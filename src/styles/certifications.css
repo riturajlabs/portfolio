@@ -1,0 +1,285 @@
+/* ===================================================
+   CERTIFICATIONS SECTION
+=================================================== */
+
+.certifications-section {
+
+    background:var(--surface);
+
+}
+
+
+
+/* ===================================================
+   CERTIFICATE GRID
+=================================================== */
+
+
+.certification-grid {
+
+    display:grid;
+
+    grid-template-columns:repeat(3,1fr);
+
+    gap:2rem;
+
+}
+
+
+
+/* ===================================================
+   CERTIFICATE CARD
+=================================================== */
+
+
+.certificate-card {
+
+    position:relative;
+
+    display:flex;
+
+    flex-direction:column;
+
+    padding:2rem;
+
+    background:var(--card);
+
+    border:1px solid var(--border);
+
+    border-radius:var(--radius-lg);
+
+    overflow:hidden;
+
+    transition:.35s ease;
+
+}
+
+
+.certificate-card::before {
+
+    content:"";
+
+    position:absolute;
+
+    inset:0;
+
+    background:radial-gradient(
+        circle at top right,
+        rgba(37,99,235,.15),
+        transparent 60%
+    );
+
+    opacity:0;
+
+    transition:.35s ease;
+
+    pointer-events:none;   /* add this */
+
+}
+
+
+.certificate-card:hover {
+
+    transform:translateY(-10px);
+
+    box-shadow:var(--shadow-lg);
+
+    border-color:var(--primary);
+
+}
+
+
+.certificate-card:hover::before {
+
+    opacity:1;
+
+}
+
+
+/* ===================================================
+   ICON
+=================================================== */
+
+
+.certificate-icon {
+
+    width:60px;
+
+    height:60px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    border-radius:18px;
+
+    background:rgba(37,99,235,.12);
+
+    font-size:2rem;
+
+    margin-bottom:1.3rem;
+
+}
+
+
+
+/* ===================================================
+   CONTENT
+=================================================== */
+
+
+.certificate-card h3 {
+
+    color:var(--text);
+
+
+    font-size:1.2rem;
+
+
+    line-height:1.4;
+
+
+    margin-bottom:.6rem;
+
+
+}
+
+
+
+.certificate-issuer {
+
+    color:var(--primary);
+
+
+    font-size:.9rem;
+
+
+    font-weight:600;
+
+
+    margin-bottom:1rem;
+
+
+}
+
+
+
+.certificate-card p {
+
+    color:var(--muted);
+
+
+    font-size:.95rem;
+
+
+    line-height:1.7;
+
+
+    margin-bottom:1.5rem;
+
+
+    flex:1;
+
+
+}
+
+
+
+/* ===================================================
+   CREDENTIAL BUTTON
+=================================================== */
+
+
+.certificate-card a {
+
+    position:relative;
+    z-index:2;
+
+    display:inline-flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:.5rem;
+
+    width:max-content;
+
+    padding:.65rem 1rem;
+
+    border-radius:var(--radius-sm);
+
+    background:var(--primary);
+
+    color:white;
+
+    font-size:.9rem;
+
+    font-weight:600;
+
+    transition:var(--transition);
+
+}
+
+
+
+.certificate-card a:hover {
+
+    background:var(--primary-dark);
+
+
+    color:white;
+
+
+    transform:translateY(-3px);
+
+
+}
+
+
+
+/* ===================================================
+   TABLET
+=================================================== */
+
+
+@media(max-width:991px){
+
+
+    .certification-grid {
+
+        grid-template-columns:repeat(2,1fr);
+
+    }
+
+
+}
+
+
+
+/* ===================================================
+   MOBILE
+=================================================== */
+
+
+@media(max-width:576px){
+
+
+    .certification-grid {
+
+        grid-template-columns:1fr;
+
+    }
+
+
+
+    .certificate-card {
+
+        padding:1.5rem;
+
+    }
+
+
+}

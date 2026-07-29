@@ -1,0 +1,125 @@
+/* ==========================================
+   BUTTON BASE
+========================================== */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+
+    padding: 0.85rem 1.5rem;
+
+    border: 2px solid transparent;
+    border-radius: 12px;
+
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1;
+
+    text-decoration: none;
+    cursor: pointer;
+
+    transition: all 0.3s ease;
+}
+
+.btn svg {
+    font-size: 1rem;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+
+/* ==========================================
+   PRIMARY
+========================================== */
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.btn-primary:hover {
+    background: transparent;
+    color: var(--primary);
+}
+
+
+/* ==========================================
+   SECONDARY
+========================================== */
+
+.btn-secondary {
+    background: var(--card);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.btn-secondary:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+
+/* ==========================================
+   OUTLINE
+========================================== */
+
+.btn-outline {
+    background: transparent;
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-outline:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+
+/* ==========================================
+   GHOST
+========================================== */
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text);
+}
+
+.btn-ghost:hover {
+    color: var(--primary);
+}
+
+
+/* ==========================================
+   FULL WIDTH
+========================================== */
+
+.btn-block {
+    width: 100%;
+}
+
+
+/* ==========================================
+   MOBILE
+========================================== */
+
+@media (max-width:576px){
+
+    .btn{
+        width:100%;
+    }
+
+}

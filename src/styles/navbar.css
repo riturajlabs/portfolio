@@ -1,0 +1,246 @@
+/* ===================================================
+   NAVBAR WRAPPER
+=================================================== */
+.navbar-wrapper {
+    position: fixed;
+    inset: 0 0 auto 0;
+    width: 100%;
+    z-index: 1000;
+    transition: background 0.35s ease, backdrop-filter 0.35s ease, box-shadow 0.35s ease;
+}
+
+.navbar-scrolled {
+
+    background: var(--glass-bg);
+
+    backdrop-filter: blur(20px);
+
+    -webkit-backdrop-filter: blur(20px);
+
+    border-bottom:1px solid var(--glass-border);
+
+    box-shadow:var(--shadow);
+
+}
+
+
+/* ===================================================
+   NAVBAR
+=================================================== */
+.navbar-custom {
+    height: 75px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ===================================================
+   LOGO
+=================================================== */
+.logo {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.logo-name{
+
+font-size:1.5rem;
+
+font-weight:800;
+
+background:var(--brand-gradient);
+
+-webkit-background-clip:text;
+
+-webkit-text-fill-color:transparent;
+
+}
+
+.logo:hover .logo-name {
+    color: #2563eb; /* Primary Blue */
+}
+
+/* ===================================================
+   DESKTOP NAVIGATION
+=================================================== */
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links a {
+    position: relative;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: #2563eb;
+}
+
+/* Enhanced Hover Underline */
+.nav-links a::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    width: 0;
+    height: 2px;
+    border-radius: 999px;
+    background: #2563eb;
+    transition: all 0.3s ease;
+    transform: translateX(-50%); /* Line grows from center now */
+}
+
+.nav-links a:hover::after,
+.nav-links a.active-link::after {
+    width: 100%;
+}
+
+/* ===================================================
+   ACTIONS (Buttons)
+=================================================== */
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.theme-toggle {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.35s ease;
+}
+
+.theme-toggle:hover {
+
+background:var(--brand-gradient);
+
+color:white;
+
+border-color:transparent;
+
+transform:scale(1.05);
+
+}
+
+.resume-btn {
+    text-decoration: none;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 99px; /* Pill shape matches your Hero section */
+    background: #2563eb;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+}
+
+.resume-btn:hover {
+    transform: translateY(-2px);
+    background: #1d4ed8;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+}
+
+.menu-btn {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.menu-btn:hover {
+    background: rgba(128, 128, 128, 0.1);
+}
+
+/* ===================================================
+   MOBILE MENU (Cleaned up for Framer Motion)
+=================================================== */
+.mobile-menu {
+    overflow: hidden;
+    background: var(--card);
+    border-radius: 16px;
+    margin-top: 0.5rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border);
+}
+
+.mobile-menu-content {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    gap: 1.2rem;
+}
+
+.mobile-menu-content a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: color 0.25s ease;
+}
+
+.mobile-menu-content a:hover,
+.mobile-menu-content a.active-link {
+    color: #2563eb;
+}
+
+.mobile-resume {
+    margin-top: 1rem;
+    padding: 1rem;
+    text-align: center;
+    border-radius: 99px;
+    background: #2563eb;
+    color: #fff !important;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+/* ===================================================
+   RESPONSIVE
+=================================================== */
+@media (max-width: 991px) {
+    .navbar-custom {
+        height: 70px;
+    }
+}
+
+@media (max-width: 576px) {
+    .logo-name {
+        font-size: 1.3rem;
+    }
+}
+
+/* ==========================================
+   ACTIVE NAVIGATION OVERRIDES
+========================================== */
+.active-link {
+    color: #2563eb !important;
+}

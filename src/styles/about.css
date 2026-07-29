@@ -1,0 +1,221 @@
+/* ===================================================
+   ABOUT SECTION
+=================================================== */
+.about-section {
+    background: var(--bg);
+    position: relative;
+}
+
+/* ===================================================
+   SECTION HEADER
+=================================================== */
+.section-header {
+    text-align: center;
+    max-width: 750px;
+    margin: 0 auto 4rem;
+}
+
+.section-tag {
+    display: inline-block;
+    padding: 0.45rem 1.2rem;
+    border-radius: var(--radius-full);
+    background: rgba(37, 99, 235, 0.12); /* Subtle Primary Tint */
+    color: var(--primary);
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.section-title {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 1.2rem;
+    /* Utilizing the global brand gradient for a unified premium look */
+    background: var(--brand-gradient, linear-gradient(90deg, #2563eb, #7c3aed));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.section-description {
+    color: var(--muted);
+    font-size: 1.1rem;
+    line-height: 1.8;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* ===================================================
+   ABOUT CONTENT
+=================================================== */
+.about-content {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 4rem;
+    align-items: start;
+}
+
+/* ===================================================
+   TEXT (Left Side)
+=================================================== */
+.about-text {
+    position: relative;
+}
+
+.about-text h3 {
+    color: var(--text);
+    font-size: 2.2rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Adds a nice gradient accent line before "My Journey" */
+.about-text h3::before {
+    content: "";
+    display: block;
+    width: 6px;
+    height: 35px;
+    border-radius: 4px;
+    background: var(--brand-gradient, linear-gradient(180deg, #2563eb, #7c3aed));
+}
+
+.about-text p {
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+
+/* ===================================================
+   CARDS (Right Side)
+=================================================== */
+.about-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.about-card {
+    display: flex;
+    flex-direction: column; /* Stacked layout for cards looks more modern */
+    gap: 1.2rem;
+    padding: 1.8rem;
+    border-radius: var(--radius);
+    background: var(--card);
+    border: 1px solid var(--border);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy transition */
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle glow effect inside the card on hover */
+.about-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.about-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-primary, 0 10px 25px rgba(37, 99, 235, 0.25));
+    border-color: rgba(37, 99, 235, 0.4);
+}
+
+.about-card:hover::before {
+    opacity: 1;
+}
+
+/* ===================================================
+   CARD ICONS (Micro-interactions)
+=================================================== */
+.about-icon {
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: var(--brand-gradient, linear-gradient(135deg, #2563eb, #7c3aed));
+    color: #ffffff; /* White icon on colorful background pops better */
+    font-size: 1.5rem;
+    transition: transform 0.4s ease;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+/* Icon rotates and scales up slightly when card is hovered */
+.about-card:hover .about-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.about-card-info {
+    position: relative;
+    z-index: 1;
+}
+
+.about-card h4 {
+    color: var(--text);
+    font-size: 1.2rem;
+    margin-bottom: 0.6rem;
+    font-weight: 700;
+}
+
+.about-card p {
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* ===================================================
+   RESPONSIVE TABLET
+=================================================== */
+@media(max-width: 991px) {
+    .about-content {
+        grid-template-columns: 1fr;
+        gap: 3.5rem;
+    }
+    
+    .about-text {
+        text-align: center;
+    }
+    
+    /* Center the accent line on tablet/mobile */
+    .about-text h3 {
+        justify-content: center;
+    }
+}
+
+/* ===================================================
+   RESPONSIVE MOBILE
+=================================================== */
+@media(max-width: 576px) {
+    .section-header {
+        margin-bottom: 3rem;
+    }
+
+    .section-title {
+        font-size: 2.3rem;
+    }
+
+    .about-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .about-card {
+        padding: 1.5rem;
+        flex-direction: row; /* Switch to side-by-side on mobile to save space */
+        align-items: flex-start;
+    }
+
+    .about-icon {
+        min-width: 48px;
+        height: 48px;
+        font-size: 1.2rem;
+    }
+}

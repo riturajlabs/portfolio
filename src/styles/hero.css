@@ -1,0 +1,338 @@
+/* ===================================================
+   HERO SECTION
+=================================================== */
+.hero-section {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding-top: 90px;
+    background: var(--bg);
+    overflow: hidden;
+}
+
+.hero-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4rem;
+    align-items: center;
+}
+
+/* ===================================================
+   LEFT
+=================================================== */
+.hero-left {
+    display: flex;
+    flex-direction: column;
+}
+
+.hero-greeting {
+    color: var(--primary);
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: .75rem;
+}
+
+.hero-status {
+    margin: .6rem 0 1rem;
+}
+
+/* Sirf direct child span par styling apply hogi, inner dot par nahi */
+.hero-status > span {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .45rem 1rem;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.12);
+    color: var(--success);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    font-size: .82rem;
+    font-weight: 600;
+}
+
+/* Pulse dot ko perfect round rakhne ke liye fix */
+.pulse-dot {
+    display: inline-block;
+    flex-shrink: 0; /* Flexbox isko daba kar chhota/lamba nahi karega */
+    width: 0.8rem;
+    height: 0.8rem;
+    background-color: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0.7);
+    animation: pulse 2s infinite;
+    /* Purani padding aur border agar galti se inherit ho toh usko hata dega */
+    padding: 0;
+    border: none; 
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+.hero-title {
+    font-size: clamp(3rem, 6vw, 4.8rem);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 1rem;
+    background: var(--brand-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+    color: var(--muted);
+    font-size: clamp(1.35rem, 3vw, 2rem);
+    font-weight: 600;
+    min-height: 60px;
+    margin-bottom: 1.4rem;
+}
+
+.hero-location {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+}
+
+.hero-description {
+    max-width: 580px;
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.8;
+    margin-bottom: 2rem;
+}
+
+/* ===================================================
+   HERO STATS
+=================================================== */
+.hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2.5rem;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-light);
+    max-width: 500px;
+}
+
+.hero-stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.hero-stat h3 {
+    color: var(--primary);
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: .2rem;
+    line-height: 1;
+}
+
+.hero-stat span {
+    color: var(--muted);
+    font-size: .95rem;
+    font-weight: 500;
+}
+
+/* ===================================================
+   BUTTONS & SOCIAL
+=================================================== */
+.hero-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2.5rem;
+}
+
+.hero-social {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.hero-social a {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--muted);
+    transition: var(--transition);
+}
+
+.hero-social a:hover {
+    color: var(--primary);
+    transform: translateY(-3px);
+}
+
+/* ===================================================
+   RIGHT (IMAGE & SKILLS)
+=================================================== */
+.hero-right {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-image-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-image-wrapper::before {
+    content: "";
+    position: absolute;
+    width: 110%;
+    height: 110%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(37,99,235,0.25), transparent 70%);
+    filter: blur(20px);
+    z-index: 1;
+    animation: glowPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes glowPulse {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    100% { transform: scale(1.05); opacity: 1; }
+}
+
+.image-container {
+    width: 78%;
+    aspect-ratio: 1;
+    position: relative;
+    z-index: 2;
+    padding: 8px;
+    border-radius: 50%;
+    background: var(--brand-gradient);
+    box-shadow: var(--shadow-primary);
+}
+
+.hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    background: var(--card);
+}
+
+/* ===================================================
+   TECH BADGES (Dynamic Support)
+=================================================== */
+.floating-stack {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none; 
+}
+
+.tech-badge {
+    position: absolute;
+    padding: .55rem 1rem;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: .85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+    /* Anchor translation center is maintained here */
+    animation: floatBadge 6s ease-in-out infinite;
+    pointer-events: auto;
+}
+
+/* ===================================================
+   ANIMATION
+=================================================== */
+@keyframes floatBadge {
+    0% { transform: translate(-50%, -50%) translateY(0); }
+    50% { transform: translate(-50%, -50%) translateY(-12px); }
+    100% { transform: translate(-50%, -50%) translateY(0); }
+}
+
+/* ===================================================
+   TABLET
+=================================================== */
+@media (max-width: 991px) {
+    .hero-content {
+        grid-template-columns: 1fr;
+        gap: 4rem;
+        text-align: center;
+    }
+    .hero-left {
+        align-items: center;
+    }
+    .hero-location {
+        justify-content: center;
+    }
+    .hero-description {
+        max-width: 650px;
+    }
+    .hero-stats {
+        justify-content: center;
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .hero-buttons,
+    .hero-social {
+        justify-content: center;
+    }
+    .hero-image-wrapper {
+        max-width: 380px;
+    }
+}
+
+/* ===================================================
+   MOBILE
+=================================================== */
+@media (max-width: 576px) {
+    .hero-section {
+        padding-top: 120px;
+        padding-bottom: 4rem;
+    }
+    .hero-title {
+        font-size: 2.7rem;
+    }
+    .hero-subtitle {
+        min-height: 48px;
+        font-size: 1.25rem;
+    }
+    .hero-description {
+        font-size: .95rem;
+    }
+    .hero-stats {
+        gap: 1.5rem;
+    }
+    .hero-stat h3 {
+        font-size: 1.6rem;
+    }
+    .hero-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+    .hero-buttons .btn,
+    .hero-buttons button,
+    .hero-buttons a {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .hero-image-wrapper {
+        max-width: 275px; /* Slight increase to prevent crowding */
+        margin-top: 1rem;
+    }
+    .hero-image-wrapper::before {
+        width: 280px;
+        height: 280px;
+    }
+    .tech-badge {
+        font-size: .7rem;
+        padding: .4rem .8rem;
+    }
+}

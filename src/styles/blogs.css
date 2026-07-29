@@ -1,0 +1,339 @@
+/* ===================================================
+   BLOG SECTION
+=================================================== */
+
+.blog-section {
+
+    background:var(--bg);
+
+}
+
+
+
+/* ===================================================
+   BLOG GRID
+=================================================== */
+
+
+.blog-grid {
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:2rem;
+
+}
+
+
+
+/* ===================================================
+   BLOG CARD
+=================================================== */
+
+
+.blog-card {
+
+    display:flex;
+
+    flex-direction:column;
+
+
+    padding:2rem;
+
+
+    background:var(--card);
+
+
+    border:1px solid var(--border);
+
+
+    border-radius:var(--radius-lg);
+
+
+    transition:var(--transition);
+
+
+}
+
+
+
+.blog-card:hover {
+
+    transform:translateY(-8px);
+
+
+    box-shadow:var(--shadow-lg);
+
+
+    border-color:rgba(37,99,235,.35);
+
+}
+
+
+
+/* ===================================================
+   CATEGORY
+=================================================== */
+
+
+.blog-category {
+
+    width:max-content;
+
+
+    padding:.4rem .9rem;
+
+
+    margin-bottom:1.2rem;
+
+
+    border-radius:var(--radius-full);
+
+
+    background:rgba(37,99,235,.12);
+
+
+    color:var(--primary);
+
+
+    font-size:.8rem;
+
+
+    font-weight:600;
+
+
+}
+
+
+
+/* ===================================================
+   TITLE
+=================================================== */
+
+
+.blog-card h3 {
+
+    color:var(--text);
+
+
+    font-size:1.35rem;
+
+
+    line-height:1.4;
+
+
+    margin-bottom:1rem;
+
+
+}
+
+
+
+/* ===================================================
+   DESCRIPTION
+=================================================== */
+
+
+.blog-card p {
+
+    color:var(--muted);
+
+
+    line-height:1.7;
+
+
+    font-size:.95rem;
+
+
+    margin-bottom:1.5rem;
+
+
+    flex:1;
+
+
+}
+
+
+
+/* ===================================================
+   META
+=================================================== */
+
+
+.blog-meta {
+
+    display:flex;
+
+
+    align-items:center;
+
+
+    justify-content:space-between;
+
+
+    padding-top:1rem;
+
+
+    margin-bottom:1.5rem;
+
+
+    border-top:1px solid var(--border);
+
+
+    color:var(--muted);
+
+
+    font-size:.85rem;
+
+
+}
+
+
+
+/* ===================================================
+   READ BUTTON
+=================================================== */
+
+
+.blog-card a {
+
+    display:inline-flex;
+
+
+    align-items:center;
+
+
+    gap:.5rem;
+
+
+    width:max-content;
+
+
+    padding:.7rem 1.1rem;
+
+
+    border-radius:var(--radius-sm);
+
+
+    background:var(--primary);
+
+
+    color:white;
+
+
+    font-size:.9rem;
+
+
+    font-weight:600;
+
+
+    transition:var(--transition);
+
+
+}
+
+
+
+.blog-card a:hover {
+
+    background:var(--primary-dark);
+
+
+    color:white;
+
+
+    transform:translateX(5px);
+
+
+}
+
+
+
+/* ===================================================
+   TABLET
+=================================================== */
+
+
+@media(max-width:991px){
+
+
+    .blog-grid {
+
+        grid-template-columns:1fr;
+
+    }
+
+
+}
+
+
+
+/* ===================================================
+   MOBILE
+=================================================== */
+
+
+@media(max-width:576px){
+
+
+    .blog-card {
+
+        padding:1.5rem;
+
+    }
+
+
+    .blog-card h3 {
+
+        font-size:1.15rem;
+
+    }
+
+
+    .blog-meta {
+
+        flex-direction:column;
+
+
+        align-items:flex-start;
+
+
+        gap:.5rem;
+
+    }
+
+
+}
+
+/* ===================================================
+   COMING SOON BUTTON
+=================================================== */
+
+.blog-coming-btn {
+
+    display:inline-flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    width:max-content;
+
+    padding:.7rem 1.2rem;
+
+    border-radius:var(--radius-sm);
+
+    background:var(--surface);
+
+    color:var(--muted);
+
+    border:1px solid var(--border);
+
+    font-size:.9rem;
+
+    font-weight:600;
+
+    cursor:not-allowed;
+
+}

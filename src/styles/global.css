@@ -1,0 +1,276 @@
+/* ==================================================
+   GOOGLE FONT
+================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+@import "./button.css";
+/* ==================================================
+   RESET
+================================================== */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ==================================================
+   ROOT (Global Responsive Typography Base)
+================================================== */
+html {
+    scroll-behavior: smooth;
+    /* 100% = 16px default base for Desktop */
+    font-size: 100%; 
+}
+
+/* ==================================================
+   BODY
+================================================== */
+body {
+    font-family: "Inter", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background 0.35s ease, color 0.35s ease;
+    font-size: 1rem; /* Adjusts automatically based on html font-size */
+}
+
+/* ==================================================
+   TYPOGRAPHY
+================================================== */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* Fallback responsive scaling for headings not using clamp() */
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+h4 { font-size: 1.5rem; }
+h5 { font-size: 1.25rem; }
+h6 { font-size: 1rem; }
+
+p {
+    color: var(--muted);
+    font-size: 1rem;
+}
+
+/* ==================================================
+   LINKS
+================================================== */
+a {
+    color: inherit;
+    text-decoration: none;
+    transition: 0.3s ease;
+}
+
+/* ==================================================
+   LIST
+================================================== */
+ul, ol {
+    list-style: none;
+}
+
+/* ==================================================
+   BUTTON
+================================================== */
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    background: none;
+}
+
+/* ==================================================
+   IMAGE
+================================================== */
+img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* ==================================================
+   SECTION
+================================================== */
+section {
+    position: relative;
+    padding: 100px 0;
+}
+
+/* ==================================================
+   CONTAINER
+================================================== */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: auto;
+    padding: 0 20px;
+}
+
+/* ==================================================
+   TEXT SELECTION
+================================================== */
+::selection {
+    background: var(--primary);
+    color: #fff;
+}
+
+/* ==================================================
+   SCROLLBAR (Desktop)
+================================================== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--surface, #1e293b);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--muted, #9ca3af);
+}
+
+/* ==================================================
+   ACCESSIBILITY
+================================================== */
+a:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+    border-radius: 8px;
+}
+
+/* ==================================================
+   COMMON UTILITIES
+================================================== */
+.text-center { text-align: center; }
+.d-flex { display: flex; }
+.align-center { align-items: center; }
+.justify-center { justify-content: center; }
+.w-100 { width: 100%; }
+.shadow { box-shadow: var(--shadow); }
+.radius { border-radius: var(--radius); }
+
+body,
+.card,
+section,
+.navbar-wrapper,
+.footer-section {
+
+    transition:
+    background-color .35s ease,
+    color .35s ease,
+    border-color .35s ease;
+
+}
+
+/* ==================================================
+   RESPONSIVE TABLET
+================================================== */
+@media(max-width: 991px) {
+    /* Base font size shrinks to ~15px. 
+       All rem values will shrink proportionally! */
+    html {
+        font-size: 93.75%; 
+    }
+
+    section {
+        padding: 80px 0;
+    }
+}
+
+/* ==================================================
+   RESPONSIVE MOBILE
+================================================== */
+@media(max-width: 576px) {
+    /* Base font size shrinks to ~14px. 
+       All rem values shrink proportionally! */
+    html {
+        font-size: 87.5%; 
+    }
+
+    .container {
+        padding: 0 18px;
+    }
+    
+    section {
+        padding: 70px 0;
+    }
+    
+    /* 🚀 SCROLLBAR HIDDEN ON MOBILE 🚀 */
+    ::-webkit-scrollbar {
+        display: none;
+    }
+    
+    html, body {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
+
+#scroll-top{
+
+    position:fixed;
+
+    right:30px;
+
+    bottom:30px;
+
+
+    width:45px;
+
+    height:45px;
+
+
+    display:none;
+
+    align-items:center;
+
+    justify-content:center;
+
+
+    border-radius:50%;
+
+
+    background:var(--primary);
+
+    color:white;
+
+
+    font-size:1.4rem;
+
+    font-weight:bold;
+
+
+    z-index:999;
+
+
+    box-shadow:var(--shadow-primary);
+
+
+    transition:.3s ease;
+
+}
+
+
+
+#scroll-top:hover{
+
+    transform:translateY(-5px);
+
+}

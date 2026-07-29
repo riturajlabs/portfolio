@@ -1,0 +1,35 @@
+/* ==========================================
+   CORE
+========================================== */
+
+@import "./styles/variables.css";
+@import "./styles/global.css";
+
+
+/* ==========================================
+   COMMON COMPONENTS
+========================================== */
+
+@import "./styles/button.css";
+
+
+/* ==========================================
+   LAYOUT
+========================================== */
+
+@import "./styles/navbar.css";
+@import "./styles/footer.css";
+
+
+/* ==========================================
+   SECTIONS
+========================================== */
+
+@import "./styles/hero.css";
+@import "./styles/about.css";
+@import "./styles/skills.css";
+@import "./styles/projects.css";
+@import "./styles/github.css";
+@import "./styles/certifications.css";
+@import "./styles/blogs.css";
+@import "./styles/contacts.css";
