@@ -11,6 +11,7 @@ function Button({
     rel,
     className = "",
     disabled = false,
+    download,
 }) {
     const classes = `btn btn-${variant} ${className}`.trim();
 
@@ -20,6 +21,7 @@ function Button({
                 href={href}
                 target={target}
                 rel={rel}
+                download={download}
                 className={classes}
             >
                 {children}

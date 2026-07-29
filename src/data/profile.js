@@ -34,7 +34,7 @@ const profile = {
        RESUME
     ========================== */
 
-    resume: "/resume.pdf",
+    resume: "/Ritu_Raj_Full_Stack_Developer_Resume.pdf",
 
     /* ==========================
        PROFILE

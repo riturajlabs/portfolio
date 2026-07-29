@@ -122,8 +122,7 @@ function Hero() {
 
                             <Button
                                 href={profile.resume}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                download
                                 variant="outline"
                             >
                                 Download Resume
