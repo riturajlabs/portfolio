@@ -1,53 +1,45 @@
 # 🚀 Ritu Raj | Full Stack Developer & AI/ML Student
 
 <p align="center">
-  <img src="./public/images/ritu.png" width="180" alt="Ritu Raj">
+  <img src="./public/images/app.png" width="180" alt="Ritu Raj">
 </p>
 
 <h3 align="center">
-Building scalable web applications and exploring AI-powered solutions.
+Building scalable web applications and exploring AI-powered solutions 🤖
 </h3>
 
 <p align="center">
-  A modern personal portfolio website built with React, Vite, and modern frontend technologies.
+Full Stack Developer | MERN Stack | AI/ML Student | DSA Enthusiast
+</p>
+
+
+<p align="center">
+
+<a href="https://riturajlabs.vercel.app/">
+<img src="https://img.shields.io/badge/🌐%20Live%20Portfolio-Visit-blue?style=for-the-badge">
+</a>
+
+<a href="https://github.com/riturajlabs">
+<img src="https://img.shields.io/badge/GitHub-riturajlabs-black?style=for-the-badge&logo=github">
+</a>
+
+<a href="https://linkedin.com/in/riturajlabs">
+<img src="https://img.shields.io/badge/LinkedIn-Ritu%20Raj-blue?style=for-the-badge&logo=linkedin">
+</a>
+
 </p>
 
 
 ---
 
-## 🌐 Live Portfolio
-
-🔗 Coming Soon
+# 👨‍💻 About Me
 
 
----
+Hi, I'm **Ritu Raj** 👋
 
-## 👨‍💻 About Me
+I am a **Full Stack Developer** and **B.Sc Artificial Intelligence & Machine Learning student** passionate about building real-world applications and exploring AI-powered solutions.
 
-Hi, I'm **Ritu Raj**.
-
-I am a **Full Stack Developer** and **B.Sc Artificial Intelligence & Machine Learning student** passionate about building real-world software applications and exploring the possibilities of Artificial Intelligence.
-
-I enjoy working with modern web technologies, solving problems through Data Structures & Algorithms, and creating practical projects that combine software development with AI.
-
-
----
-
-## ✨ Features
-
-- ⚡ Modern React + Vite architecture
-- 🎨 Responsive UI design
-- 🌙 Dark / Light theme support
-- 🎭 Smooth animations using Framer Motion
-- 📱 Mobile friendly layout
-- 🧩 Component-based architecture
-- 📂 Dynamic project showcase
-- 🏆 Certifications section
-- 📝 Blog section
-- 📊 GitHub statistics integration
-- 📧 Working contact form using EmailJS
-- 🔍 SEO optimization
-- 🚀 Production ready deployment setup
+I love creating modern web applications, solving problems using **Data Structures & Algorithms**, and experimenting with **Generative AI, Machine Learning, and Backend Systems**.
 
 
 ---
@@ -55,32 +47,55 @@ I enjoy working with modern web technologies, solving problems through Data Stru
 # 🛠️ Tech Stack
 
 
-## Frontend
+### Frontend
 
-- React.js
-- Vite
-- JavaScript (ES6+)
-- HTML5
-- CSS3
-- Bootstrap
-- Framer Motion
-- React Icons
+<p>
+
+<img src="https://skillicons.dev/icons?i=react,vite,js,html,css,bootstrap"/>
+
+</p>
 
 
-## Tools & Services
+### Backend & Database
 
-- Git
-- GitHub
-- VS Code
-- EmailJS
-- Vercel
+<p>
+
+<img src="https://skillicons.dev/icons?i=nodejs,express,mongodb"/>
+
+</p>
+
+
+### Tools
+
+<p>
+
+<img src="https://skillicons.dev/icons?i=git,github,vscode,vercel"/>
+
+</p>
+
+
+---
+
+# ✨ Features
+
+
+| Feature | Description |
+|---|---|
+| ⚡ React + Vite | Modern frontend architecture |
+| 🎨 Responsive UI | Works across devices |
+| 🌙 Theme Support | Dark / Light mode |
+| 🎭 Animations | Framer Motion powered UI |
+| 📂 Projects | Dynamic showcase system |
+| 📧 Contact | EmailJS integration |
+| 🔍 SEO | Optimized portfolio |
 
 
 ---
 
 # 📂 Project Structure
 
-```
+
+```bash
 portfolio
 │
 ├── public
@@ -90,27 +105,16 @@ portfolio
 │   └── sitemap.xml
 │
 ├── src
-│   │
-│   ├── assets
-│   │
 │   ├── components
 │   │   ├── common
 │   │   ├── layout
 │   │   └── sections
 │   │
 │   ├── context
-│   │   └── ThemeContext.jsx
-│   │
 │   ├── data
-│   │   └── Portfolio data
-│   │
 │   ├── hooks
-│   │
 │   ├── pages
-│   │   └── Home.jsx
-│   │
 │   ├── services
-│   │
 │   ├── styles
 │   │
 │   ├── App.jsx
@@ -123,52 +127,31 @@ portfolio
 
 ---
 
-# 🚀 Getting Started
+# 🚀 Installation
 
 
-## Clone Repository
+### Clone Repository
 
 ```bash
 git clone https://github.com/riturajlabs/portfolio.git
 ```
 
 
-## Navigate to Project
-
-```bash
-cd portfolio
-```
-
-
-## Install Dependencies
+### Install Dependencies
 
 ```bash
 npm install
 ```
 
 
-## Environment Variables
-
-Create a `.env` file in the root directory:
-
-
-```env
-VITE_EMAIL_SERVICE_ID=your_service_id
-
-VITE_EMAIL_TEMPLATE_ID=your_template_id
-
-VITE_EMAIL_PUBLIC_KEY=your_public_key
-```
-
-
-## Run Development Server
+### Run Project
 
 ```bash
 npm run dev
 ```
 
 
-## Build Production
+### Build
 
 ```bash
 npm run build
@@ -177,84 +160,76 @@ npm run build
 
 ---
 
-# 📌 Featured Projects
+# 🚀 Featured Projects
 
 
 ## 🤖 Orbit AI
 
-An AI-powered application exploring Generative AI concepts and intelligent systems.
+AI-powered application exploring Generative AI concepts and intelligent systems.
 
-### Technologies:
 
-- React
-- Node.js
-- AI APIs
-- Generative AI
+**Tech Stack**
+
+<img src="https://skillicons.dev/icons?i=react,nodejs"/>
 
 
 ---
-
 
 ## 🏠 Stayora
 
-A full-stack accommodation and listing management platform.
+Full-stack accommodation platform with listing management.
 
-### Technologies:
 
-- Node.js
-- Express.js
-- MongoDB
-- EJS
-- REST APIs
+**Tech Stack**
+
+<img src="https://skillicons.dev/icons?i=nodejs,express,mongodb"/>
 
 
 ---
-
 
 ## 🧮 Scientific Calculator
 
-A feature-rich calculator application supporting advanced mathematical operations.
+Advanced calculator supporting mathematical operations.
 
-### Technologies:
 
-- HTML
-- CSS
-- JavaScript
+**Tech Stack**
+
+<img src="https://skillicons.dev/icons?i=html,css,js"/>
 
 
 ---
 
-
 # 📚 Currently Learning
 
-- Data Structures & Algorithms
-- Machine Learning
-- Deep Learning
-- Generative AI
-- Retrieval Augmented Generation (RAG)
-- AI Agents
-- Backend Development
-- System Design
+
+- 🧠 Machine Learning
+- 🤖 Generative AI
+- 🔎 RAG Systems
+- 🕵️ AI Agents
+- 🏗️ System Design
+- 📊 Data Structures & Algorithms
 
 
 ---
 
 # 🏆 Certifications
 
-- Delta Full Stack Web Development - Apna College
-- Python for Data Science and Machine Learning - LinkedIn Learning
-- Artificial Intelligence Foundations: Machine Learning - LinkedIn Learning
+
+🏅 Delta Full Stack Web Development  
+🏅 Python for Data Science and Machine Learning  
+🏅 Artificial Intelligence Foundations: Machine Learning  
 
 
 ---
 
-# 📈 Development Goals
+# 📊 GitHub Analytics
 
-- Build scalable full-stack applications
-- Explore AI engineering
-- Improve problem-solving skills
-- Contribute to open-source projects
-- Build impactful software solutions
+
+<p align="center">
+
+<img src="https://github-readme-stats.vercel.app/api?username=riturajlabs&show_icons=true&theme=tokyonight"/>
+
+</p>
 
 
 ---
@@ -262,25 +237,29 @@ A feature-rich calculator application supporting advanced mathematical operation
 # 🤝 Connect With Me
 
 
-### GitHub
+<p>
 
-https://github.com/riturajlabs
-
-
-### LinkedIn
-
-https://linkedin.com/in/riturajlabs
+<a href="https://github.com/riturajlabs">
+<img src="https://img.shields.io/badge/GitHub-Follow-black?style=for-the-badge&logo=github">
+</a>
 
 
-### Email
+<a href="https://linkedin.com/in/riturajlabs">
+<img src="https://img.shields.io/badge/LinkedIn-Connect-blue?style=for-the-badge&logo=linkedin">
+</a>
 
-riturajlabs@outlook.com
+
+<a href="mailto:riturajlabs@outlook.com">
+<img src="https://img.shields.io/badge/Email-Contact-red?style=for-the-badge&logo=gmail">
+</a>
+
+</p>
 
 
 ---
 
 <p align="center">
 
-⭐ If you like my work, consider giving this repository a star.
+⭐ If you like my work, consider starring this repository.
 
 </p>
