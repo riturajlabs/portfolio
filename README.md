@@ -1,7 +1,7 @@
 # 🚀 Ritu Raj | Full Stack Developer & AI/ML Student
 
 <p align="center">
-  <img src="./public/images/app.png" width="180" alt="Ritu Raj">
+  <img src="./public/images/portfolio-og.png" alt="Ritu Raj">
 </p>
 
 <h3 align="center">
