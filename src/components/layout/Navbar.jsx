@@ -116,7 +116,8 @@ function Navbar() {
                     </div>
                 </nav>
 
-                {/* ================= MOBILE MENU (FIXED) ================= */}
+                
+                {/* ================= MOBILE MENU ================= */}
                 <AnimatePresence>
                     {menuOpen && (
                         <motion.div
@@ -135,15 +136,16 @@ function Navbar() {
                                         onClick={(e) => {
                                             e.preventDefault();
                                             
-                                            // 1. Scroll directly to the section
-                                            document.getElementById(item.id)?.scrollIntoView({
-                                                behavior: "smooth"
-                                            });
-
-                                            // 2. Wait slightly before hiding menu so mobile browser registers the tap completely
+                                            // 1. Sabse pehle menu close karo taaki body ka "overflow: hidden" hat jaye aur page unlock ho.
+                                            setMenuOpen(false); 
+                                            
+                                            // 2. 300ms ka wait karo (taaki Framer motion ka close animation ho jaye aur DOM update ho jaye) 
+                                            // Fir perfectly correct section par scroll karo.
                                             setTimeout(() => {
-                                                setMenuOpen(false);
-                                            }, 200);
+                                                document.getElementById(item.id)?.scrollIntoView({
+                                                    behavior: "smooth"
+                                                });
+                                            }, 300);
                                         }}
                                     >
                                         {item.label}
