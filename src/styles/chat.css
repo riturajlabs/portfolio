@@ -518,85 +518,77 @@ body.chat-open {
     transform: translateY(-1px);
 }
 
+
 /* ===================================================
-   MOBILE RESPONSIVENESS (KEYBOARD FIX)
+   MOBILE RESPONSIVENESS
 =================================================== */
-@media (max-width: 576px) {
-    .chat-container {
-        bottom: 20px;
-        right: 20px;
-    }
-    
-    .chat-window {
-        position: fixed;
-        /* 🚀 FIX: Anchor to TOP instead of BOTTOM to prevent pushing up */
-        top: 15px;
-        bottom: auto;
-        right: 15px;
-        left: 15px;
-        width: auto;
-        /* 🚀 FIX: dvh (Dynamic Viewport Height) automatically shrinks when keyboard opens */
-        height: calc(100dvh - 100px);
-        max-height: calc(100dvh - 100px);
-        border-radius: var(--radius-lg, 24px);
-    }
-
-    .chat-bubble {
-        max-width: 92%;
-    }
-}
-
 @media (max-width:576px){
 
-.chat-container{
+    .chat-container{
+        left:0;
+        right:0;
+        bottom:0;
 
-    right:0;
-    left:0;
+        display:flex;
+        justify-content:flex-end;
+        align-items:flex-end;
 
-    bottom:0;
+        pointer-events:none;
+    }
 
-}
+    .chat-window{
+        position:fixed;
 
-.chat-window{
+        left:12px;
+        right:12px;
 
-    position:fixed;
+        top:12px;
 
-    left:12px;
-    right:12px;
+        bottom:calc(
+            90px +
+            var(--keyboard-height,0px)
+        );
 
-    top:12px;
+        width:auto;
+        height:auto;
+        max-height:none;
 
-    bottom:calc(
-        85px +
-        var(--keyboard-height,0px)
-    );
+        margin:0;
 
-    width:auto;
+        border-radius:20px;
 
-    height:auto;
+        pointer-events:auto;
+    }
 
-    max-height:none;
+    .chat-body{
+        flex:1;
+        overflow-y:auto;
+        overscroll-behavior:contain;
+        -webkit-overflow-scrolling:touch;
+    }
 
-    margin:0;
+    .chat-footer{
+        position:sticky;
+        bottom:0;
+        z-index:5;
 
-}
+        background:var(--surface);
+    }
 
-.chat-body{
+    .chat-fab-wrapper{
+        position:fixed;
 
-    flex:1;
+        right:20px;
+        bottom:20px;
 
-    overflow-y:auto;
+        pointer-events:auto;
+    }
 
-}
-
-.chat-footer{
-
-    position:sticky;
-
-    bottom:0;
-
-    background:var(--surface);
-
-}
+    .chat-bubble{
+        max-width:92%;
+    }
+    .chat-container.chat-opened .chat-fab-wrapper{
+        display:none;
+    }
 
 }

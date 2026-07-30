@@ -403,7 +403,7 @@ function ChatAssistant() {
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
                             role="dialog"
                             aria-label="AI Portfolio Assistant"
-                            layout={false}
+                            
                         >
                             {/* HEADER */}
                             <div className="chat-header">
