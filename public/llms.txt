@@ -1,0 +1,54 @@
+# Ritu Raj Portfolio
+
+> Official portfolio of Ritu Raj (RituRajLabs), Full Stack Developer and AI & Machine Learning Student.
+
+## Website
+
+- Homepage: https://riturajlabs.vercel.app
+- Portfolio: https://riturajlabs.vercel.app
+
+## About
+
+Ritu Raj is a Full Stack Developer and AI & Machine Learning student.
+He builds modern web applications using React, JavaScript, Node.js, Express, MongoDB, Java and Python.
+His interests include Artificial Intelligence, Machine Learning, Generative AI, Data Structures & Algorithms and Software Engineering.
+
+## Skills
+
+- React
+- JavaScript
+- Node.js
+- Express.js
+- MongoDB
+- Java
+- Python
+- HTML5
+- CSS3
+- Bootstrap
+- Git
+- GitHub
+- REST APIs
+- Artificial Intelligence
+- Machine Learning
+- Generative AI
+- Data Structures & Algorithms
+
+## Projects
+
+- Stayora
+- Orbit AI
+- Scientific Calculator
+- Portfolio Website
+
+## Profiles
+
+- GitHub: https://github.com/riturajlabs
+- LinkedIn: https://linkedin.com/in/riturajlabs
+
+## Resume
+
+- https://riturajlabs.vercel.app/Ritu_Raj_Full_Stack_Developer_Resume.pdf
+
+## License
+
+Copyright © Ritu Raj.

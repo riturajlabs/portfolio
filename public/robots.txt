@@ -1,4 +1,11 @@
+# ======================================================
+# Ritu Raj Portfolio - robots.txt
+# https://riturajlabs.vercel.app
+# ======================================================
+
 User-agent: *
+
 Allow: /
 
+# Sitemap
 Sitemap: https://riturajlabs.vercel.app/sitemap.xml

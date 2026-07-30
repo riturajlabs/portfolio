@@ -1,0 +1,50 @@
+/* TEAM */
+
+Developer: Ritu Raj
+Brand: RituRajLabs
+Role: Full Stack Developer & AI/ML Student
+
+Website:
+https://riturajlabs.vercel.app
+
+GitHub:
+https://github.com/riturajlabs
+
+LinkedIn:
+https://linkedin.com/in/riturajlabs
+
+Email:
+riturajlabs@outlook.com
+
+Location:
+Pune, Maharashtra, India
+
+--------------------------------------------
+
+/* SITE */
+
+Website:
+Ritu Raj Portfolio
+
+Technology:
+
+React
+Vite
+Bootstrap
+JavaScript
+HTML5
+CSS3
+
+Deployment:
+Vercel
+
+Repository:
+https://github.com/riturajlabs
+
+--------------------------------------------
+
+/* THANKS */
+
+Thank you for visiting my portfolio.
+
+Have a great day.
