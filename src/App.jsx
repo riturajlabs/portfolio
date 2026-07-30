@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import profile from "./data/profile";
 
 import { updateSEO } from "./utils/seo";
+import ChatAssistant from "./components/common/ChatAssistant";
 
 
 function App(){
@@ -44,6 +45,8 @@ function App(){
 
 
             <Footer />
+
+            <ChatAssistant />
 
 
         </>
