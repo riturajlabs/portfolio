@@ -81,15 +81,28 @@ function Navbar() {
 
                     {/* DESKTOP NAV */}
                     <ul className="nav-links d-none d-lg-flex">
+                        {/* MOBILE MENU LINKS */}
                         {navigation.map((item) => (
-                            <li key={item.id}>
-                                <a
-                                    href={`#${item.id}`}
-                                    className={activeSection === item.id ? "active-link" : ""}
-                                >
-                                    {item.label}
-                                </a>
-                            </li>
+                            <a
+                                key={item.id}
+                                href={`#${item.id}`}
+                                className={activeSection === item.id ? "active-link" : ""}
+                                onClick={(e) => {
+                                    e.preventDefault(); 
+                                    
+                                    // Pehle smoothly scroll karenge
+                                    document.getElementById(item.id)?.scrollIntoView({
+                                        behavior: "smooth"
+                                    });
+
+                                    // 150ms ka delay dekar menu close karenge taaki animation aur tap me conflict na ho
+                                    setTimeout(() => {
+                                        setMenuOpen(false);
+                                    }, 150);
+                                }}
+                            >
+                                {item.label}
+                            </a>
                         ))}
                     </ul>
 
