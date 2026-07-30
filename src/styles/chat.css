@@ -545,3 +545,58 @@ body.chat-open {
         max-width: 92%;
     }
 }
+
+@media (max-width:576px){
+
+.chat-container{
+
+    right:0;
+    left:0;
+
+    bottom:0;
+
+}
+
+.chat-window{
+
+    position:fixed;
+
+    left:12px;
+    right:12px;
+
+    top:12px;
+
+    bottom:calc(
+        85px +
+        var(--keyboard-height,0px)
+    );
+
+    width:auto;
+
+    height:auto;
+
+    max-height:none;
+
+    margin:0;
+
+}
+
+.chat-body{
+
+    flex:1;
+
+    overflow-y:auto;
+
+}
+
+.chat-footer{
+
+    position:sticky;
+
+    bottom:0;
+
+    background:var(--surface);
+
+}
+
+}

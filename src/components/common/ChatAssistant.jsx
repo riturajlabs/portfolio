@@ -198,6 +198,37 @@ function ChatAssistant() {
         return () => document.body.classList.remove('chat-open');
     }, [isOpen]);
 
+    useEffect(() => {
+
+    if (!window.visualViewport) return;
+
+    const handleResize = () => {
+
+        document.documentElement.style.setProperty(
+            "--keyboard-height",
+            `${window.innerHeight - window.visualViewport.height}px`
+        );
+
+    };
+
+    handleResize();
+
+    window.visualViewport.addEventListener(
+        "resize",
+        handleResize
+    );
+
+    return () => {
+
+        window.visualViewport.removeEventListener(
+            "resize",
+            handleResize
+        );
+
+    };
+
+}, []);
+
     // Derived AI Status Indicator
     const getStatusColor = () => {
         if (activeModelName.toLowerCase().includes('gemini')) return 'var(--status-gemini, #10b981)'; // Green
@@ -361,7 +392,7 @@ function ChatAssistant() {
                 )}
             </AnimatePresence>
 
-            <div className="chat-container">
+            <div className={`chat-container ${isOpen ? "chat-opened" : ""}`}>
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div
@@ -372,6 +403,7 @@ function ChatAssistant() {
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
                             role="dialog"
                             aria-label="AI Portfolio Assistant"
+                            layout={false}
                         >
                             {/* HEADER */}
                             <div className="chat-header">
