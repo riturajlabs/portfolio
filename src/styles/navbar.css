@@ -10,19 +10,12 @@
 }
 
 .navbar-scrolled {
-
     background: var(--glass-bg);
-
     backdrop-filter: blur(20px);
-
     -webkit-backdrop-filter: blur(20px);
-
-    border-bottom:1px solid var(--glass-border);
-
-    box-shadow:var(--shadow);
-
+    border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+    box-shadow: var(--shadow);
 }
-
 
 /* ===================================================
    NAVBAR
@@ -43,22 +36,16 @@
     align-items: center;
 }
 
-.logo-name{
-
-font-size:1.5rem;
-
-font-weight:800;
-
-background:var(--brand-gradient);
-
--webkit-background-clip:text;
-
--webkit-text-fill-color:transparent;
-
+.logo-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: var(--brand-gradient, linear-gradient(90deg, #2563eb, #7c3aed));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .logo:hover .logo-name {
-    color: #2563eb; /* Primary Blue */
+    color: var(--primary, #2563eb); 
 }
 
 /* ===================================================
@@ -83,7 +70,7 @@ background:var(--brand-gradient);
 }
 
 .nav-links a:hover {
-    color: #2563eb;
+    color: var(--primary, #2563eb);
 }
 
 /* Enhanced Hover Underline */
@@ -95,9 +82,9 @@ background:var(--brand-gradient);
     width: 0;
     height: 2px;
     border-radius: 999px;
-    background: #2563eb;
+    background: var(--primary, #2563eb);
     transition: all 0.3s ease;
-    transform: translateX(-50%); /* Line grows from center now */
+    transform: translateX(-50%);
 }
 
 .nav-links a:hover::after,
@@ -129,15 +116,10 @@ background:var(--brand-gradient);
 }
 
 .theme-toggle:hover {
-
-background:var(--brand-gradient);
-
-color:white;
-
-border-color:transparent;
-
-transform:scale(1.05);
-
+    background: var(--brand-gradient, linear-gradient(90deg, #2563eb, #7c3aed));
+    color: white;
+    border-color: transparent;
+    transform: scale(1.05);
 }
 
 .resume-btn {
@@ -146,8 +128,8 @@ transform:scale(1.05);
     justify-content: center;
     align-items: center;
     padding: 0.75rem 1.5rem;
-    border-radius: 99px; /* Pill shape matches your Hero section */
-    background: #2563eb;
+    border-radius: 99px;
+    background: var(--primary, #2563eb);
     color: #fff;
     font-size: 0.95rem;
     font-weight: 600;
@@ -157,7 +139,7 @@ transform:scale(1.05);
 
 .resume-btn:hover {
     transform: translateY(-2px);
-    background: #1d4ed8;
+    background: var(--primary-dark, #1d4ed8);
     box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
 }
 
@@ -181,7 +163,7 @@ transform:scale(1.05);
 }
 
 /* ===================================================
-   MOBILE MENU (Cleaned up for Framer Motion)
+   MOBILE MENU (Fixed for small screens)
 =================================================== */
 .mobile-menu {
     overflow: hidden;
@@ -197,6 +179,18 @@ transform:scale(1.05);
     flex-direction: column;
     padding: 1.5rem;
     gap: 1.2rem;
+    /* FIX: Ensures the menu is scrollable on very small phones */
+    max-height: calc(100vh - 100px); 
+    overflow-y: auto;
+}
+
+/* Hide scrollbar for a cleaner look in mobile menu */
+.mobile-menu-content::-webkit-scrollbar {
+    display: none;
+}
+.mobile-menu-content {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .mobile-menu-content a {
@@ -205,11 +199,12 @@ transform:scale(1.05);
     font-size: 1.1rem;
     font-weight: 600;
     transition: color 0.25s ease;
+    padding: 0.5rem 0; /* Better touch target size for mobile */
 }
 
 .mobile-menu-content a:hover,
 .mobile-menu-content a.active-link {
-    color: #2563eb;
+    color: var(--primary, #2563eb);
 }
 
 .mobile-resume {
@@ -217,7 +212,7 @@ transform:scale(1.05);
     padding: 1rem;
     text-align: center;
     border-radius: 99px;
-    background: #2563eb;
+    background: var(--primary, #2563eb);
     color: #fff !important;
     font-weight: 600;
     text-decoration: none;
@@ -242,5 +237,5 @@ transform:scale(1.05);
    ACTIVE NAVIGATION OVERRIDES
 ========================================== */
 .active-link {
-    color: #2563eb !important;
+    color: var(--primary, #2563eb) !important;
 }

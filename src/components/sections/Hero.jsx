@@ -80,7 +80,7 @@ function Hero() {
                         </h2>
 
                         <div className="hero-location">
-                            <FaMapMarkerAlt />
+                            <FaMapMarkerAlt color="red" c/>
                             <span>
                                 {profile.location}
                             </span>
