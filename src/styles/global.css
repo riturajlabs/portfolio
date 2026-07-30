@@ -50,25 +50,38 @@ p, h1, h2, h3, h4, h5, h6, span {
 /* ==================================================
    ROOT (Global Responsive Typography Base)
 ================================================== */
+/* ==================================================
+   ROOT & BODY (Mobile Fixed Header & Selection Fix)
+================================================== */
 html {
     scroll-behavior: smooth;
     font-size: 100%; 
 }
 
-/* ==================================================
-   BODY
-================================================== */
 body {
     font-family: "Inter", sans-serif;
     background: var(--bg);
     color: var(--text);
-    overflow-x: hidden;
     line-height: 1.6;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background 0.35s ease, color 0.35s ease;
     font-size: 1rem;
+    
+    /* 🚀 FIX: Prevent ANY text selection on mobile by default */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 🚀 FIX: Move overflow-x here so Navbar doesn't scroll away */
+#root, main {
+    overflow-x: hidden;
+    position: relative;
+    width: 100%;
 }
 
 /* ==================================================

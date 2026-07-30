@@ -79,30 +79,17 @@ function Navbar() {
                         <span className="logo-name">{profile.name}</span>
                     </a>
 
-                    {/* DESKTOP NAV */}
+                    {/* ================= DESKTOP NAV (FIXED) ================= */}
                     <ul className="nav-links d-none d-lg-flex">
-                        {/* MOBILE MENU LINKS */}
                         {navigation.map((item) => (
-                            <a
-                                key={item.id}
-                                href={`#${item.id}`}
-                                className={activeSection === item.id ? "active-link" : ""}
-                                onClick={(e) => {
-                                    e.preventDefault(); 
-                                    
-                                    // Pehle smoothly scroll karenge
-                                    document.getElementById(item.id)?.scrollIntoView({
-                                        behavior: "smooth"
-                                    });
-
-                                    // 150ms ka delay dekar menu close karenge taaki animation aur tap me conflict na ho
-                                    setTimeout(() => {
-                                        setMenuOpen(false);
-                                    }, 150);
-                                }}
-                            >
-                                {item.label}
-                            </a>
+                            <li key={item.id}>
+                                <a
+                                    href={`#${item.id}`}
+                                    className={activeSection === item.id ? "active-link" : ""}
+                                >
+                                    {item.label}
+                                </a>
+                            </li>
                         ))}
                     </ul>
 
@@ -129,7 +116,7 @@ function Navbar() {
                     </div>
                 </nav>
 
-                {/* MOBILE MENU */}
+                {/* ================= MOBILE MENU (FIXED) ================= */}
                 <AnimatePresence>
                     {menuOpen && (
                         <motion.div
@@ -139,7 +126,6 @@ function Navbar() {
                             exit={{ opacity: 0, height: 0 }}
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                         >
-                            {/* MOBILE MENU */}
                             <div className="mobile-menu-content">
                                 {navigation.map((item) => (
                                     <a
@@ -148,12 +134,16 @@ function Navbar() {
                                         className={activeSection === item.id ? "active-link" : ""}
                                         onClick={(e) => {
                                             e.preventDefault();
-                                            setMenuOpen(false); // Menu turant band hoga
                                             
-                                            // Smoothly target section par scroll karega
+                                            // 1. Scroll directly to the section
                                             document.getElementById(item.id)?.scrollIntoView({
                                                 behavior: "smooth"
                                             });
+
+                                            // 2. Wait slightly before hiding menu so mobile browser registers the tap completely
+                                            setTimeout(() => {
+                                                setMenuOpen(false);
+                                            }, 200);
                                         }}
                                     >
                                         {item.label}

@@ -1,11 +1,13 @@
 /* ===================================================
    NAVBAR WRAPPER
 =================================================== */
+
 .navbar-wrapper {
     position: fixed;
-    inset: 0 0 auto 0;
+    top: 0;
+    left: 0;
     width: 100%;
-    z-index: 1000;
+    z-index: 9999; /* 🚀 FIX: Highest Z-index to always stay on top */
     transition: background 0.35s ease, backdrop-filter 0.35s ease, box-shadow 0.35s ease;
 }
 
@@ -198,9 +200,12 @@
     text-decoration: none;
     font-size: 1.1rem;
     font-weight: 600;
-    transition: color 0.25s ease;
-    padding: 0.5rem 0; /* Better touch target size for mobile */
+    padding: 0.8rem 0;
+    /* 🚀 FIX: Native touch behavior */
+    touch-action: manipulation; 
 }
+
+/* 🚀 REMOVED :hover from mobile menu completely */
 
 .mobile-menu-content a:hover,
 .mobile-menu-content a.active-link {
