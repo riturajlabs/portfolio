@@ -1,7 +1,11 @@
-
 /* ===================================================
-   BACKDROP BLUR OVERLAY
+   GLOBAL CLASSES
 =================================================== */
+/* Locks body scrolling when chat is open */
+body.chat-open {
+    overflow: hidden;
+}
+
 /* ===================================================
    BACKDROP BLUR OVERLAY
 =================================================== */
@@ -11,10 +15,10 @@
     width: 100vw;
     height: 100vh;
 
-    background: var(--glass, rgba(255, 255, 255, 0.1));
+    background: var(--glass-bg);
 
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 
     z-index: 9990;
     transition:
@@ -515,7 +519,7 @@
 }
 
 /* ===================================================
-   MOBILE RESPONSIVENESS
+   MOBILE RESPONSIVENESS (KEYBOARD FIX)
 =================================================== */
 @media (max-width: 576px) {
     .chat-container {
@@ -525,11 +529,15 @@
     
     .chat-window {
         position: fixed;
-        bottom: 90px;
+        /* 🚀 FIX: Anchor to TOP instead of BOTTOM to prevent pushing up */
+        top: 15px;
+        bottom: auto;
         right: 15px;
         left: 15px;
         width: auto;
-        height: 65vh;
+        /* 🚀 FIX: dvh (Dynamic Viewport Height) automatically shrinks when keyboard opens */
+        height: calc(100dvh - 100px);
+        max-height: calc(100dvh - 100px);
         border-radius: var(--radius-lg, 24px);
     }
 
