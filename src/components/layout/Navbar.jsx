@@ -77,7 +77,6 @@ function Navbar() {
                         onClick={(e) => {
                             e.preventDefault();
                             setMenuOpen(false);
-                            // BUG FIXED: Changed item.id to "home"
                             document.getElementById("home")?.scrollIntoView({
                                 behavior: "smooth"
                             });
@@ -139,7 +138,14 @@ function Navbar() {
                                         key={item.id}
                                         href={`#${item.id}`}
                                         className={activeSection === item.id ? "active-link" : ""}
-                                        onClick={() => setMenuOpen(false)}
+                                        onClick={(e) => {
+                                            // FIX: Prevent default routing and handle smooth scroll manually
+                                            e.preventDefault();
+                                            setMenuOpen(false);
+                                            document.getElementById(item.id)?.scrollIntoView({
+                                                behavior: "smooth"
+                                            });
+                                        }}
                                     >
                                         {item.label}
                                     </a>
