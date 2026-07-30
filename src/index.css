@@ -1,30 +1,23 @@
 /* ==========================================
    CORE
 ========================================== */
-
 @import "./styles/variables.css";
 @import "./styles/global.css";
-
 
 /* ==========================================
    COMMON COMPONENTS
 ========================================== */
-
 @import "./styles/button.css";
-
 
 /* ==========================================
    LAYOUT
 ========================================== */
-
 @import "./styles/navbar.css";
 @import "./styles/footer.css";
-
 
 /* ==========================================
    SECTIONS
 ========================================== */
-
 @import "./styles/hero.css";
 @import "./styles/about.css";
 @import "./styles/skills.css";
@@ -33,3 +26,20 @@
 @import "./styles/certifications.css";
 @import "./styles/blogs.css";
 @import "./styles/contacts.css";
+
+/* ==========================================
+   🚀 ULTIMATE MOBILE TOUCH OVERRIDES 🚀
+   (Put this at the absolute bottom)
+========================================== */
+* {
+    /* Neel rang ke highlight ko hamesha ke liye band karega */
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Double tap delay aur text selection block */
+a, button, .mobile-menu, .mobile-menu a, .logo {
+    touch-action: manipulation !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+}

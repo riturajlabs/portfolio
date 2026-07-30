@@ -139,13 +139,22 @@ function Navbar() {
                             exit={{ opacity: 0, height: 0 }}
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                         >
+                            {/* MOBILE MENU */}
                             <div className="mobile-menu-content">
                                 {navigation.map((item) => (
                                     <a
                                         key={item.id}
                                         href={`#${item.id}`}
                                         className={activeSection === item.id ? "active-link" : ""}
-                                        onClick={() => setMenuOpen(false)}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setMenuOpen(false); // Menu turant band hoga
+                                            
+                                            // Smoothly target section par scroll karega
+                                            document.getElementById(item.id)?.scrollIntoView({
+                                                behavior: "smooth"
+                                            });
+                                        }}
                                     >
                                         {item.label}
                                     </a>

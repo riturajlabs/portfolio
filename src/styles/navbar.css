@@ -239,3 +239,15 @@
 .active-link {
     color: var(--primary, #2563eb) !important;
 }
+
+/* Ye sirf desktop/mouse wale devices par hover chalayega */
+@media (hover: hover) {
+    .mobile-menu-content a:hover {
+        color: var(--primary, #2563eb);
+    }
+}
+
+/* Active link ka color mobile aur desktop dono par chalega */
+.mobile-menu-content a.active-link {
+    color: var(--primary, #2563eb) !important;
+}
