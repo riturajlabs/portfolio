@@ -545,7 +545,7 @@ body.chat-open {
         top:12px;
 
         bottom:calc(
-            90px +
+            5px +
             var(--keyboard-height,0px)
         );
 
