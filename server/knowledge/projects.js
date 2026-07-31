@@ -1,19 +1,13 @@
 // ==========================================
 // 🚀 PROJECTS KNOWLEDGE BASE
-// Used for:
-// - Project Details
-// - Technologies
-// - Features
-// - Challenges
-// - Architecture
-// - Live Demo
 // ==========================================
 
 export const projects = [
 
-    // ======================================================
+    // ==========================================
     // ORBIT AI
-    // ======================================================
+    // ==========================================
+
     {
         id: 1,
 
@@ -28,14 +22,16 @@ export const projects = [
         status: "Completed",
 
         overview: {
+
             short:
-                "An AI-powered full-stack conversational platform built using modern web technologies.",
+                "An AI-powered full-stack conversational assistant built using React, Node.js, FastAPI, LangChain, and Groq.",
 
             detailed:
-                "Orbit AI is a production-ready AI chatbot platform that integrates Large Language Models with a secure backend architecture. It supports intelligent conversations, authentication, persistent chat history, and modern responsive UI."
+                "Orbit AI is a production-ready AI assistant that combines a React frontend, Node.js backend, and Python FastAPI AI service. It integrates LangChain, Groq Llama 3.3, JWT authentication, MongoDB Atlas, and persistent conversation memory for intelligent real-time interactions."
         },
 
         technologies: {
+
             frontend: [
                 "React",
                 "Bootstrap",
@@ -45,16 +41,23 @@ export const projects = [
 
             backend: [
                 "Node.js",
-                "Express.js"
+                "Express.js",
+                "Python",
+                "FastAPI"
             ],
 
             database: [
-                "MongoDB"
+                "MongoDB Atlas"
             ],
 
             ai: [
-                "Google Gemini API",
-                "Groq API"
+                "Groq API (Llama 3.3)",
+                "LangChain",
+                "Prompt Engineering"
+            ],
+
+            authentication: [
+                "JWT"
             ],
 
             deployment: [
@@ -63,54 +66,84 @@ export const projects = [
         },
 
         features: [
+
             "AI Chat Assistant",
-            "Conversation History",
+
+            "Persistent Chat Memory",
+
             "JWT Authentication",
+
             "Responsive UI",
-            "Markdown Support",
-            "Model Failover",
-            "Secure Backend APIs",
-            "Fast Performance"
+
+            "Markdown Rendering",
+
+            "Conversation Context",
+
+            "AI Provider Failover",
+
+            "Secure Backend APIs"
         ],
 
         architecture: [
-            "Frontend (React)",
-            "REST API",
-            "Express Backend",
-            "MongoDB Database",
-            "Google Gemini",
-            "Groq AI Failover"
+
+            "React Frontend",
+
+            "Node.js Express Backend",
+
+            "Python FastAPI AI Service",
+
+            "MongoDB Atlas",
+
+            "LangChain",
+
+            "Groq Llama 3.3"
         ],
 
         challenges: [
-            "Managing multiple AI providers.",
-            "Reducing frontend bundle size.",
-            "Securing API keys.",
-            "Improving AI response performance."
+
+            "Managing multiple backend services",
+
+            "Maintaining conversation context",
+
+            "Integrating LangChain workflows",
+
+            "Securing API keys",
+
+            "Optimizing AI response latency"
         ],
 
         learnings: [
-            "Production deployment",
-            "Serverless Functions",
-            "AI API integration",
+
+            "Full Stack Architecture",
+
+            "AI Integration",
+
             "Prompt Engineering",
-            "Performance Optimization"
+
+            "JWT Authentication",
+
+            "Backend API Design",
+
+            "Deployment on Vercel"
         ],
 
         liveDemo:
-            "https://orbit-ai-client.vercel.app/",
+            "https://orbit-ai-client.vercel.app",
 
         github:
             "https://github.com/riturajlabs",
 
-        image: "orbit-ai",
+        image:
+            "orbit-ai",
 
-        completionYear: 2026
+        completionYear:
+            2026
     },
 
-    // ======================================================
+    // ==========================================
     // STAYORA
-    // ======================================================
+    // ==========================================
+
     {
         id: 2,
 
@@ -125,56 +158,97 @@ export const projects = [
         status: "Completed",
 
         overview: {
+
             short:
-                "An Airbnb-inspired rental platform.",
+                "A full-stack Airbnb-inspired property rental platform.",
 
             detailed:
-                "Stayora allows users to discover, list, and manage rental properties with authentication, image uploads, reviews, and wishlist functionality."
+                "Stayora enables users to browse, create, update, and manage rental properties with authentication, reviews, image uploads, and a responsive interface."
         },
 
         technologies: {
+
             frontend: [
+
                 "HTML",
+
                 "CSS",
+
                 "Bootstrap",
+
                 "JavaScript",
+
                 "EJS"
             ],
 
             backend: [
+
                 "Node.js",
+
                 "Express.js"
             ],
 
             database: [
-                "MongoDB"
+
+                "MongoDB",
+
+                "Mongoose"
             ],
 
             deployment: [
-                "Render"
+
+                "Railway"
             ]
         },
 
         features: [
-            "Authentication",
+
+            "User Authentication",
+
             "Property Listings",
-            "Cloud Image Upload",
+
+            "CRUD Operations",
+
+            "Image Upload",
+
             "Reviews",
-            "Wishlist",
+
             "Responsive Design"
         ],
 
+        architecture: [
+
+            "MVC Architecture",
+
+            "REST APIs",
+
+            "Express Routing",
+
+            "MongoDB"
+        ],
+
         challenges: [
+
             "Authentication",
-            "Cloud Storage Integration",
-            "Database Relationships"
+
+            "Database Relationships",
+
+            "Image Storage",
+
+            "CRUD Validation"
         ],
 
         learnings: [
+
+            "REST APIs",
+
+            "MVC Pattern",
+
             "MongoDB",
-            "Express",
-            "MVC Architecture",
-            "CRUD Operations"
+
+            "Authentication",
+
+            "Deployment"
         ],
 
         liveDemo:
@@ -183,14 +257,17 @@ export const projects = [
         github:
             "https://github.com/riturajlabs",
 
-        image: "stayora",
+        image:
+            "stayora",
 
-        completionYear: 2026
+        completionYear:
+            2026
     },
 
-    // ======================================================
+    // ==========================================
     // SCIENTIFIC CALCULATOR
-    // ======================================================
+    // ==========================================
+
     {
         id: 3,
 
@@ -205,32 +282,50 @@ export const projects = [
         status: "Completed",
 
         overview: {
+
             short:
-                "A responsive scientific calculator.",
+                "A responsive web-based scientific calculator.",
 
             detailed:
-                "A web-based calculator supporting arithmetic operations, trigonometric calculations, factorials, permutations, combinations, and advanced mathematical functions."
+                "A JavaScript-powered scientific calculator supporting arithmetic, trigonometric functions, factorial, permutations, combinations, and real-time calculations."
         },
 
         technologies: {
+
             frontend: [
+
                 "HTML",
+
                 "CSS",
+
                 "JavaScript"
             ]
         },
 
         features: [
+
+            "Arithmetic Operations",
+
             "Scientific Functions",
-            "Responsive Design",
-            "Keyboard Support",
-            "Fast Calculations"
+
+            "Trigonometry",
+
+            "Factorial",
+
+            "Permutation & Combination",
+
+            "Responsive Design"
         ],
 
         learnings: [
-            "JavaScript Logic",
+
+            "JavaScript",
+
             "DOM Manipulation",
-            "Responsive UI"
+
+            "Mathematical Logic",
+
+            "Responsive Design"
         ],
 
         liveDemo:
@@ -239,14 +334,17 @@ export const projects = [
         github:
             "https://github.com/riturajlabs",
 
-        image: "calculator",
+        image:
+            "calculator",
 
-        completionYear: 2025
+        completionYear:
+            2025
     },
 
-    // ======================================================
-    // ZERODHA CLONE
-    // ======================================================
+    // ==========================================
+    // Zerodha Clone
+    // ==========================================
+
     {
         id: 4,
 
@@ -261,38 +359,56 @@ export const projects = [
         status: "In Progress",
 
         overview: {
+
             short:
-                "A responsive trading platform UI.",
+                "A responsive Zerodha-inspired trading platform UI.",
 
             detailed:
-                "A modern frontend clone inspired by Zerodha focusing on reusable React components, responsive layouts, and clean architecture."
+                "A React-based frontend clone focused on reusable components, responsive layouts, and clean UI architecture."
         },
 
         technologies: {
+
             frontend: [
+
                 "React",
+
                 "Bootstrap",
+
                 "JavaScript"
             ]
         },
 
         features: [
+
             "Responsive Layout",
+
             "Reusable Components",
-            "Modern UI"
+
+            "Modern UI",
+
+            "Component-based Architecture"
         ],
 
         learnings: [
-            "Component Design",
-            "React Architecture",
-            "Responsive Development"
+
+            "React",
+
+            "Reusable Components",
+
+            "Responsive Design",
+
+            "Frontend Architecture"
         ],
 
         github:
             "https://github.com/riturajlabs",
 
-        image: "zerodha",
+        image:
+            "zerodha",
 
-        completionYear: 2026
+        completionYear:
+            2026
     }
+
 ];

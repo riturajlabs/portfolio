@@ -1,146 +1,121 @@
 // ==========================================
 // 📜 CERTIFICATIONS KNOWLEDGE BASE
-// Used for:
-// - Certificates
-// - Courses
-// - Learning Achievements
-// - Professional Development
 // ==========================================
 
 export const certifications = [
 
-    // ======================================================
-    // GitHub Foundations
-    // ======================================================
+    // ==========================================
+    // Delta - Full Stack Web Development
+    // ==========================================
+
     {
         id: 1,
 
-        title: "GitHub Foundations",
+        title: "Delta - Full Stack Web Development",
 
-        issuer: "GitHub",
+        issuer: "Apna College",
 
-        category: "Version Control",
+        category: "Full Stack Development",
 
         status: "Completed",
 
         issueDate: "2025",
 
-        credentialId: null,
+        credentialId: "https://mycourse.app/0alZAvqjp0gicVLOm",
 
         verificationUrl: null,
 
         skills: [
+            "HTML5",
+            "CSS3",
+            "JavaScript",
+            "Bootstrap",
+            "React",
+            "Node.js",
+            "Express.js",
+            "MongoDB",
+            "REST APIs",
+            "Authentication",
+            "MVC Architecture",
             "Git",
-            "GitHub",
-            "Version Control",
-            "Branching",
-            "Pull Requests",
-            "Collaboration"
+            "GitHub"
         ],
 
         summary:
-            "Learned Git fundamentals, repository management, branching strategies, pull requests, and collaborative development workflows.",
+            "Completed an industry-focused Full Stack Web Development program covering frontend, backend, databases, authentication, REST APIs, deployment, Git, and real-world MERN stack projects.",
 
         featured: true
     },
 
-    // ======================================================
-    // Generative AI
-    // ======================================================
+    // ==========================================
+    // Python for Data Science & Machine Learning
+    // ==========================================
+
     {
         id: 2,
 
-        title: "Generative AI",
+        title: "Python for Data Science and Machine Learning",
 
-        issuer: "Google",
+        issuer: "Online Learning Platform",
+
+        category: "Python & Machine Learning",
+
+        status: "Completed",
+
+        issueDate: "2025",
+
+        credentialId: "https://www.linkedin.com/learning/certificates/5ee986f46956a2a977b06f6e09b183944b57b49578a44664a2f0af4be6eaa973",
+
+        verificationUrl: null,
+
+        skills: [
+            "Python",
+            "NumPy",
+            "Pandas",
+            "Data Analysis",
+            "Data Visualization",
+            "Machine Learning Fundamentals"
+        ],
+
+        summary:
+            "Learned Python programming for data analysis and machine learning, including data preprocessing, visualization, and foundational ML concepts.",
+
+        featured: true
+    },
+
+    // ==========================================
+    // AI Foundations
+    // ==========================================
+
+    {
+        id: 3,
+
+        title: "Artificial Intelligence Foundations: Machine Learning",
+
+        issuer: "Professional Learning Platform",
 
         category: "Artificial Intelligence",
 
         status: "Completed",
 
-        issueDate: "2026",
+        issueDate: "2025",
 
-        credentialId: null,
+        credentialId: "https://www.linkedin.com/learning/certificates/697ee1e69f10746e7523ad54338ed17cd69d31e3486cb17fc2bd13dc6bc4fd1c?u=133424385",
 
         verificationUrl: null,
 
         skills: [
-            "Generative AI",
-            "Prompt Engineering",
-            "Large Language Models",
-            "AI Applications"
+            "Artificial Intelligence",
+            "Machine Learning",
+            "Supervised Learning",
+            "Model Evaluation",
+            "AI Fundamentals"
         ],
 
         summary:
-            "Covered the fundamentals of Generative AI, Large Language Models, prompt engineering, and practical AI applications.",
+            "Studied the core concepts of Artificial Intelligence and Machine Learning, including learning paradigms, model evaluation, and practical AI fundamentals.",
 
         featured: true
-    },
-
-    // ======================================================
-    // Java Programming
-    // ======================================================
-    {
-        id: 3,
-
-        title: "Java Programming",
-
-        issuer: "Online Learning Platform",
-
-        category: "Programming",
-
-        status: "Completed",
-
-        issueDate: "2026",
-
-        credentialId: null,
-
-        verificationUrl: null,
-
-        skills: [
-            "Java",
-            "Object-Oriented Programming",
-            "Collections",
-            "Exception Handling"
-        ],
-
-        summary:
-            "Learned Java fundamentals, object-oriented programming, collections framework, and exception handling.",
-
-        featured: false
-    },
-
-    // ======================================================
-    // Machine Learning
-    // ======================================================
-    {
-        id: 4,
-
-        title: "Machine Learning Fundamentals",
-
-        issuer: "Online Learning Platform",
-
-        category: "Machine Learning",
-
-        status: "In Progress",
-
-        issueDate: null,
-
-        credentialId: null,
-
-        verificationUrl: null,
-
-        skills: [
-            "Machine Learning",
-            "Python",
-            "Data Analysis",
-            "Model Training"
-        ],
-
-        summary:
-            "Currently learning supervised learning, unsupervised learning, and model evaluation techniques.",
-
-        featured: false
     }
 
 ];

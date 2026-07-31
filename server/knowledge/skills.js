@@ -1,203 +1,342 @@
 // ==========================================
 // 💻 SKILLS KNOWLEDGE BASE
-// Used for:
-// - Technical Skills
-// - Programming Languages
-// - Frameworks
-// - Databases
-// - Tools
-// - AI / ML Skills
 // ==========================================
 
 export const skills = {
+
+    // ==========================================
+    // Programming Languages
+    // ==========================================
+
     programmingLanguages: [
-        {
-            name: "Java",
-            level: "Intermediate",
-            category: "Programming Language",
-            currentlyUsing: true
-        },
+
         {
             name: "JavaScript",
             level: "Intermediate",
             category: "Programming Language",
             currentlyUsing: true
         },
+
         {
             name: "Python",
             level: "Intermediate",
             category: "Programming Language",
             currentlyUsing: true
         },
+
         {
-            name: "C++",
+            name: "Java",
             level: "Intermediate",
             category: "Programming Language",
-            currentlyUsing: false
+            currentlyUsing: true
         }
+
     ],
 
+    // ==========================================
+    // Frontend
+    // ==========================================
+
     frontend: [
+
         {
             name: "HTML5",
             level: "Advanced"
         },
+
         {
             name: "CSS3",
             level: "Advanced"
         },
+
         {
-            name: "Bootstrap 5",
+            name: "Bootstrap",
             level: "Advanced"
         },
+
         {
-            name: "React.js",
+            name: "React",
             level: "Intermediate"
         },
+
         {
             name: "Vite",
             level: "Intermediate"
         },
+
         {
             name: "Responsive Web Design",
             level: "Advanced"
         }
+
     ],
 
+    // ==========================================
+    // Backend
+    // ==========================================
+
     backend: [
+
         {
             name: "Node.js",
             level: "Intermediate"
         },
+
         {
             name: "Express.js",
             level: "Intermediate"
         },
+
         {
             name: "REST APIs",
             level: "Intermediate"
         },
+
         {
-            name: "Authentication (JWT)",
+            name: "JWT Authentication",
             level: "Intermediate"
+        },
+
+        {
+            name: "MVC Architecture",
+            level: "Intermediate"
+        },
+
+        {
+            name: "FastAPI",
+            level: "Learning"
         }
+
     ],
 
+    // ==========================================
+    // Database
+    // ==========================================
+
     databases: [
+
         {
             name: "MongoDB",
             level: "Intermediate"
         },
+
         {
             name: "PostgreSQL",
             level: "Beginner"
-        },
-        {
-            name: "MySQL",
-            level: "Beginner"
         }
+
     ],
 
+    // ==========================================
+    // AI / ML
+    // ==========================================
+
     aiAndMachineLearning: [
-        {
-            name: "Machine Learning Fundamentals",
-            level: "Intermediate"
-        },
-        {
-            name: "Generative AI",
-            level: "Intermediate"
-        },
+
         {
             name: "Prompt Engineering",
             level: "Intermediate"
         },
+
+        {
+            name: "LangChain",
+            level: "Intermediate"
+        },
+
+        {
+            name: "Groq API (Llama 3.3)",
+            level: "Intermediate"
+        },
+
         {
             name: "Google Gemini API",
             level: "Intermediate"
         },
+
         {
-            name: "Groq API",
+            name: "Model Integration",
             level: "Intermediate"
         },
+
         {
-            name: "RAG Systems",
-            level: "Learning"
+            name: "Machine Learning Fundamentals",
+            level: "Intermediate"
         }
+
     ],
+
+    // ==========================================
+    // Developer Tools
+    // ==========================================
 
     developerTools: [
+
         "Git",
+
         "GitHub",
+
         "VS Code",
-        "Postman",
-        "MongoDB Compass",
-        "npm",
+
         "Vercel",
+
         "Render",
+
         "Netlify",
-        "Railway"
+
+        "Railway",
+
+        "MongoDB Compass",
+
+        "Postman",
+
+        "npm"
+
     ],
+
+    // ==========================================
+    // Operating Systems
+    // ==========================================
 
     operatingSystems: [
+
         "Windows",
+
         "Linux (Ubuntu)",
+
         "WSL"
+
     ],
+
+    // ==========================================
+    // Core Concepts
+    // ==========================================
 
     concepts: [
+
         "Object-Oriented Programming",
-        "Data Structures & Algorithms",
+
+        "Data Structures",
+
+        "Algorithms",
+
         "REST API Development",
-        "Responsive Design",
+
+        "Authentication & Authorization",
+
         "MVC Architecture",
-        "JSON",
+
+        "Responsive Web Design",
+
         "Asynchronous JavaScript",
-        "DOM Manipulation",
+
         "Software Engineering Principles"
+
     ],
+
+    // ==========================================
+    // Currently Learning
+    // ==========================================
 
     currentlyLearning: [
-        "Advanced React",
-        "Advanced Node.js",
+
         "System Design",
+
         "Docker",
+
+        "Kubernetes",
+
         "AWS",
-        "Microservices",
+
         "Redis",
+
         "CI/CD",
-        "Vector Databases",
-        "Large Language Models"
+
+        "Advanced React",
+
+        "Advanced Backend Engineering",
+
+        "Retrieval-Augmented Generation (RAG)",
+
+        "AI Agents"
+
     ],
 
+    // ==========================================
+    // Preferred Stack
+    // ==========================================
+
     preferredStack: {
+
         frontend: [
+
             "React",
+
             "Bootstrap",
+
             "JavaScript"
+
         ],
 
         backend: [
+
             "Node.js",
-            "Express.js"
+
+            "Express.js",
+
+            "FastAPI"
+
         ],
 
         database: [
+
             "MongoDB"
+
+        ],
+
+        ai: [
+
+            "LangChain",
+
+            "Groq API",
+
+            "Gemini API"
+
         ],
 
         deployment: [
+
             "Vercel",
-            "Render"
+
+            "Render",
+
+            "Railway"
+
         ]
+
     },
 
+    // ==========================================
+    // Technical Strengths
+    // ==========================================
+
     strengths: [
-        "Building Full Stack Web Applications",
-        "REST API Development",
+
+        "Full Stack Web Development",
+
+        "Backend API Development",
+
+        "REST API Design",
+
+        "AI Application Development",
+
+        "Prompt Engineering",
+
         "Responsive Frontend Development",
-        "Backend Integration",
-        "AI API Integration",
+
         "Problem Solving",
+
         "Project-Based Learning"
+
     ]
+
 };

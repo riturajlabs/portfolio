@@ -1,48 +1,65 @@
 // ==========================================
 // 🎓 EDUCATION KNOWLEDGE BASE
-// Used for:
-// - Education
-// - Academic Background
-// - Semester Information
-// - Relevant Coursework
-// - Learning Roadmap
 // ==========================================
 
 export const education = {
+
+    // ==========================================
+    // Current Education
+    // ==========================================
+
     current: {
-        degree: "Bachelor of Science (B.Sc.)",
 
-        specialization: "Artificial Intelligence & Machine Learning",
+        degree:
+            "Bachelor of Science (B.Sc.)",
 
-        university: "Indira University",
+        specialization:
+            "Artificial Intelligence & Machine Learning",
 
-        location: "Pune, Maharashtra, India",
+        college:
+            "Chanakya Education Society's Indira College of Commerce & Science",
+
+        location:
+            "Pune, Maharashtra, India",
 
         currentSemester: 3,
 
-        status: "Currently Pursuing",
+        cgpa: "9.16 / 10",
 
-        expectedGraduation: "2028"
+        status:
+            "Currently Pursuing",
+
+        expectedGraduation:
+            "2028"
     },
+
+    // ==========================================
+    // Overview
+    // ==========================================
 
     overview: {
+
         short:
-            "Currently pursuing a Bachelor's degree in Artificial Intelligence & Machine Learning with a strong focus on Software Development, Full Stack Development, and AI technologies.",
+            "Currently pursuing a B.Sc. in Artificial Intelligence & Machine Learning while building practical expertise in Full Stack Development and AI-powered software.",
 
         detailed:
-            "My academic journey combines Artificial Intelligence, Machine Learning, Programming, Data Structures, Software Engineering, Database Management Systems, and Mathematics. Alongside academics, I actively build real-world projects to strengthen practical development skills."
+            "My academic journey combines Artificial Intelligence, Machine Learning, Software Engineering, Programming, Database Systems, Mathematics, and problem-solving. Alongside my coursework, I actively build production-ready applications to gain hands-on industry experience."
     },
 
+    // ==========================================
+    // Coursework
+    // ==========================================
+
     relevantCoursework: {
+
         programming: [
             "Java",
             "Python",
-            "C++",
             "JavaScript"
         ],
 
         softwareEngineering: [
-            "Object Oriented Programming",
+            "Object-Oriented Programming",
             "Data Structures",
             "Algorithms",
             "Database Management Systems",
@@ -50,69 +67,126 @@ export const education = {
         ],
 
         artificialIntelligence: [
-            "Machine Learning",
             "Artificial Intelligence",
+            "Machine Learning",
             "Data Analysis",
-            "Data Visualization",
-            "Neural Networks (Learning)"
+            "Prompt Engineering",
+            "AI Applications"
         ],
 
         mathematics: [
             "Statistics",
-            "Linear Algebra",
             "Probability",
+            "Linear Algebra",
             "Discrete Mathematics"
-        ],
-
-        webDevelopment: [
-            "HTML",
-            "CSS",
-            "Bootstrap",
-            "React",
-            "Node.js",
-            "Express.js"
         ]
     },
 
-    academicGoals: [
-        "Build strong software engineering fundamentals.",
-        "Master Full Stack Development.",
-        "Develop practical Machine Learning skills.",
-        "Strengthen Data Structures and Algorithms.",
-        "Learn scalable backend architecture.",
-        "Build production-ready AI applications."
+    // ==========================================
+    // Academic Strengths
+    // ==========================================
+
+    academicStrengths: [
+
+        "Strong practical learning approach",
+
+        "Hands-on Full Stack Development",
+
+        "AI & Machine Learning fundamentals",
+
+        "Problem-solving through Data Structures & Algorithms",
+
+        "Real-world project development"
     ],
+
+    // ==========================================
+    // Learning Philosophy
+    // ==========================================
 
     practicalLearning: {
+
         philosophy:
-            "I believe in learning by building real-world projects instead of relying only on theoretical concepts.",
+            "I believe practical project development is the fastest way to become a better software engineer. Every concept I learn is reinforced by building real-world applications.",
 
         activities: [
-            "Personal Projects",
+
+            "Building Full Stack Projects",
+
+            "Developing AI Applications",
+
+            "Data Structures & Algorithms Practice",
+
             "Portfolio Development",
-            "DSA Practice",
+
             "Open Source Learning",
+
             "Technical Documentation",
-            "Hands-on AI Experiments"
+
+            "Continuous Skill Development"
         ]
     },
 
-    futureLearning: [
-        "System Design",
-        "Cloud Computing",
-        "Docker",
-        "Kubernetes",
-        "AWS",
-        "CI/CD",
-        "Redis",
-        "Microservices",
-        "Generative AI",
-        "LLM Applications",
-        "RAG Systems"
+    // ==========================================
+    // Current Learning
+    // ==========================================
+
+    currentlyLearning: [
+
+        "Advanced React",
+
+        "Node.js Backend Development",
+
+        "REST API Design",
+
+        "Authentication & Authorization",
+
+        "LangChain",
+
+        "Large Language Models (LLMs)",
+
+        "AI Agent Development",
+
+        "Prompt Engineering"
     ],
 
-    certificationsGoal: {
-        objective:
-            "Continuously earn industry-recognized certifications while strengthening practical software engineering and AI skills."
+    // ==========================================
+    // Future Learning Roadmap
+    // ==========================================
+
+    futureLearning: [
+
+        "System Design",
+
+        "Docker",
+
+        "Kubernetes",
+
+        "AWS Cloud",
+
+        "CI/CD",
+
+        "Redis",
+
+        "Microservices",
+
+        "Vector Databases",
+
+        "Retrieval-Augmented Generation (RAG)",
+
+        "Model Deployment"
+    ],
+
+    // ==========================================
+    // Academic Goal
+    // ==========================================
+
+    academicGoals: {
+
+        short:
+            "Become a skilled Software Engineer specializing in Full Stack Development and AI Systems.",
+
+        detailed:
+            "My goal is to combine software engineering principles with Artificial Intelligence to build scalable, intelligent, and production-ready applications while continuously improving my technical expertise."
     }
+
 };
