@@ -70,6 +70,8 @@ Structure your response to highlight:
 • Technologies: What stack was used?
 • Key Features: What are the main functionalities?
 • Learnings/Challenges: What did Ritu learn from building it?
+• Demo Link: Provide a link to a live demo of the project if available inside a label.
+
 
 If asked for technical details, explain the architecture or logic clearly.
 Never fabricate project features or metrics that are not provided.

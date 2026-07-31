@@ -19,7 +19,8 @@ const KNOWLEDGE = {
     projects,
     certifications,
     recruiter,
-    socials
+    socials,
+    faq
 };
 
 // ==========================================
@@ -112,6 +113,18 @@ const CATEGORY_KEYWORDS = {
         "portfolio",
         "connect",
         "social"
+    ],
+
+    keywords:[
+        "tell me",
+        "about yourself",
+        "why hire",
+        "why should",
+        "how learn",
+        "currently learning",
+        "career goal",
+        "preferred stack",
+        "experience"
     ]
 };
 
