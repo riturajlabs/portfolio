@@ -13,10 +13,19 @@ const MAX_HISTORY = 10;
 const MAX_CACHE_SIZE = 50;
 
 const SUGGESTED_QUESTIONS = [
-    "Tell me about your projects 🚀",
+
+    "Tell me about yourself 👨‍💻",
+
+    "Explain your projects 🚀",
+
+    "Tell me about Orbit AI 🤖",
+
     "What technologies do you know? 💻",
-    "Show your certificates 📜",
-    "Tell me about yourself 👨‍💻"
+
+    "Are you available for internships? 💼",
+
+    "Why should we hire Ritu Raj? ⭐"
+
 ];
 
 // ==========================================
@@ -88,7 +97,7 @@ function ChatAssistant() {
         { 
             id: generateId(),
             role: "ai", 
-            text: "Hi there! 👋 I'm Ritu Raj's AI Portfolio Assistant. Ask me anything about his projects, skills, or certificates!" 
+            text: "Hi there! 👋 I'm Ritu Raj's AI Assistant. I can help you explore his projects, technical skills, education, certifications, and internship opportunities. Feel free to ask anything! 🚀"
         }
     ]);
 
