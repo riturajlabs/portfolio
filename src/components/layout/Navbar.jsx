@@ -76,7 +76,7 @@ function Navbar() {
                         className="logo"
                         onClick={() => setMenuOpen(false)}
                     >
-                        <span className="logo-name">{profile.name}</span>
+                        <h1 className="logo-name">{profile.name}</h1>
                     </a>
 
                     {/* ================= DESKTOP NAV (FIXED) ================= */}
