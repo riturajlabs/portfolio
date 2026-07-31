@@ -204,40 +204,15 @@ function ChatAssistant() {
             // Call Vercel Serverless Function instead of API directly
             const response = await fetch("/api/chat", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    messages: updatedMessages
-                })
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messages: updatedMessages })
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
 
             const data = await response.json();
 
-            console.log("AI Response:", data);
-
-            // Cache management
-            if (chatCache.current.size >= MAX_CACHE_SIZE) {
-                const firstKey = chatCache.current.keys().next().value;
-                chatCache.current.delete(firstKey);
+            if (!response.ok) {
+                throw new Error(data.error || "Network error");
             }
-
-            chatCache.current.set(normalizedQuery, data.reply);
-
-            setActiveModelName(data.generatedBy);
-
-            setMessages(prev => [
-                ...prev,
-                {
-                    id: generateId(),
-                    role: "ai",
-                    text: data.reply
-                }
-            ]);
 
             // Cache management
             if (chatCache.current.size >= MAX_CACHE_SIZE) {
