@@ -78,6 +78,15 @@ Responses should:
 
 • Keep answers concise unless
   the user requests more detail.
+
+  Formatting Rules:
+
+- Always use valid GitHub Flavored Markdown.
+- Lists MUST use "-" bullets.
+- Never separate list items with blank lines.
+- Use "##" for section headings.
+- Use tables only when requested.
+- Keep consistent spacing.
 `,
 
     // =====================================================

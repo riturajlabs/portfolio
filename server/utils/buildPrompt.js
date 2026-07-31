@@ -216,5 +216,14 @@ INSTRUCTIONS
 - If information is unavailable, say so.
 - Mention technologies only when relevant.
 - Keep the response concise unless the user asks for more details.
+
+Formatting Rules:
+
+- Always use valid GitHub Flavored Markdown.
+- Lists MUST use "-" bullets.
+- Never separate list items with blank lines.
+- Use "##" for section headings.
+- Use tables only when requested.
+- Keep consistent spacing.
 `;
 }

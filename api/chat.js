@@ -6,7 +6,7 @@ import { buildPrompt } from "../server/utils/buildPrompt.js";
 // 🚀 CONSTANTS & CONFIGURATION
 // ==========================================
 const MAX_OUTPUT_TOKENS = 1024; 
-const TEMPERATURE = 0.3;
+const TEMPERATURE = 0.1;
 const REQUEST_TIMEOUT_MS = 10000;
 
 const FALLBACK_MODELS = [
