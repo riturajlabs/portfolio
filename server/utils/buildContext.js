@@ -1,7 +1,6 @@
 // ==========================================
 // 🧠 CONTEXT BUILDER
-// Selects only the most relevant knowledge
-// based on the user's question.
+// Retrieves only the most relevant knowledge
 // ==========================================
 
 import { profile } from "../knowledge/profile.js";
@@ -23,124 +22,114 @@ const KNOWLEDGE = {
     socials
 };
 
-// ------------------------------------------
-// Keywords mapped to knowledge sections
-// ------------------------------------------
+// ==========================================
+// Keywords
+// ==========================================
 
-const CATEGORY_KEYWORDS = [
-    {
-        source: "profile",
-        keywords: [
-            "about",
-            "yourself",
-            "introduce",
-            "background",
-            "who are you",
-            "bio"
-        ]
-    },
+const CATEGORY_KEYWORDS = {
+    profile: [
+        "about",
+        "yourself",
+        "who are you",
+        "introduce",
+        "background",
+        "bio",
+        "name"
+    ],
 
-    {
-        source: "education",
-        keywords: [
-            "education",
-            "college",
-            "university",
-            "degree",
-            "semester",
-            "study",
-            "course",
-            "subject"
-        ]
-    },
+    education: [
+        "education",
+        "college",
+        "university",
+        "degree",
+        "semester",
+        "study",
+        "course",
+        "subject",
+        "cgpa"
+    ],
 
-    {
-        source: "skills",
-        keywords: [
-            "skill",
-            "technology",
-            "tech",
-            "language",
-            "frontend",
-            "backend",
-            "react",
-            "node",
-            "express",
-            "mongodb",
-            "java",
-            "python",
-            "javascript"
-        ]
-    },
+    skills: [
+        "skill",
+        "skills",
+        "technology",
+        "technologies",
+        "tech",
+        "language",
+        "languages",
+        "frontend",
+        "backend",
+        "react",
+        "node",
+        "express",
+        "mongodb",
+        "javascript",
+        "python",
+        "java",
+        "html",
+        "css"
+    ],
 
-    {
-        source: "projects",
-        keywords: [
-            "project",
-            "orbit",
-            "stayora",
-            "calculator",
-            "zerodha",
-            "portfolio",
-            "demo",
-            "github"
-        ]
-    },
+    projects: [
+        "project",
+        "projects",
+        "orbit",
+        "stayora",
+        "calculator",
+        "zerodha",
+        "portfolio",
+        "demo",
+        "github"
+    ],
 
-    {
-        source: "certifications",
-        keywords: [
-            "certificate",
-            "certification",
-            "course",
-            "credential",
-            "training"
-        ]
-    },
+    certifications: [
+        "certificate",
+        "certification",
+        "credential",
+        "training",
+        "course completed"
+    ],
 
-    {
-        source: "recruiter",
-        keywords: [
-            "hire",
-            "internship",
-            "career",
-            "job",
-            "role",
-            "strength",
-            "experience",
-            "availability",
-            "remote"
-        ]
-    },
+    recruiter: [
+        "hire",
+        "hiring",
+        "intern",
+        "internship",
+        "job",
+        "career",
+        "resume",
+        "experience",
+        "strength",
+        "availability",
+        "remote"
+    ],
 
-    {
-        source: "socials",
-        keywords: [
-            "contact",
-            "email",
-            "linkedin",
-            "github",
-            "resume",
-            "portfolio",
-            "connect"
-        ]
-    }
-];
+    socials: [
+        "contact",
+        "email",
+        "linkedin",
+        "github",
+        "portfolio",
+        "connect",
+        "social"
+    ]
+};
 
-// ------------------------------------------
+// ==========================================
 // Normalize
-// ------------------------------------------
+// ==========================================
 
 function normalize(text = "") {
     return text
         .toLowerCase()
         .replace(/[^\w\s]/g, " ")
+        .replace(/\s+/g, " ")
         .trim();
 }
 
-// ------------------------------------------
-// Score every category
-// ------------------------------------------
+// ==========================================
+// Score Sources
+// ==========================================
 
 function scoreCategories(question) {
 
@@ -148,25 +137,28 @@ function scoreCategories(question) {
 
     const scores = {};
 
-    CATEGORY_KEYWORDS.forEach(category => {
+    for (const [source, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
 
         let score = 0;
 
-        category.keywords.forEach(keyword => {
+        for (const keyword of keywords) {
 
-            if (query.includes(keyword))
+            const key = normalize(keyword);
+
+            if (query.includes(key)) {
                 score++;
-        });
+            }
+        }
 
-        scores[category.source] = score;
-    });
+        scores[source] = score;
+    }
 
     return scores;
 }
 
-// ------------------------------------------
-// Return best matching categories
-// ------------------------------------------
+// ==========================================
+// Relevant Sources
+// ==========================================
 
 function getRelevantSources(question) {
 
@@ -175,20 +167,21 @@ function getRelevantSources(question) {
     const sorted = Object.entries(scores)
         .sort((a, b) => b[1] - a[1]);
 
-    const bestScore = sorted[0][1];
+    const matched = sorted
+        .filter(([, score]) => score > 0)
+        .slice(0, 4)
+        .map(([source]) => source);
 
-    if (bestScore === 0) {
-        return ["profile"];
+    if (matched.length === 0) {
+        return ["profile", "socials"];
     }
 
-    return sorted
-        .filter(item => item[1] > 0)
-        .map(item => item[0]);
+    return matched;
 }
 
-// ------------------------------------------
+// ==========================================
 // Build Context
-// ------------------------------------------
+// ==========================================
 
 export function buildContext(question) {
 
@@ -196,10 +189,9 @@ export function buildContext(question) {
 
     const context = {};
 
-    sources.forEach(source => {
-
+    for (const source of sources) {
         context[source] = KNOWLEDGE[source];
-    });
+    }
 
     return {
         sources,

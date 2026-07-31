@@ -1,5 +1,4 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
 import { buildPrompt } from "../server/utils/buildPrompt.js";
 
 // ==========================================
@@ -18,7 +17,32 @@ const FALLBACK_MODELS = [
     { provider: "groq", name: "llama3-8b-8192", displayName: "Groq Llama 3 (8B)" },
 ];
 
+// ==========================================
+// 📝 Normalize Markdown (Upgraded)
+// ==========================================
+function normalizeMarkdown(text = "") {
+    return text
+        // 1. Convert various stray bullet styles to a standard markdown dash
+        .replace(/^[\u2022\u25CF\u25E6\u25AA\u2023\u2043]\s*/gm, "- ")
+        
+        // 2. Convert list formats like "1)" or "1 -" to standard "1."
+        .replace(/^(\d+)[\)\-]\s*/gm, "$1. ")
+        
+        // 3. Ensure proper spacing after markdown headers (e.g., "#Header" -> "# Header")
+        .replace(/^(#{1,6})([^#\s])/gm, "$1 $2")
 
+        // 4. Ensure bold lists are properly spaced (e.g., "-**Item**" -> "- **Item**")
+        .replace(/^(-|\d+\.)\s*(\*\*)/gm, "$1 $2")
+        
+        // 5. Remove 3+ consecutive blank lines to keep the chat bubble compact
+        .replace(/\n{3,}/g, "\n\n")
+        
+        // 6. Remove trailing spaces and tabs from the end of lines
+        .replace(/[ \t]+$/gm, "")
+        
+        // 7. Final trim
+        .trim();
+}
 
 // Utility for Timeout
 const withTimeout = (promise, ms) => {
@@ -126,9 +150,10 @@ export default async function handler(req, res) {
             }
         }
 
-        // 4. Return Result
+        // 4. Return Normalized Result
         if (responseText) {
-            return res.status(200).json({ reply: responseText, generatedBy });
+            const finalResponse = normalizeMarkdown(responseText);
+            return res.status(200).json({ reply: finalResponse, generatedBy });
         } else {
             return res.status(503).json({ error: "All AI models are currently busy or unavailable." });
         }

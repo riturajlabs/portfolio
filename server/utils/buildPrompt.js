@@ -3,6 +3,10 @@ import { buildContext } from "./buildContext.js";
 
 const MAX_HISTORY = 6;
 
+// ==========================================
+// Conversation History
+// ==========================================
+
 function formatHistory(history = []) {
     return history
         .slice(-MAX_HISTORY)
@@ -17,14 +21,15 @@ function formatHistory(history = []) {
         .join("\n");
 }
 
-// -----------------------------------------
-// Compress objects into readable text
-// -----------------------------------------
+// ==========================================
+// Convert Object -> Readable Text
+// ==========================================
 
-function objectToText(obj, indent = "") {
+function objectToText(data, indent = "") {
 
-    if (Array.isArray(obj)) {
-        return obj
+    if (Array.isArray(data)) {
+
+        return data
             .map(item => {
 
                 if (typeof item === "object") {
@@ -37,34 +42,39 @@ function objectToText(obj, indent = "") {
             .join("\n");
     }
 
-    if (typeof obj === "object" && obj !== null) {
+    if (typeof data === "object" && data !== null) {
 
-        return Object.entries(obj)
+        return Object.entries(data)
             .map(([key, value]) => {
+
+                const title =
+                    key
+                        .replace(/([A-Z])/g, " $1")
+                        .replace(/^./, c => c.toUpperCase());
 
                 if (
                     typeof value === "object" &&
                     value !== null
                 ) {
 
-                    return `${indent}${key}:\n${objectToText(
+                    return `${indent}${title}:\n${objectToText(
                         value,
                         indent + "  "
                     )}`;
                 }
 
-                return `${indent}${key}: ${value}`;
+                return `${indent}${title}: ${value}`;
 
             })
             .join("\n");
     }
 
-    return String(obj);
+    return String(data);
 }
 
-// -----------------------------------------
-// Detect recruiter questions
-// -----------------------------------------
+// ==========================================
+// Recruiter Detection
+// ==========================================
 
 function isRecruiterQuestion(question) {
 
@@ -73,19 +83,22 @@ function isRecruiterQuestion(question) {
     return [
         "hire",
         "intern",
+        "internship",
         "experience",
-        "salary",
         "resume",
+        "salary",
+        "availability",
+        "career",
+        "remote",
         "role",
-        "available",
-        "remote"
+        "job"
     ].some(word => q.includes(word));
 
 }
 
-// -----------------------------------------
-// Detect project mentioned
-// -----------------------------------------
+// ==========================================
+// Detect Project
+// ==========================================
 
 function detectProject(question, projects = []) {
 
@@ -97,9 +110,9 @@ function detectProject(question, projects = []) {
 
 }
 
-// -----------------------------------------
-// Build compact context
-// -----------------------------------------
+// ==========================================
+// Build Compact Context
+// ==========================================
 
 function buildCompactContext(question, context) {
 
@@ -109,50 +122,56 @@ function buildCompactContext(question, context) {
 
         if (key === "projects") {
 
-            const matchedProject =
+            const matched =
                 detectProject(question, value);
 
-            if (matchedProject) {
+            if (matched) {
 
-                sections.push(
-`PROJECT
+                sections.push(`
 
-${objectToText(matchedProject)}`
-                );
+## PROJECT
+
+${objectToText(matched)}
+
+`);
 
                 continue;
             }
 
-            sections.push(
-`PROJECTS
+            sections.push(`
+
+## FEATURED PROJECTS
 
 ${value
-    .filter(p => p.featured)
-    .map(p =>
-`${p.name}
-- ${p.overview.short}`
+    .filter(project => project.featured)
+    .map(project =>
+`### ${project.name}
+
+${project.overview.short}`
     )
-    .join("\n\n")}`
-            );
+    .join("\n\n")}
+
+`);
 
             continue;
         }
 
-        sections.push(
-`${key.toUpperCase()}
+        sections.push(`
 
-${objectToText(value)}`
-        );
+## ${key.toUpperCase()}
+
+${objectToText(value)}
+
+`);
 
     }
 
-    return sections.join("\n\n----------------------\n\n");
-
+    return sections.join("\n--------------------------\n");
 }
 
-// -----------------------------------------
-// Main Prompt Builder
-// -----------------------------------------
+// ==========================================
+// Prompt Builder
+// ==========================================
 
 export function buildPrompt(question, history = []) {
 
@@ -188,42 +207,100 @@ ${prompts.safetyRules}
 
 ${recruiter ? prompts.recruiterRules : ""}
 
-=========================
-AVAILABLE KNOWLEDGE
-=========================
+=================================================
+REFERENCE DATA (FACTS)
+=================================================
+
+Everything below is factual portfolio information.
+
+Never contradict it.
+
+Never add information that is not present.
+
+Relevant Sources:
+${sources.join(", ")}
 
 ${compactContext}
 
-=========================
+=================================================
 CONVERSATION
-=========================
+=================================================
 
 ${historyText || "No previous conversation."}
 
-=========================
-QUESTION
-=========================
+=================================================
+USER QUESTION
+=================================================
 
 ${question}
 
-=========================
+=================================================
 INSTRUCTIONS
-=========================
+=================================================
 
-- Answer ONLY using the available knowledge.
+GENERAL RULES
+
+- Answer ONLY using the reference data.
 - Never invent information.
-- Use Markdown.
-- If information is unavailable, say so.
-- Mention technologies only when relevant.
-- Keep the response concise unless the user asks for more details.
+- Never assume facts.
+- If information is unavailable, clearly say so.
+- Keep answers concise unless detailed information is requested.
 
-Formatting Rules:
+MARKDOWN RULES (MANDATORY)
 
-- Always use valid GitHub Flavored Markdown.
-- Lists MUST use "-" bullets.
-- Never separate list items with blank lines.
-- Use "##" for section headings.
-- Use tables only when requested.
-- Keep consistent spacing.
+- Return ONLY valid GitHub Flavored Markdown.
+- Use "##" for main headings.
+- Use "###" for sub-headings.
+- Use "-" for every unordered list.
+- Never use bullets like • ● ◦ ▪.
+- Never leave blank lines between bullet items.
+- Leave exactly ONE blank line between sections.
+- Wrap code inside triple backticks.
+- Use tables only if explicitly requested.
+
+OUTPUT STYLE
+
+Example:
+
+## Programming Languages
+
+- Java
+- JavaScript
+- Python
+- C++
+
+## Project
+
+### Technologies
+
+- React
+- Node.js
+- Express
+- MongoDB
+
+### Features
+
+- Feature One
+- Feature Two
+
+### Learnings
+
+- Learning One
+- Learning Two
+
+FOR RECRUITER QUESTIONS
+
+- Be professional.
+- Be confident.
+- Never exaggerate.
+- Mention strengths honestly.
+
+DO NOT
+
+- Do not output plain text lists.
+- Do not use inconsistent spacing.
+- Do not repeat headings.
+- Do not generate malformed Markdown.
+- Do not answer outside the provided knowledge.
 `;
 }
