@@ -1,13 +1,34 @@
+import { lazy, Suspense } from "react";
+
 import SEO from "../components/common/SEO";
 
 import Hero from "../components/sections/Hero";
 import About from "../components/sections/About";
 import Skills from "../components/sections/Skills";
-import Projects from "../components/sections/Projects";
-import GithubStats from "../components/sections/GithubStats";
-import Certifications from "../components/sections/Certifications";
-import Blog from "../components/sections/Blog";
-import Contact from "../components/sections/Contact";
+
+
+import Loader from "../components/common/Loader";
+
+// Lazy Loaded Sections
+const GithubStats = lazy(() =>
+    import("../components/sections/GithubStats")
+);
+
+const Certifications = lazy(() =>
+    import("../components/sections/Certifications")
+);
+
+const Blog = lazy(() =>
+    import("../components/sections/Blog")
+);
+
+const Contact = lazy(() =>
+    import("../components/sections/Contact")
+);
+
+const Projects = lazy(() =>
+    import("../components/sections/Projects")
+);
 
 function Home() {
 
@@ -17,21 +38,28 @@ function Home() {
 
             <SEO />
 
+            {/* Above the Fold */}
             <Hero />
 
             <About />
 
             <Skills />
 
-            <Projects />
 
-            <GithubStats />
+            {/* Lazy Loaded Sections */}
+            <Suspense fallback={<Loader />}>
 
-            <Certifications />
+                <Projects />
 
-            <Blog />
+                <GithubStats />
 
-            <Contact />
+                <Certifications />
+
+                <Blog />
+
+                <Contact />
+
+            </Suspense>
 
         </>
 

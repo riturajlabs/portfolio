@@ -1,10 +1,14 @@
+import { lazy, Suspense } from "react";
+
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import ScrollToTop from "./components/common/ScrollToTop";
 
 import Home from "./pages/Home";
 
-import ChatAssistant from "./components/common/ChatAssistant";
+const ChatAssistant = lazy(() =>
+    import("./components/common/ChatAssistant")
+);
 
 function App() {
 
@@ -24,7 +28,9 @@ function App() {
 
             <Footer />
 
-            <ChatAssistant />
+            <Suspense fallback={null}>
+                <ChatAssistant />
+            </Suspense>
 
         </>
 
