@@ -13,9 +13,9 @@ import ThemeProvider from "./context/ThemeContext";
 
 createRoot(document.getElementById("root")).render(
 
-    <HelmetProvider>
+    <StrictMode>
 
-        <StrictMode>
+        <HelmetProvider>
 
             <ThemeProvider>
 
@@ -23,8 +23,8 @@ createRoot(document.getElementById("root")).render(
 
             </ThemeProvider>
 
-        </StrictMode>
+        </HelmetProvider>
 
-    </HelmetProvider>
+    </StrictMode>
 
 );
