@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 
-import SEO from "../components/common/SEO";
+
 
 import Hero from "../components/sections/Hero";
 import About from "../components/sections/About";
@@ -36,7 +36,7 @@ function Home() {
 
         <>
 
-            <SEO />
+            
 
             {/* Above the Fold */}
             <Hero />
