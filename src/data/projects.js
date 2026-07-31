@@ -1,7 +1,7 @@
-import orbitAI from "../assets/images/orbit-ai.png";
-import stayora from "../assets/images/stayora.png";
-// import zerodha from "../assets/images/zerodha.png";
-import calculator from "../assets/images/calculator.png";
+import orbitAI from "../assets/images/orbit-ai.webp";
+import stayora from "../assets/images/stayora.webp";
+// import zerodha from "../assets/images/zerodha.webp";
+import calculator from "../assets/images/calculator.webp";
 
 const projects = [
     {

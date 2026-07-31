@@ -1,4 +1,4 @@
-import profileImage from "../assets/images/ritu.png";
+import profileImage from "../assets/images/ritu.webp";
 
 const profile = {
     /* ==========================
