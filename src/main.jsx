@@ -10,12 +10,21 @@ import "./index.css";
 import App from "./App.jsx";
 import ThemeProvider from "./context/ThemeContext";
 
+
 createRoot(document.getElementById("root")).render(
-    <StrictMode>
-        <HelmetProvider>
+
+    <HelmetProvider>
+
+        <StrictMode>
+
             <ThemeProvider>
+
                 <App />
+
             </ThemeProvider>
-        </HelmetProvider>
-    </StrictMode>
+
+        </StrictMode>
+
+    </HelmetProvider>
+
 );
