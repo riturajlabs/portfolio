@@ -7,7 +7,7 @@ export default function SEO({
     title = seo.title,
 
     description = seo.description,
-    
+
     keywords = seo.keywords,
 
     image = seo.image,
@@ -67,9 +67,9 @@ export default function SEO({
         <Helmet prioritizeSeoTags>
 
 
-            {/* ================================= */}
+            {/* ========================= */}
             {/* Primary SEO */}
-            {/* ================================= */}
+            {/* ========================= */}
 
 
             <title>
@@ -113,7 +113,6 @@ export default function SEO({
             />
 
 
-
             <link
                 rel="canonical"
                 href={url}
@@ -121,9 +120,9 @@ export default function SEO({
 
 
 
-            {/* ================================= */}
-            {/* Search Console Verification */}
-            {/* ================================= */}
+            {/* ========================= */}
+            {/* Verification */}
+            {/* ========================= */}
 
 
             {
@@ -145,9 +144,10 @@ export default function SEO({
 
 
 
-            {/* ================================= */}
+
+            {/* ========================= */}
             {/* Open Graph */}
-            {/* ================================= */}
+            {/* ========================= */}
 
 
             <meta
@@ -198,16 +198,10 @@ export default function SEO({
             />
 
 
-            <meta
-                property="og:locale"
-                content={seo.locale}
-            />
 
-
-
-            {/* ================================= */}
-            {/* Twitter Card */}
-            {/* ================================= */}
+            {/* ========================= */}
+            {/* Twitter */}
+            {/* ========================= */}
 
 
             <meta
@@ -235,14 +229,17 @@ export default function SEO({
 
 
 
-            {/* ================================= */}
+            {/* ========================= */}
             {/* Structured Data */}
-            {/* ================================= */}
+            {/* ========================= */}
 
 
-            <script type="application/ld+json">
-                {JSON.stringify(structuredData)}
-            </script>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(structuredData)
+                }}
+            />
 
 
         </Helmet>
