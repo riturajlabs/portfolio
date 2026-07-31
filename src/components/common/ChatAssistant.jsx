@@ -203,16 +203,17 @@ function ChatAssistant() {
         try {
             // Call Vercel Serverless Function instead of API directly
             const response = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: updatedMessages })
-            });
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: updatedMessages })
+});
 
-            const data = await response.json();
+const text = await response.text();
 
-            if (!response.ok) {
-                throw new Error(data.error || "Network error");
-            }
+console.log("SERVER RESPONSE:");
+console.log(text);
+
+return;
 
             // Cache management
             if (chatCache.current.size >= MAX_CACHE_SIZE) {

@@ -1,11 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// 1. DATA IMPORTS (Now securely on the backend)
-// Note: Vercel serverless functions resolve paths from the api folder.
-import profile from '../src/data/profile.js';
-import projects from '../src/data/projects.js';
-import skills from '../src/data/skills.js';
-import certificates from '../src/data/certificates.js';
+import { portfolioData } from "../server/portfolioData.js";
 
 // ==========================================
 // 🚀 CONSTANTS & CONFIGURATION
@@ -31,10 +26,8 @@ You are "Ritu Raj's AI Portfolio Assistant".
 Your strict job is to answer questions about Ritu Raj politely, professionally, and accurately using ONLY the data provided below.
 
 --- RITU RAJ'S DATA ---
-PROFILE: ${JSON.stringify(profile)}
-SKILLS: ${JSON.stringify(skills)}
-PROJECTS: ${JSON.stringify(projects)}
-CERTIFICATES: ${JSON.stringify(certificates)}
+PORTFOLIO DATA:
+${JSON.stringify(portfolioData)}
 -----------------------
 
 STRICT RULES & SECURITY (CRITICAL):
