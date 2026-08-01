@@ -5,7 +5,8 @@ from pathlib import Path
 
 import chromadb
 # 🚀 Naya Import: ChromaDB ka built-in ONNX function
-from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
+import os
+from chromadb.utils.embedding_functions import GoogleGenerativeAiEmbeddingFunction
 
 from config.settings import settings
 
@@ -137,17 +138,24 @@ def _get_client() -> chromadb.ClientAPI:
 def _get_collection():
     global _collection
     if _collection is None:
-        # 🚀 Initialize ONNX Embedding Function
-        onnx_ef = ONNXMiniLM_L6_V2(preferred_providers=['CPUExecutionProvider'])
+        # 🚀 ONNX ki jagah ab Gemini Embeddings use kar rahe hain (RAM bachane ke liye)
+        gemini_api_key = os.environ.get("GEMINI_API_KEY")
         
-        # Collection banate waqt hi embedding function de diya
+        if not gemini_api_key:
+            logger.warning("GEMINI_API_KEY environment variable me nahi mili!")
+            
+        gemini_ef = GoogleGenerativeAiEmbeddingFunction(
+            api_key=gemini_api_key,
+            task_type="RETRIEVAL_DOCUMENT"
+        )
+        
+        # Collection banate waqt Gemini embedding function de diya
         _collection = _get_client().get_or_create_collection(
             name=settings.COLLECTION_NAME,
-            embedding_function=onnx_ef,
+            embedding_function=gemini_ef,
             metadata={"hnsw:space": "cosine"},
         )
     return _collection
-
 
 def ensure_embeddings(collection, chunks: list[dict]) -> int:
     """Embeds and upserts only the chunks not already present in ChromaDB."""

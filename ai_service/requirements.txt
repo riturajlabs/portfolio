@@ -3,8 +3,8 @@ uvicorn[standard]
 groq
 chromadb
 google-genai
+google-generativeai
 pydantic
 python-dotenv
-onnxruntime
 slowapi
 httpx
