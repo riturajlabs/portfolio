@@ -2,15 +2,21 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
-    visualizer({
-      filename: "stats.html",
-      open: true,
-      gzipSize: true,
-      brotliSize: true,
-    }),
+    // Only emit stats.html when explicitly requested: `npm run build -- --mode analyze` or `ANALYZE=1 npm run build`
+    ...(mode === "analyze" || process.env.ANALYZE === "1"
+      ? [
+          visualizer({
+            filename: "stats.html",
+            open: false,
+            gzipSize: true,
+            brotliSize: true,
+            template: "treemap",
+          }),
+        ]
+      : []),
   ],
 
   build: {
@@ -50,4 +56,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
