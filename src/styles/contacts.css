@@ -392,19 +392,57 @@
 
 .contact-status {
 
-
     text-align:center;
-
 
     margin-top:.5rem;
 
-
     font-weight:600;
-
 
     color:var(--primary);
 
+}
 
+.contact-status-success {
+    color: var(--accent, #10b981);
+}
+
+.contact-status-error {
+    color: var(--danger, #ef4444);
+}
+
+
+/* ===================================================
+   FIELD ERROR & HONEYPOT
+=================================================== */
+
+.contact-field {
+    position: relative;
+}
+
+.contact-field-error {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--danger, #ef4444);
+    font-weight: 500;
+}
+
+.contact-form input[aria-invalid="true"],
+.contact-form textarea[aria-invalid="true"] {
+    border-color: var(--danger, #ef4444) !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/* 🐝 Honeypot: hidden from humans and screen readers. */
+.contact-honeypot {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
 }
 
 

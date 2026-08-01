@@ -1,0 +1,27 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# Python bytecode & caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ChromaDB persistent storage (rebuilt on each deploy)
+chroma_db/
+
+# Environment variables (NEVER commit secrets)
+.env
+.env.*
+!.env.example
+
+# OS / editor noise
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# Local models (legacy)
+models/

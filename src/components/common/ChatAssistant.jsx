@@ -12,6 +12,17 @@ import "../../styles/chat.css";
 const MAX_HISTORY = 10;
 const MAX_CACHE_SIZE = 50;
 
+// Hard request timeout (ms) — Render free tier cold-starts can take 25 s.
+const REQUEST_TIMEOUT_MS = 25000;
+
+// Resolved once at module init — every request reuses the same values.
+const API_URL =
+    import.meta.env.VITE_BACKEND_URL ||
+    import.meta.env.VITE_API_URL ||
+    "http://localhost:8000";
+
+const API_KEY = import.meta.env.VITE_API_KEY || "";
+
 const SUGGESTED_QUESTIONS = [
 
     "Tell me about yourself 👨‍💻",
@@ -187,64 +198,179 @@ function ChatAssistant() {
         code: CodeBlock
     }), []);
 
-    // 🚀 NEW: Secure Fetch from Serverless Backend
+    // 🚀 Streaming fetch with AbortController timeout + non-streaming fallback
     const handleSend = useCallback(async (textOverride) => {
         const userMessageText = typeof textOverride === 'string' ? textOverride : input;
         if (!userMessageText.trim() || isLoading) return;
 
         const normalizedQuery = userMessageText.trim().toLowerCase();
         const userMessage = { id: generateId(), role: "user", text: userMessageText.trim() };
-        
-        const updatedMessages = [...messages, userMessage].slice(-MAX_HISTORY);
-        setMessages(updatedMessages);
+
+        setMessages(prev => [...prev, userMessage]);
         setInput("");
         setIsLoading(true);
 
-        // Serve from Cache if available
+        // Serve from cache if available
         if (chatCache.current.has(normalizedQuery)) {
             setTimeout(() => {
-                setMessages(prev => [...prev, { id: generateId(), role: "ai", text: chatCache.current.get(normalizedQuery) }]);
+                setMessages(prev => [...prev, {
+                    id: generateId(),
+                    role: "ai",
+                    text: chatCache.current.get(normalizedQuery),
+                }]);
                 setIsLoading(false);
-            }, 500); 
+            }, 400);
             return;
         }
 
+        // Reserve a placeholder AI message we can update token-by-token
+        const aiMessageId = generateId();
+        setMessages(prev => [...prev, { id: aiMessageId, role: "ai", text: "" }]);
+
+        // AbortController with hard timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(
+            () => controller.abort(),
+            REQUEST_TIMEOUT_MS
+        );
+
+        const authHeaders = API_KEY
+            ? { "X-API-Key": API_KEY }
+            : {};
+
+        let streamedOk = false;
+        let finalText = "";
+        let generatedBy = "AI Auto-Failover";
+
         try {
-            // Call Vercel Serverless Function instead of API directly
-            const response = await fetch("/api/chat", {
+            // 🌊 PRIMARY: streaming SSE
+            const streamResponse = await fetch(`${API_URL}/chat/stream`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ messages: updatedMessages })
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "text/event-stream",
+                    ...authHeaders,
+                },
+                body: JSON.stringify({ message: userMessageText.trim() }),
+                signal: controller.signal,
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Network error");
+            if (!streamResponse.ok) {
+                throw new Error(`Stream HTTP ${streamResponse.status}`);
             }
 
-            // Cache management
-            if (chatCache.current.size >= MAX_CACHE_SIZE) {
-                const firstKey = chatCache.current.keys().next().value;
-                chatCache.current.delete(firstKey);
-            }
-            chatCache.current.set(normalizedQuery, data.reply);
-            
-            setActiveModelName(data.generatedBy);
-            setMessages(prev => [...prev, { id: generateId(), role: "ai", text: data.reply }]);
+            const reader = streamResponse.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
 
-        } catch (error) {
-            console.error("[Chat Frontend] Error:", error);
-            setActiveModelName("Offline");
-            setMessages(prev => [...prev, { 
-                id: generateId(),
-                role: "ai", 
-                text: "The AI service is currently busy or experiencing network issues. Please try again in a few seconds." 
-            }]);
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                // SSE events are separated by a blank line (\n\n)
+                let sepIdx;
+                while ((sepIdx = buffer.indexOf("\n\n")) !== -1) {
+                    const rawEvent = buffer.slice(0, sepIdx);
+                    buffer = buffer.slice(sepIdx + 2);
+
+                    const line = rawEvent
+                        .split("\n")
+                        .find(l => l.startsWith("data:"));
+                    if (!line) continue;
+
+                    try {
+                        const payload = JSON.parse(line.slice(5).trim());
+                        if (payload.event === "token" && payload.data) {
+                            finalText += payload.data;
+                            streamedOk = true;
+                            setMessages(prev =>
+                                prev.map(m =>
+                                    m.id === aiMessageId
+                                        ? { ...m, text: finalText }
+                                        : m
+                                )
+                            );
+                        } else if (payload.event === "done") {
+                            generatedBy = payload.data || generatedBy;
+                        } else if (payload.event === "error") {
+                            throw new Error(payload.data || "Stream error");
+                        }
+                        // 'sources' event: future use — UI hook for RAG transparency
+                    } catch (parseErr) {
+                        // ignore malformed line
+                    }
+                }
+            }
+        } catch (streamErr) {
+            // If SSE failed and we haven't streamed anything yet, fall back.
+            if (!streamedOk) {
+                console.warn(
+                    "[Chat] SSE failed, falling back to /chat:",
+                    streamErr
+                );
+                try {
+                    const fallbackResponse = await fetch(`${API_URL}/chat`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            ...authHeaders,
+                        },
+                        body: JSON.stringify({ message: userMessageText.trim() }),
+                        signal: controller.signal,
+                    });
+
+                    if (!fallbackResponse.ok) {
+                        throw new Error(`HTTP ${fallbackResponse.status}`);
+                    }
+
+                    const data = await fallbackResponse.json();
+                    finalText = data.reply || data.response || "";
+                    generatedBy = data.generatedBy || "AI";
+                    streamedOk = true;
+
+                    setMessages(prev =>
+                        prev.map(m =>
+                            m.id === aiMessageId
+                                ? { ...m, text: finalText }
+                                : m
+                        )
+                    );
+                } catch (fallbackErr) {
+                    console.error("[Chat] Fallback also failed:", fallbackErr);
+                    setActiveModelName("Offline");
+                    setMessages(prev =>
+                        prev.map(m =>
+                            m.id === aiMessageId
+                                ? {
+                                      ...m,
+                                      text:
+                                          controller.signal.aborted
+                                              ? "⏱️ The AI took too long to respond. Please try again."
+                                              : "The AI service is currently offline or experiencing network issues. Please try again.",
+                                      isError: true,
+                                  }
+                                : m
+                        )
+                    );
+                }
+            }
         } finally {
+            clearTimeout(timeoutId);
             setIsLoading(false);
+
+            // Cache the final text
+            if (finalText && finalText.trim()) {
+                if (chatCache.current.size >= MAX_CACHE_SIZE) {
+                    const firstKey = chatCache.current.keys().next().value;
+                    chatCache.current.delete(firstKey);
+                }
+                chatCache.current.set(normalizedQuery, finalText);
+                setActiveModelName(generatedBy);
+            }
         }
-    }, [input, isLoading, messages]);
+    }, [input, isLoading]);
 
     const onSubmit = (e) => {
         e.preventDefault();

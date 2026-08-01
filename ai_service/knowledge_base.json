@@ -1,0 +1,876 @@
+{
+  "profile": {
+    "basic": {
+      "fullName": "Ritu Raj",
+      "title": "Full Stack Developer & AI/ML Student",
+      "tagline": "Building scalable web applications and exploring Artificial Intelligence through real-world projects.",
+      "location": {
+        "city": "Pune",
+        "state": "Maharashtra",
+        "country": "India"
+      },
+      "education": "Bachelor of Science (B.Sc.) in Artificial Intelligence & Machine Learning",
+      "university": "Chanakya Education Society's Indira College of Commerce & Science",
+      "currentSemester": 3,
+      "availability": {
+        "internships": true,
+        "freelance": true,
+        "fullTime": false,
+        "remote": true
+      }
+    },
+    "about": {
+      "short": "I am a Full Stack Developer and AI/ML student passionate about building modern web applications, backend systems, and AI-powered solutions.",
+      "detailed": "I enjoy solving real-world problems through software development. My primary interests are Full Stack Development, Backend Engineering, Artificial Intelligence, Machine Learning, and Software Engineering. I continuously improve my skills by building projects, practicing Data Structures & Algorithms, and exploring modern technologies."
+    },
+    "career": {
+      "currentFocus": [
+        "Full Stack Development",
+        "Backend Development",
+        "Artificial Intelligence",
+        "Machine Learning",
+        "Data Structures & Algorithms",
+        "AI Engineering"
+      ],
+      "careerGoal": "To become a highly skilled AI Engineer capable of building scalable, intelligent, and production-ready applications.",
+      "longTermGoal": "To work on impactful software products, contribute to innovative AI solutions, and eventually build technology products that solve real-world problems."
+    },
+    "learning": {
+      "currentlyLearning": [
+        "Advanced React",
+        "Node.js",
+        "Express.js",
+        "MongoDB",
+        "Java",
+        "DSA",
+        "System Design",
+        "Machine Learning",
+        "Generative AI",
+        "Cloud Fundamentals"
+      ],
+      "nextLearningGoals": [
+        "Docker",
+        "Kubernetes",
+        "AWS",
+        "CI/CD",
+        "Redis",
+        "Microservices",
+        "Vector Databases",
+        "RAG Systems",
+        "LLM Applications"
+      ]
+    },
+    "interests": [
+      "Full Stack Development",
+      "Backend Engineering",
+      "Artificial Intelligence",
+      "Machine Learning",
+      "Open Source",
+      "Software Architecture",
+      "Developer Tools",
+      "Cloud Computing"
+    ],
+    "strengths": [
+      "Quick learner",
+      "Strong problem-solving mindset",
+      "Project-based learning approach",
+      "Clean and maintainable code",
+      "Analytical & Detail-Oriented (My 'overthinking' ensures edge-cases are handled)",
+      "Self-motivated"
+    ],
+    "hobbies": [
+      "Building software projects",
+      "Learning new technologies",
+      "Reading technical documentation",
+      "Exploring AI tools",
+      "Practicing DSA"
+    ],
+    "languages": [
+      {
+        "language": "Hindi",
+        "proficiency": "Native"
+      },
+      {
+        "language": "English",
+        "proficiency": "Professional Working"
+      }
+    ],
+    "funFacts": [
+      "Enjoys building complete products from frontend to backend.",
+      "Learns best by building real-world projects.",
+      "Interested in AI-powered software products.",
+      "Believes consistency is more important than intensity."
+    ]
+  },
+  "education": {
+    "current": {
+      "degree": "Bachelor of Science (B.Sc.)",
+      "specialization": "Artificial Intelligence & Machine Learning",
+      "college": "Chanakya Education Society's Indira College of Commerce & Science",
+      "location": "Pune, Maharashtra, India",
+      "currentSemester": 3,
+      "cgpa": "9.16 / 10",
+      "status": "Currently Pursuing",
+      "expectedGraduation": "2028"
+    },
+    "overview": {
+      "short": "Currently pursuing a B.Sc. in Artificial Intelligence & Machine Learning while building practical expertise in Full Stack Development and AI-powered software.",
+      "detailed": "My academic journey combines Artificial Intelligence, Machine Learning, Software Engineering, Programming, Database Systems, Mathematics, and problem-solving. Alongside my coursework, I actively build production-ready applications to gain hands-on industry experience."
+    },
+    "relevantCoursework": {
+      "programming": [
+        "Java",
+        "Python",
+        "JavaScript"
+      ],
+      "softwareEngineering": [
+        "Object-Oriented Programming",
+        "Data Structures",
+        "Algorithms",
+        "Database Management Systems",
+        "Software Engineering"
+      ],
+      "artificialIntelligence": [
+        "Artificial Intelligence",
+        "Machine Learning",
+        "Data Analysis",
+        "Prompt Engineering",
+        "AI Applications"
+      ],
+      "mathematics": [
+        "Statistics",
+        "Probability",
+        "Linear Algebra",
+        "Discrete Mathematics"
+      ]
+    },
+    "academicStrengths": [
+      "Strong practical learning approach",
+      "Hands-on Full Stack Development",
+      "AI & Machine Learning fundamentals",
+      "Problem-solving through Data Structures & Algorithms",
+      "Real-world project development"
+    ],
+    "practicalLearning": {
+      "philosophy": "I believe practical project development is the fastest way to become a better AI Engineer. Every concept I learn is reinforced by building real-world applications.",
+      "activities": [
+        "Building Full Stack Projects",
+        "Developing AI Applications",
+        "Data Structures & Algorithms Practice",
+        "Portfolio Development",
+        "Open Source Learning",
+        "Technical Documentation",
+        "Continuous Skill Development"
+      ]
+    },
+    "currentlyLearning": [
+      "Advanced React",
+      "Node.js Backend Development",
+      "REST API Design",
+      "Authentication & Authorization",
+      "LangChain",
+      "Large Language Models (LLMs)",
+      "AI Agent Development",
+      "Prompt Engineering"
+    ],
+    "futureLearning": [
+      "System Design",
+      "Docker",
+      "Kubernetes",
+      "AWS Cloud",
+      "CI/CD",
+      "Redis",
+      "Microservices",
+      "Vector Databases",
+      "Retrieval-Augmented Generation (RAG)",
+      "Model Deployment"
+    ],
+    "academicGoals": {
+      "short": "Become a skilled AI Engineer specializing in Artificial Intelligence and scalable backend systems.",
+      "detailed": "My goal is to combine core engineering principles with Artificial Intelligence to build scalable, intelligent, and production-ready applications while continuously improving my technical expertise."
+    }
+  },
+  "skills": {
+    "programmingLanguages": [
+      {
+        "name": "JavaScript",
+        "level": "Intermediate",
+        "category": "Programming Language",
+        "currentlyUsing": true
+      },
+      {
+        "name": "Python",
+        "level": "Intermediate",
+        "category": "Programming Language",
+        "currentlyUsing": true
+      },
+      {
+        "name": "Java",
+        "level": "Intermediate",
+        "category": "Programming Language",
+        "currentlyUsing": true
+      }
+    ],
+    "frontend": [
+      {
+        "name": "HTML5",
+        "level": "Advanced"
+      },
+      {
+        "name": "CSS3",
+        "level": "Advanced"
+      },
+      {
+        "name": "Bootstrap",
+        "level": "Advanced"
+      },
+      {
+        "name": "React",
+        "level": "Intermediate"
+      }
+    ],
+    "backend": [
+      {
+        "name": "Node.js",
+        "level": "Intermediate"
+      },
+      {
+        "name": "Express.js",
+        "level": "Intermediate"
+      },
+      {
+        "name": "REST APIs",
+        "level": "Intermediate"
+      },
+      {
+        "name": "Authentication",
+        "level": "Intermediate"
+      },
+      {
+        "name": "MVC Architecture",
+        "level": "Intermediate"
+      },
+      {
+        "name": "EJS",
+        "level": "Intermediate"
+      }
+    ],
+    "databases": [
+      {
+        "name": "MongoDB",
+        "level": "Intermediate"
+      },
+      {
+        "name": "PostgreSQL",
+        "level": "Beginner"
+      }
+    ],
+    "aiAndMachineLearning": [
+      {
+        "name": "Groq API (Llama 3.3)",
+        "level": "Intermediate"
+      },
+      {
+        "name": "LangChain",
+        "level": "Intermediate"
+      },
+      {
+        "name": "Prompt Engineering",
+        "level": "Intermediate"
+      },
+      {
+        "name": "Model Integration",
+        "level": "Intermediate"
+      }
+    ],
+    "developerTools": [
+      "Git",
+      "GitHub",
+      "VS Code",
+      "Vercel",
+      "Render"
+    ],
+    "operatingSystems": [
+      "Windows",
+      "Linux (Ubuntu)",
+      "WSL"
+    ],
+    "concepts": [
+      "Object-Oriented Programming",
+      "Data Structures",
+      "Algorithms",
+      "REST API Development",
+      "Authentication & Authorization",
+      "MVC Architecture",
+      "Responsive Web Design",
+      "Asynchronous JavaScript",
+      "Software Engineering Principles"
+    ],
+    "currentlyLearning": [
+      "System Design",
+      "Docker",
+      "Kubernetes",
+      "AWS",
+      "Redis",
+      "CI/CD",
+      "Advanced React",
+      "Advanced Backend Engineering",
+      "Retrieval-Augmented Generation (RAG)",
+      "AI Agents"
+    ],
+    "preferredStack": {
+      "frontend": [
+        "React",
+        "Bootstrap",
+        "HTML5",
+        "CSS3"
+      ],
+      "backend": [
+        "Node.js",
+        "Express.js"
+      ],
+      "database": [
+        "MongoDB"
+      ],
+      "ai": [
+        "LangChain",
+        "Groq API"
+      ],
+      "deployment": [
+        "Vercel",
+        "Render"
+      ]
+    },
+    "strengths": [
+      "Full Stack Web Development",
+      "Backend API Development",
+      "REST API Design",
+      "AI Application Development",
+      "Prompt Engineering",
+      "Responsive Frontend Development",
+      "Problem Solving",
+      "Project-Based Learning"
+    ]
+  },
+  "projects": [
+    {
+      "id": 1,
+      "name": "Orbit AI",
+      "slug": "orbit-ai",
+      "category": "Artificial Intelligence",
+      "featured": true,
+      "status": "Completed",
+      "overview": {
+        "short": "An AI-powered full-stack conversational assistant built using React, Node.js, FastAPI, LangChain, and Groq.",
+        "detailed": "Orbit AI is a production-ready AI assistant that combines a React frontend, Node.js backend, and Python FastAPI AI service. It integrates LangChain, Groq Llama 3.3, JWT authentication, MongoDB Atlas, and persistent conversation memory for intelligent real-time interactions."
+      },
+      "technologies": {
+        "frontend": [
+          "React",
+          "Bootstrap",
+          "JavaScript",
+          "Vite"
+        ],
+        "backend": [
+          "Node.js",
+          "Express.js",
+          "Python",
+          "FastAPI"
+        ],
+        "database": [
+          "MongoDB Atlas"
+        ],
+        "ai": [
+          "Groq API (Llama 3.3)",
+          "LangChain",
+          "Prompt Engineering"
+        ],
+        "authentication": [
+          "JWT"
+        ],
+        "deployment": [
+          "Vercel"
+        ]
+      },
+      "features": [
+        "AI Chat Assistant",
+        "Persistent Chat Memory",
+        "JWT Authentication",
+        "Responsive UI",
+        "Markdown Rendering",
+        "Conversation Context",
+        "AI Provider Failover",
+        "Secure Backend APIs"
+      ],
+      "architecture": [
+        "React Frontend",
+        "Node.js Express Backend",
+        "Python FastAPI AI Service",
+        "MongoDB Atlas",
+        "LangChain",
+        "Groq Llama 3.3"
+      ],
+      "challenges": [
+        "Managing multiple backend services",
+        "Maintaining conversation context",
+        "Integrating LangChain workflows",
+        "Securing API keys",
+        "Optimizing AI response latency"
+      ],
+      "learnings": [
+        "Full Stack Architecture",
+        "AI Integration",
+        "Prompt Engineering",
+        "JWT Authentication",
+        "Backend API Design",
+        "Deployment on Vercel"
+      ],
+      "liveDemo": "https://orbit-ai-client.vercel.app",
+      "github": "https://github.com/riturajlabs",
+      "image": "orbit-ai",
+      "completionYear": 2026
+    },
+    {
+      "id": 2,
+      "name": "Stayora",
+      "slug": "stayora",
+      "category": "Full Stack",
+      "featured": true,
+      "status": "Completed",
+      "overview": {
+        "short": "A full-stack Airbnb-inspired property rental platform.",
+        "detailed": "Stayora enables users to browse, create, update, and manage rental properties with authentication, reviews, image uploads, and a responsive interface."
+      },
+      "technologies": {
+        "frontend": [
+          "HTML",
+          "CSS",
+          "Bootstrap",
+          "JavaScript",
+          "EJS"
+        ],
+        "backend": [
+          "Node.js",
+          "Express.js"
+        ],
+        "database": [
+          "MongoDB",
+          "Mongoose"
+        ],
+        "deployment": [
+          "Railway"
+        ]
+      },
+      "features": [
+        "User Authentication",
+        "Property Listings",
+        "CRUD Operations",
+        "Image Upload",
+        "Reviews",
+        "Responsive Design"
+      ],
+      "architecture": [
+        "MVC Architecture",
+        "REST APIs",
+        "Express Routing",
+        "MongoDB"
+      ],
+      "challenges": [
+        "Authentication",
+        "Database Relationships",
+        "Image Storage",
+        "CRUD Validation"
+      ],
+      "learnings": [
+        "REST APIs",
+        "MVC Pattern",
+        "MongoDB",
+        "Authentication",
+        "Deployment"
+      ],
+      "liveDemo": "https://stayora-cuh3.onrender.com/",
+      "github": "https://github.com/riturajlabs",
+      "image": "stayora",
+      "completionYear": 2026
+    },
+    {
+      "id": 3,
+      "name": "Scientific Calculator",
+      "slug": "scientific-calculator",
+      "category": "Frontend",
+      "featured": true,
+      "status": "Completed",
+      "overview": {
+        "short": "A responsive web-based scientific calculator.",
+        "detailed": "A JavaScript-powered scientific calculator supporting arithmetic, trigonometric functions, factorial, permutations, combinations, and real-time calculations."
+      },
+      "technologies": {
+        "frontend": [
+          "HTML",
+          "CSS",
+          "JavaScript"
+        ]
+      },
+      "features": [
+        "Arithmetic Operations",
+        "Scientific Functions",
+        "Trigonometry",
+        "Factorial",
+        "Permutation & Combination",
+        "Responsive Design"
+      ],
+      "learnings": [
+        "JavaScript",
+        "DOM Manipulation",
+        "Mathematical Logic",
+        "Responsive Design"
+      ],
+      "liveDemo": "https://ritu-scientific-calculator.netlify.app",
+      "github": "https://github.com/riturajlabs",
+      "image": "calculator",
+      "completionYear": 2025
+    }
+  ],
+  "certifications": [
+    {
+      "id": 1,
+      "title": "Delta - Full Stack Web Development",
+      "issuer": "Apna College",
+      "category": "Full Stack Development",
+      "status": "Completed",
+      "issueDate": "2025",
+      "credentialId": "https://mycourse.app/0alZAvqjp0gicVLOm",
+      "verificationUrl": null,
+      "skills": [
+        "HTML5",
+        "CSS3",
+        "JavaScript",
+        "Bootstrap",
+        "React",
+        "Node.js",
+        "Express.js",
+        "MongoDB",
+        "REST APIs",
+        "Authentication",
+        "MVC Architecture",
+        "Git",
+        "GitHub"
+      ],
+      "summary": "Completed an industry-focused Full Stack Web Development program covering frontend, backend, databases, authentication, REST APIs, deployment, Git, and real-world MERN stack projects.",
+      "featured": true
+    },
+    {
+      "id": 2,
+      "title": "Python for Data Science and Machine Learning",
+      "issuer": "Online Learning Platform",
+      "category": "Python & Machine Learning",
+      "status": "Completed",
+      "issueDate": "2025",
+      "credentialId": "https://www.linkedin.com/learning/certificates/5ee986f46956a2a977b06f6e09b183944b57b49578a44664a2f0af4be6eaa973",
+      "verificationUrl": null,
+      "skills": [
+        "Python",
+        "NumPy",
+        "Pandas",
+        "Data Analysis",
+        "Data Visualization",
+        "Machine Learning Fundamentals"
+      ],
+      "summary": "Learned Python programming for data analysis and machine learning, including data preprocessing, visualization, and foundational ML concepts.",
+      "featured": true
+    },
+    {
+      "id": 3,
+      "title": "Artificial Intelligence Foundations: Machine Learning",
+      "issuer": "Professional Learning Platform",
+      "category": "Artificial Intelligence",
+      "status": "Completed",
+      "issueDate": "2025",
+      "credentialId": "https://www.linkedin.com/learning/certificates/697ee1e69f10746e7523ad54338ed17cd69d31e3486cb17fc2bd13dc6bc4fd1c?u=133424385",
+      "verificationUrl": null,
+      "skills": [
+        "Artificial Intelligence",
+        "Machine Learning",
+        "Supervised Learning",
+        "Model Evaluation",
+        "AI Fundamentals"
+      ],
+      "summary": "Studied the core concepts of Artificial Intelligence and Machine Learning, including learning paradigms, model evaluation, and practical AI fundamentals.",
+      "featured": true
+    }
+  ],
+  "recruiter": {
+    "professionalSummary": {
+      "short": "Full Stack Developer and AI & Machine Learning student passionate about building scalable web applications and AI-powered software.",
+      "detailed": "I am currently pursuing a B.Sc. in Artificial Intelligence & Machine Learning while actively developing full-stack and AI-powered applications. My primary interests are backend engineering, modern web development, and intelligent software systems. I enjoy solving real-world problems by building production-ready projects and continuously improving my software engineering skills."
+    },
+    "targetRoles": [
+      "Software Development Engineer (SDE) Intern",
+      "Full Stack Developer Intern",
+      "Backend Developer Intern",
+      "Frontend Developer Intern",
+      "Software Engineering Intern"
+    ],
+    "availability": {
+      "internships": true,
+      "freelance": true,
+      "fullTime": false,
+      "remote": true,
+      "hybrid": true,
+      "relocation": true
+    },
+    "workPreferences": {
+      "preferredEnvironment": [
+        "Product-Based Companies",
+        "Engineering Teams",
+        "Fast-growing Startups",
+        "Collaborative Development",
+        "Remote or Hybrid Teams"
+      ],
+      "interests": [
+        "Backend Development",
+        "Full Stack Engineering",
+        "Artificial Intelligence",
+        "REST API Development",
+        "Software Architecture",
+        "Problem Solving"
+      ]
+    },
+    "strengths": [
+      "Strong project-based learning approach.",
+      "Experience building full-stack applications.",
+      "Comfortable learning new technologies quickly.",
+      "Interested in clean architecture and maintainable code.",
+      "Hands-on experience integrating AI into web applications."
+    ],
+    "softSkills": [
+      "Communication",
+      "Team Collaboration",
+      "Problem Solving",
+      "Self Learning",
+      "Adaptability",
+      "Time Management"
+    ],
+    "valueProposition": {
+      "whyHireMe": "I combine academic knowledge with practical software development experience through real-world projects. I enjoy learning new technologies, adapting quickly, and contributing to meaningful engineering work while continuously improving my skills.",
+      "uniqueStrength": "My combination of Full Stack Development and Artificial Intelligence allows me to build modern applications that combine scalable backend systems with intelligent AI-powered features."
+    },
+    "careerGoals": {
+      "shortTerm": "Secure an AI/ML or software engineering internship where I can contribute to production applications while learning from experienced engineers.",
+      "longTerm": "Become a skilled AI Engineer specializing in scalable backend systems, Full Stack Development, and AI-powered applications."
+    },
+    "preferredTechStack": {
+      "frontend": [
+        "React",
+        "Bootstrap",
+        "JavaScript"
+      ],
+      "backend": [
+        "Node.js",
+        "Express.js"
+      ],
+      "database": [
+        "MongoDB",
+        "PostgreSQL"
+      ],
+      "ai": [
+        "LangChain",
+        "Groq API"
+      ],
+      "programming": [
+        "JavaScript",
+        "Python",
+        "Java"
+      ]
+    },
+    "interviewHighlights": [
+      "Built AI-powered applications using LangChain and Groq Llama 3.3.",
+      "Developed full-stack applications with React, Node.js, Express.js, and MongoDB.",
+      "Experience designing REST APIs and implementing Authentication.",
+      "Comfortable deploying applications on Vercel, Railway, and Render.",
+      "Continuously improving Data Structures, Algorithms, and backend engineering skills."
+    ],
+    "recruiterFAQs": [
+      {
+        "question": "Are you currently looking for internships?",
+        "answer": "Yes. I am actively looking for Software Engineering, Full Stack Development, and Backend Development internship opportunities where I can contribute while learning from experienced engineers."
+      },
+      {
+        "question": "Can you work remotely?",
+        "answer": "Yes. I am comfortable working in remote, hybrid, or on-site environments and have experience managing personal software projects independently."
+      },
+      {
+        "question": "Why should we hire you?",
+        "answer": "I enjoy learning by building. Instead of limiting myself to tutorials, I create complete projects that help me understand architecture, backend development, deployment, and AI integration. I am eager to learn, adapt quickly, and contribute to engineering teams."
+      },
+      {
+        "question": "How do you learn new technologies?",
+        "answer": "I begin with official documentation to understand the fundamentals, then reinforce my learning by building practical projects. This approach helps me gain hands-on experience and understand real-world implementation."
+      },
+      {
+        "question": "What is your biggest weakness?",
+        "answer": "I tend to be an overthinker, especially when designing application architecture and considering edge cases. While this sometimes means I spend extra time planning, it naturally acts as a massive strength—it helps me write secure, bug-free, and highly maintainable code right from the start."
+      },
+      {
+        "question": "What are your stipend expectations?",
+        "answer": "My priority is gaining industry experience, learning from experienced engineers, and contributing effectively to the team. I am open to discussing a stipend that aligns with the company's internship structure."
+      }
+    ]
+  },
+  "socials": {
+    "contact": {
+      "email": "riturajlabs@outlook.com",
+      "phone": "+91 7762057235",
+      "preferredContact": [
+        "Email",
+        "LinkedIn"
+      ],
+      "responseTime": "Usually within 24-48 hours."
+    },
+    "portfolio": {
+      "website": "https://riturajlabs.vercel.app",
+      "resume": "/Ritu_Raj_Full_Stack_Developer_Resume.pdf"
+    },
+    "socialProfiles": {
+      "github": {
+        "username": "riturajlabs",
+        "url": "https://github.com/riturajlabs"
+      },
+      "linkedin": {
+        "username": "riturajlabs",
+        "url": "https://linkedin.com/in/riturajlabs"
+      },
+      "twitter": {
+        "username": null,
+        "url": null
+      },
+      "instagram": {
+        "username": null,
+        "url": null
+      }
+    },
+    "codingProfiles": {
+      "leetcode": {
+        "username": "riturajlabs",
+        "url": "https://leetcode.com/riturajlabs"
+      },
+      "geeksForGeeks": {
+        "username": null,
+        "url": null
+      },
+      "hackerRank": {
+        "username": "riturajlabs",
+        "url": "https://www.hackerrank.com/riturajlabs"
+      },
+      "codeforces": {
+        "username": null,
+        "url": null
+      }
+    },
+    "projectLinks": {
+      "orbitAI": "https://your-orbit-ai.vercel.app",
+      "stayora": "https://stayora-cuh3.onrender.com",
+      "scientificCalculator": "https://ritu-scientific-calculator.netlify.app"
+    },
+    "availability": {
+      "openForInternships": true,
+      "openForFreelance": true,
+      "openSourceContributions": true,
+      "collaborations": true
+    },
+    "recruiterMessage": "Thank you for visiting my portfolio. If you believe my skills align with your team or project, feel free to reach out via email or LinkedIn.",
+    "visitorMessage": "Thanks for exploring my portfolio! Feel free to check out my projects, connect on LinkedIn, or explore my GitHub repositories."
+  },
+  "faq": {
+    "suggestedQuestions": [
+      "Tell me about yourself",
+      "What technologies do you know?",
+      "Explain your projects",
+      "Tell me about Orbit AI",
+      "Are you available for internships?",
+      "Show your certifications"
+    ],
+    "questions": [
+      {
+        "question": "Tell me about yourself",
+        "answer": "Ritu Raj is a Full Stack Developer and AI & Machine Learning student currently pursuing B.Sc. in Artificial Intelligence & Machine Learning. He focuses on building modern web applications, backend systems, and AI-powered solutions using technologies like React, Node.js, MongoDB, and Generative AI."
+      },
+      {
+        "question": "What are your main skills?",
+        "answer": "Ritu's main skills include JavaScript, Python, Java, HTML5, CSS3, Bootstrap, React, Node.js, Express.js, MongoDB, REST APIs, Groq API (Llama 3.3), and LangChain."
+      },
+      {
+        "question": "What technologies do you use?",
+        "answer": "Frontend technologies include HTML5, CSS3, Bootstrap, and React. Backend technologies include Node.js, Express.js, REST APIs, and MongoDB. For AI applications, he primarily works with Groq API (Llama 3.3) and LangChain."
+      },
+      {
+        "question": "Tell me about Orbit AI",
+        "answer": "Orbit AI is an AI-powered full-stack conversational platform. It integrates Large Language Models with a secure backend architecture and includes AI chat, authentication, conversation history, Markdown support, and AI provider failover."
+      },
+      {
+        "question": "Explain Orbit AI architecture",
+        "answer": "Orbit AI follows a full-stack architecture with React frontend, Express backend APIs, MongoDB database, and AI integrations using Groq APIs. The application focuses on secure API handling, scalable structure, and intelligent conversations."
+      },
+      {
+        "question": "Tell me about Stayora",
+        "answer": "Stayora is an Airbnb-inspired rental platform where users can explore and manage properties. It includes authentication, property listings, cloud image uploads, reviews, wishlist functionality, and MongoDB-based data management."
+      },
+      {
+        "question": "Tell me about Scientific Calculator",
+        "answer": "Scientific Calculator is a frontend web application built using HTML, CSS, and JavaScript. It supports arithmetic operations, trigonometric functions, factorials, permutations, and combinations."
+      },
+      {
+        "question": "Which project are you most proud of?",
+        "answer": "Orbit AI is one of the most advanced projects because it combines Full Stack Development with Artificial Intelligence. It demonstrates backend architecture, API integration, authentication, and practical Generative AI implementation."
+      },
+      {
+        "question": "Are you available for internship?",
+        "answer": "Yes. Ritu Raj is actively looking for Software Development, Full Stack Development, Backend Development, and AI/ML internship opportunities."
+      },
+      {
+        "question": "Why should we hire you?",
+        "answer": "Ritu combines software development skills with AI knowledge. He learns through building real-world projects, adapts quickly to new technologies, and focuses on writing clean and maintainable code."
+      },
+      {
+        "question": "What kind of roles are you looking for?",
+        "answer": "He is interested in Software Development Engineer Intern, Full Stack Developer Intern, Backend Developer Intern, Frontend Developer Intern, and AI/ML Intern roles."
+      },
+      {
+        "question": "Can you work remotely?",
+        "answer": "Yes. Ritu is comfortable working in remote and hybrid environments and has experience independently building and deploying software projects."
+      },
+      {
+        "question": "What is your education?",
+        "answer": "Ritu Raj is pursuing a Bachelor of Science (B.Sc.) in Artificial Intelligence & Machine Learning from Chanakya Education Society's Indira College of Commerce & Science, Pune."
+      },
+      {
+        "question": "Why did you choose AI and Machine Learning?",
+        "answer": "He chose AI and Machine Learning because he is interested in combining software engineering with intelligent systems to build practical solutions."
+      },
+      {
+        "question": "What is your preferred tech stack?",
+        "answer": "Preferred stack includes React and Bootstrap for frontend, Node.js and Express.js for backend, MongoDB for database, and LangChain/Groq APIs for AI integrations."
+      },
+      {
+        "question": "Do you know backend development?",
+        "answer": "Yes. Ritu has experience building REST APIs using Node.js and Express.js, handling authentication, connecting databases, and deploying backend applications."
+      },
+      {
+        "question": "Do you have AI experience?",
+        "answer": "Yes. Ritu has worked with Generative AI concepts, Prompt Engineering, Groq API (Llama 3.3), LangChain, and AI-powered application development."
+      },
+      {
+        "question": "What are you currently learning?",
+        "answer": "Currently learning Advanced MERN Stack, System Design, Data Structures & Algorithms, Cloud Deployment, and advanced AI application development."
+      },
+      {
+        "question": "What are your career goals?",
+        "answer": "Short-term goal is to gain industry experience through an internship. Long-term goal is to become a Software Engineer building scalable software systems and AI-powered products."
+      },
+      {
+        "question": "How do you learn new technologies?",
+        "answer": "Ritu follows a learn-by-building approach. He studies documentation, understands fundamentals, and applies concepts by creating practical projects."
+      }
+    ]
+  }
+}
