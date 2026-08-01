@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@vercel/speed-insights": "^2.0.0",
     "bootstrap": "^5.3.8",
     "framer-motion": "^12.42.2",
     "prop-types": "^15.8.1",

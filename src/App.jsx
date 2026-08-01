@@ -8,7 +8,7 @@ import ScrollToTop from "./components/common/ScrollToTop";
 
 import Home from "./pages/Home";
 import SEO from "./components/common/SEO";
-
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const ChatAssistant = lazy(() =>
     import("./components/common/ChatAssistant")
@@ -47,7 +47,7 @@ function App() {
 
             </Suspense>
 
-
+            <SpeedInsights />
         </>
 
     );
