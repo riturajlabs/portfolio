@@ -1,0 +1,131 @@
+/* ==========================================
+ * Minimal Bootstrap-equivalent (grid + utilities)
+ * ==========================================
+ * Replaces bootstrap/dist/css/bootstrap.min.css (~230 KB) with the
+ * tiny subset this project actually uses:
+ *   - Reboot (CSS reset)
+ *   - .container (5 places)
+ *   - .col-8 / .col-10 / .col-12 (3 placeholders in Loader.jsx)
+ *   - .d-none / .d-lg-flex / .d-lg-inline-flex / .d-lg-none (Navbar)
+ *
+ * Everything else (buttons, navbar, forms, modals, etc.) is hand-rolled
+ * in src/styles/*.css — no Bootstrap equivalents needed there.
+ *
+ * Source-derived from Bootstrap 5.3.x with all the unused modules
+ * (forms, buttons, navbar JS, modals, alerts, etc.) stripped out.
+ * Saves ~220 KB of unused CSS off the critical path.
+ * ========================================== */
+
+/* ----- CSS Reset (Reboot) ----- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+        Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+        "Segoe UI Symbol", "Noto Color Emoji";
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+a {
+    color: #0d6efd;
+    text-decoration: underline;
+}
+
+img,
+svg {
+    vertical-align: middle;
+}
+
+button {
+    border-radius: 0;
+    margin: 0;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+/* ----- Container ----- */
+.container {
+    width: 100%;
+    padding-right: var(--bs-gutter-x, 0.75rem);
+    padding-left: var(--bs-gutter-x, 0.75rem);
+    margin-right: auto;
+    margin-left: auto;
+}
+
+@media (min-width: 576px) {
+    .container { max-width: 540px; }
+}
+@media (min-width: 768px) {
+    .container { max-width: 720px; }
+}
+@media (min-width: 992px) {
+    .container { max-width: 960px; }
+}
+@media (min-width: 1200px) {
+    .container { max-width: 1140px; }
+}
+@media (min-width: 1400px) {
+    .container { max-width: 1320px; }
+}
+
+/* ----- Grid columns (only the sizes we use) ----- */
+.col-8  { flex: 0 0 auto; width: 66.66666667%; }
+.col-10 { flex: 0 0 auto; width: 83.33333333%; }
+.col-12 { flex: 0 0 auto; width: 100%; }
+
+/* ----- Display utilities (responsive show/hide) ----- */
+.d-none              { display: none !important; }
+.d-flex              { display: flex !important; }
+.d-inline-flex       { display: inline-flex !important; }
+.d-block             { display: block !important; }
+.d-inline            { display: inline !important; }
+.d-inline-block      { display: inline-block !important; }
+
+@media (min-width: 576px) {
+    .d-sm-none     { display: none !important; }
+    .d-sm-flex     { display: flex !important; }
+    .d-sm-inline-flex { display: inline-flex !important; }
+}
+@media (min-width: 768px) {
+    .d-md-none     { display: none !important; }
+    .d-md-flex     { display: flex !important; }
+    .d-md-inline-flex { display: inline-flex !important; }
+}
+@media (min-width: 992px) {
+    .d-lg-none     { display: none !important; }
+    .d-lg-flex     { display: flex !important; }
+    .d-lg-inline-flex { display: inline-flex !important; }
+}
+@media (min-width: 1200px) {
+    .d-xl-none     { display: none !important; }
+    .d-xl-flex     { display: flex !important; }
+    .d-xl-inline-flex { display: inline-flex !important; }
+}
+@media (min-width: 1400px) {
+    .d-xxl-none    { display: none !important; }
+    .d-xxl-flex    { display: flex !important; }
+    .d-xxl-inline-flex { display: inline-flex !important; }
+}

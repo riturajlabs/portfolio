@@ -22,6 +22,20 @@ async def lifespan(app: FastAPI):
     # 🟢 Fire-and-forget ChromaDB ingestion so the server can accept
     # requests immediately. /ready returns 503 until ingestion completes.
     startup_knowledge_loading()
+
+    # 🟢 Warm the embedding function + genai.Client at startup so the first
+    # /chat request doesn't pay the cold-start init cost (~100-300 ms).
+    # Ingestion itself is already kicked off above; this only ensures the
+    # genai.Client object exists in memory.
+    try:
+        from services.embeddings import get_embedding_function
+
+        get_embedding_function()
+        logger.info("✅ Embedding function warmed at startup.")
+    except Exception as exc:  # pragma: no cover
+        # Don't crash the app if warm-up fails — first request will retry.
+        logger.warning("⚠️ Embedding function warm-up failed: %s", exc)
+
     yield
 
 

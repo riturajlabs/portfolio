@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
+from collections import OrderedDict
 from typing import Iterable
 
 from google import genai
@@ -38,8 +40,19 @@ logger = logging.getLogger(__name__)
 
 # gemini-embedding-001 (a.k.a. text-embedding-005) — official Google
 # replacement for the now-shutdown text-embedding-004.
-# Configurable output dimensionality; we pin to 768 to match the existing
-# vector space (changing dim requires a Chroma re-ingestion).
+#
+# Why pin output_dimensionality to 768 instead of the model default (3072)?
+#   - Render free tier has 512 MB RAM. Each chunk vector = 768 × 4 bytes
+#     = 3 KB vs. 12 KB at 3072. At 55 chunks the savings are ~500 KB —
+#     modest, but HNSW index memory grows faster than linear as the KB
+#     scales. Pinning now avoids a forced re-ingestion later.
+#   - Retrieval quality at 768 vs. 3072 on a 55-chunk portfolio KB is
+#     indistinguishable in practice (embeddings saturate quickly for
+#     small, well-curated corpora). We can re-evaluate if the KB grows
+#     past ~500 chunks or if eval shows precision regressions.
+#   - Changing this constant requires a forced re-ingestion (different
+#     dim = different vector space), so the loader wipes Chroma on the
+#     next startup when this changes.
 _MODEL_NAME = "models/gemini-embedding-001"
 _OUTPUT_DIM = 768
 _TASK_TYPE_DOCUMENT = "RETRIEVAL_DOCUMENT"
@@ -93,12 +106,23 @@ class GeminiEmbeddingFunction:
             `TypeError: 'float' object cannot be converted to 'Sequence'`.
 
         Routes through the same batched path with `RETRIEVAL_QUERY`.
+        Wrapped in an LRU cache keyed on the normalized query — identical
+        repeat questions re-use the first embed, saving a 100-300 ms
+        Gemini round-trip per hit.
         """
         if not input:
             return [[]]
+        # Normalize: collapse whitespace + lowercase so "  Orbit AI  " and
+        # "orbit ai" hit the same cache slot.
+        cache_key = " ".join(input.split()).lower()
+        cached = _query_cache_get(cache_key)
+        if cached is not None:
+            return cached
         results = self._embed_sync([input], _TASK_TYPE_QUERY)
+        vector = [results[0]] if results else [[]]
+        _query_cache_put(cache_key, vector)
         # Wrap the single vector in a 2D list — one row, one query.
-        return [results[0]] if results else [[]]
+        return vector
 
     # ---- Internals -------------------------------------------------------
     def _embed_sync(self, texts: list[str], task_type: str) -> list[list[float]]:
@@ -150,6 +174,48 @@ class GeminiEmbeddingFunction:
 # Module-level singleton so we only build one client per process.
 _client: genai.Client | None = None
 _function: GeminiEmbeddingFunction | None = None
+
+
+# ==========================================
+# 🗃️  Query embedding LRU cache
+# ==========================================
+# `embed_query` is the only path that takes a single user query string
+# and round-trips to Gemini. Caching it by normalized query string:
+#   - Saves 100-300 ms per repeat question (the embedding API round-trip).
+#   - At 200 entries x 768 floats x 8 bytes ≈ 1.2 MB. Negligible vs the
+#     512 MB Render budget.
+#   - Thread-safe via a single `threading.Lock` (queries are dispatched
+#     to worker threads via `asyncio.to_thread` in chat routes).
+# `OrderedDict.move_to_end` gives true LRU semantics — most-recently
+# used stays at the tail, oldest gets evicted from the front.
+_QUERY_CACHE_MAX = 200
+_query_cache: "OrderedDict[str, list[list[float]]]" = OrderedDict()
+_query_cache_lock = threading.Lock()
+
+
+def _query_cache_get(key: str) -> list[list[float]] | None:
+    with _query_cache_lock:
+        if key not in _query_cache:
+            return None
+        _query_cache.move_to_end(key)
+        return _query_cache[key]
+
+
+def _query_cache_put(key: str, value: list[list[float]]) -> None:
+    with _query_cache_lock:
+        if key in _query_cache:
+            _query_cache.move_to_end(key)
+            _query_cache[key] = value
+            return
+        _query_cache[key] = value
+        if len(_query_cache) > _QUERY_CACHE_MAX:
+            _query_cache.popitem(last=False)  # evict oldest
+
+
+def clear_query_cache() -> None:
+    """Test helper: drop all cached embeddings."""
+    with _query_cache_lock:
+        _query_cache.clear()
 
 
 def get_embedding_function() -> GeminiEmbeddingFunction:

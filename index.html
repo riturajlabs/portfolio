@@ -70,11 +70,14 @@
   <!-- ========================================================= -->
   <!-- PWA -->
   <!-- ========================================================= -->
-
-
-  <link
-    rel="manifest"
-    href="/site.webmanifest">
+  <!--
+    No web manifest or service worker is registered. The previous
+    site.webmanifest didn't make the site "installable" (browsers
+    require a registered service worker before prompting the user
+    to add to home screen) and cost us a 404 risk on misconfigured
+    hosts. Mobile theme color is still set via the <meta name="theme-color">
+    tag above.
+  -->
 
 
 

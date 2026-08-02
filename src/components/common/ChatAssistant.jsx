@@ -1,8 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaRobot, FaTimes, FaPaperPlane, FaCommentDots, FaCheck, FaCopy } from "react-icons/fa";
-import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+// 🚀 Lazy-load markdown — react-markdown + micromark together are ~80 KB
+// (remark-gfm is small and treeshakes well, so it's fine to keep sync).
+// We only pay this cost the first time the user opens the chat AND an
+// AI message arrives. Splitting keeps the initial bundle lean.
+const ReactMarkdown = lazy(() => import("react-markdown"));
 
 import "../../styles/chat.css";
 
@@ -11,6 +15,10 @@ import "../../styles/chat.css";
 // ==========================================
 const MAX_HISTORY = 10;
 const MAX_CACHE_SIZE = 50;
+// Cap on conversation turns we send to the backend. Backend further
+// trims to its own MAX_HISTORY_TURNS — keep the client's cap slightly
+// higher so the backend has full context to choose what to keep.
+const MAX_HISTORY_TURNS = 6;
 
 // Hard request timeout (ms) — Render free tier cold-starts can take 25 s.
 const REQUEST_TIMEOUT_MS = 25000;
@@ -118,7 +126,11 @@ function ChatAssistant() {
     const chatBodyRef = useRef(null);
     const isUserScrolled = useRef(false);
     const inputRef = useRef(null);
-    const chatCache = useRef(new Map()); 
+    const chatCache = useRef(new Map());
+    // Mirror messages into a ref so handleSend sees the LATEST state,
+    // not the closure-captured stale value (handleSend is memoized).
+    const messagesRef = useRef(messages);
+    useEffect(() => { messagesRef.current = messages; }, [messages]);
 
     const handleScroll = useCallback(() => {
         if (!chatBodyRef.current) return;
@@ -200,6 +212,20 @@ function ChatAssistant() {
         code: CodeBlock
     }), []);
 
+    // Build the conversation history payload from the latest messages
+    // snapshot. Excludes the empty placeholder AI bubble reserved during
+    // streaming so the model doesn't see an empty assistant turn.
+    const buildHistory = (currentMessages) => {
+        const visible = currentMessages.filter(
+            (m) => !(m.role === "ai" && !m.text)
+        );
+        const recent = visible.slice(-MAX_HISTORY_TURNS);
+        return recent.map((m) => ({
+            role: m.role === "ai" ? "assistant" : "user",
+            content: m.text,
+        }));
+    };
+
     // 🚀 Streaming fetch with AbortController timeout + non-streaming fallback
     const handleSend = useCallback(async (textOverride) => {
         const userMessageText = typeof textOverride === 'string' ? textOverride : input;
@@ -208,7 +234,13 @@ function ChatAssistant() {
         const normalizedQuery = userMessageText.trim().toLowerCase();
         const userMessage = { id: generateId(), role: "user", text: userMessageText.trim() };
 
+        // Snapshot history BEFORE we append the current message — the
+        // current question is sent in `message`, the prior conversation
+        // is what goes in `history`.
+        const history = buildHistory(messagesRef.current);
+
         setMessages(prev => [...prev, userMessage]);
+        messagesRef.current = [...messagesRef.current, userMessage];
         setInput("");
         setIsLoading(true);
 
@@ -227,7 +259,9 @@ function ChatAssistant() {
 
         // Reserve a placeholder AI message we can update token-by-token
         const aiMessageId = generateId();
-        setMessages(prev => [...prev, { id: aiMessageId, role: "ai", text: "" }]);
+        const aiPlaceholder = { id: aiMessageId, role: "ai", text: "" };
+        setMessages(prev => [...prev, aiPlaceholder]);
+        messagesRef.current = [...messagesRef.current, aiPlaceholder];
 
         // AbortController with hard timeout
         const controller = new AbortController();
@@ -240,48 +274,34 @@ function ChatAssistant() {
             ? { "X-API-Key": API_KEY }
             : {};
 
+        // Common request body — used by both streaming and fallback paths.
+        const requestBody = {
+            message: userMessageText.trim(),
+            history,
+        };
+
         let streamedOk = false;
         let finalText = "";
         let generatedBy = "AI Auto-Failover";
 
-        try {
-            // 🌊 PRIMARY: streaming SSE
-            const streamResponse = await fetch(`${API_URL}/chat/stream`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Accept: "text/event-stream",
-                    ...authHeaders,
-                },
-                body: JSON.stringify({ message: userMessageText.trim() }),
-                signal: controller.signal,
-            });
-
-            if (!streamResponse.ok) {
-                throw new Error(`Stream HTTP ${streamResponse.status}`);
-            }
-
+        // Shared SSE consumer — used by both /chat/stream and the /chat
+        // fallback path (since /chat now streams SSE too).
+        const consumeSse = async streamResponse => {
             const reader = streamResponse.body.getReader();
             const decoder = new TextDecoder("utf-8");
             let buffer = "";
-
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
-
                 buffer += decoder.decode(value, { stream: true });
-
-                // SSE events are separated by a blank line (\n\n)
                 let sepIdx;
                 while ((sepIdx = buffer.indexOf("\n\n")) !== -1) {
                     const rawEvent = buffer.slice(0, sepIdx);
                     buffer = buffer.slice(sepIdx + 2);
-
                     const line = rawEvent
                         .split("\n")
                         .find(l => l.startsWith("data:"));
                     if (!line) continue;
-
                     try {
                         const payload = JSON.parse(line.slice(5).trim());
                         if (payload.event === "token" && payload.data) {
@@ -299,12 +319,32 @@ function ChatAssistant() {
                         } else if (payload.event === "error") {
                             throw new Error(payload.data || "Stream error");
                         }
-                        // 'sources' event: future use — UI hook for RAG transparency
+                        // 'sources' / 'meta' events: reserved for future UI hooks
                     } catch (parseErr) {
                         // ignore malformed line
                     }
                 }
             }
+        };
+
+        try {
+            // 🌊 PRIMARY: streaming SSE
+            const streamResponse = await fetch(`${API_URL}/chat/stream`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "text/event-stream",
+                    ...authHeaders,
+                },
+                body: JSON.stringify(requestBody),
+                signal: controller.signal,
+            });
+
+            if (!streamResponse.ok) {
+                throw new Error(`Stream HTTP ${streamResponse.status}`);
+            }
+
+            await consumeSse(streamResponse);
         } catch (streamErr) {
             // If SSE failed and we haven't streamed anything yet, fall back.
             if (!streamedOk) {
@@ -313,13 +353,17 @@ function ChatAssistant() {
                     streamErr
                 );
                 try {
+                    // /chat now also streams SSE (same shape), so reuse the
+                    // SSE consumer instead of parsing JSON. This also avoids
+                    // thread-blocking the request on a stuck LLM call.
                     const fallbackResponse = await fetch(`${API_URL}/chat`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
+                            Accept: "text/event-stream",
                             ...authHeaders,
                         },
-                        body: JSON.stringify({ message: userMessageText.trim() }),
+                        body: JSON.stringify(requestBody),
                         signal: controller.signal,
                     });
 
@@ -327,18 +371,7 @@ function ChatAssistant() {
                         throw new Error(`HTTP ${fallbackResponse.status}`);
                     }
 
-                    const data = await fallbackResponse.json();
-                    finalText = data.reply || data.response || "";
-                    generatedBy = data.generatedBy || "AI";
-                    streamedOk = true;
-
-                    setMessages(prev =>
-                        prev.map(m =>
-                            m.id === aiMessageId
-                                ? { ...m, text: finalText }
-                                : m
-                        )
-                    );
+                    await consumeSse(fallbackResponse);
                 } catch (fallbackErr) {
                     console.error("[Chat] Fallback also failed:", fallbackErr);
                     setActiveModelName("Offline");
@@ -446,12 +479,18 @@ function ChatAssistant() {
                                         transition={{ duration: 0.3 }}
                                     >
                                         {msg.role === "ai" ? (
-                                            <ReactMarkdown 
-                                                remarkPlugins={[remarkGfm]} 
-                                                components={markdownComponents}
+                                            <Suspense
+                                                fallback={
+                                                    <span className="chat-bubble-loading">…</span>
+                                                }
                                             >
-                                                {msg.text}
-                                            </ReactMarkdown>
+                                                <ReactMarkdown
+                                                    remarkPlugins={[remarkGfm]}
+                                                    components={markdownComponents}
+                                                >
+                                                    {msg.text}
+                                                </ReactMarkdown>
+                                            </Suspense>
                                         ) : (
                                             msg.text
                                         )}

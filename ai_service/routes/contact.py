@@ -26,7 +26,7 @@ import os
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from core.rate_limit import limiter
 
@@ -37,6 +37,9 @@ router = APIRouter(prefix="/api", tags=["contact"])
 
 # --- Request / Response schemas ----------------------------------------
 class ContactRequest(BaseModel):
+    # Reject typo'd fields (e.g. "messsage") with 422 instead of silent ignore.
+    model_config = ConfigDict(extra="forbid")
+
     name: str = Field(min_length=2, max_length=80)
     email: EmailStr
     message: str = Field(min_length=10, max_length=2000)

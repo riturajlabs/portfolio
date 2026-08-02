@@ -1,49 +1,115 @@
 import asyncio
 import json
 import logging
+import os
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from groq import Groq
-from google import genai  # Modern GenAI SDK
-from pydantic import BaseModel, Field
+from google import genai
+from google.genai import types as genai_types
+from pydantic import BaseModel, ConfigDict, Field
 
 from config.settings import settings
-from core.prompts import SYSTEM_PROMPT
+from core.prompts import PROMPT_VERSION, SYSTEM_PROMPT
 from core.security import verify_api_key
 from core.startup import is_knowledge_ready
 from core.rate_limit import limiter
-from services.formatter import format_groq_response
 from services.knowledge_loader import query_knowledge
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 logger = logging.getLogger(__name__)
 
-# --- Initialise Gemini client once at import time ---
+# --- Initialise Gemini + Groq clients once at import time. -----------------
+# Module-level singletons avoid per-request client init / httpx pool
+# construction (~50-150 ms saved on each /chat call).
 gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+groq_client = Groq(api_key=settings.GROQ_API_KEY)
+
+# --- Tunables (env-overridable). -------------------------------------------
+# 512 is plenty for portfolio-style answers; previous 1024 meant we waited
+# for output that would never come.
+MAX_OUTPUT_TOKENS = int(os.getenv("CHAT_MAX_TOKENS", "512"))
+# Hard cap on the RAG call so a stuck embedding API can't hang the request.
+QUERY_TIMEOUT_SECONDS = float(os.getenv("CHAT_QUERY_TIMEOUT", "10.0"))
+# Keepalive cadence for SSE — sent only while no tokens have arrived.
+SSE_KEEPALIVE_SECONDS = float(os.getenv("CHAT_SSE_KEEPALIVE", "15.0"))
+GEMINI_MODEL = os.getenv("CHAT_GEMINI_MODEL", "gemini-2.5-flash")
+# Sampling temperature for both providers. 0.3 is plenty for grounded
+# portfolio answers — we don't want the model to invent creative
+# variations on the source material. Override via env if you want
+# higher (e.g. for a "creative ideas" branch later).
+DEFAULT_TEMPERATURE = float(os.getenv("CHAT_TEMPERATURE", "0.3"))
+
+# --- AFC config (no tools registered, so disable to save a round-trip). ----
+_AFC_DISABLED = genai_types.AutomaticFunctionCallingConfig(disable=True)
 
 
 # ==========================================
 # 📦 Request / Response models
 # ==========================================
+# Maximum conversation turns the client is allowed to send back. Caps
+# total prompt growth so a long chat can't blow past the LLM's context
+# window or balloon per-request cost. ~6 turns ≈ 2-3 KB of history.
+MAX_HISTORY_TURNS = 6
+
+
+class HistoryMessage(BaseModel):
+    # Reject typo'd role names with 422 instead of silently dropping them.
+    model_config = ConfigDict(extra="forbid")
+
+    role: str = Field(pattern=r"^(user|assistant)$")
+    content: str = Field(min_length=1, max_length=4000)
+
+
 class ChatRequest(BaseModel):
-    message: str
+    # extra="forbid" → 422 on typo'd fields instead of silent ignore.
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(min_length=1, max_length=4000)
     sessionId: str = Field(default="default_session")
+    # Optional multi-turn context. Backend caps to MAX_HISTORY_TURNS most
+    # recent turns, dropping older ones.
+    history: list[HistoryMessage] = Field(default_factory=list)
+    # Per-request temperature override. Falls back to CHAT_TEMPERATURE env
+    # (default 0.3) when not provided. Bounded to keep Groq happy
+    # (its max is 2.0; >1.5 is rarely useful).
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
 
 
 # ==========================================
 # 🧠 Shared RAG helper
 # ==========================================
-def _build_system_prompt(context_chunks: list[dict]) -> str:
-    if not context_chunks:
-        return SYSTEM_PROMPT
-
-    context_text = "\n\n".join(
-        f"[{chunk['source']}]\n{chunk['text']}" for chunk in context_chunks
+def _format_history_block(history: list[HistoryMessage]) -> str:
+    """
+    Render the conversation history as a transcript block the model
+    can read. Only called when there's at least one turn to include.
+    """
+    lines = ["CONVERSATION SO FAR"]
+    for turn in history:
+        speaker = "Visitor" if turn.role == "user" else "Assistant"
+        lines.append(f"{speaker}: {turn.content}")
+    lines.append(
+        "Refer back to this transcript when the visitor uses pronouns or "
+        "follow-ups. Do NOT invent context that isn't above."
     )
+    return "\n".join(lines)
 
-    return f"""{SYSTEM_PROMPT}
 
+def _build_system_prompt(
+    context_chunks: list[dict],
+    history: list[HistoryMessage] | None = None,
+) -> str:
+    parts = [SYSTEM_PROMPT]
+
+    if context_chunks:
+        context_text = "\n\n".join(
+            f"[{chunk['source']}]\n{chunk['text']}"
+            for chunk in context_chunks
+        )
+        parts.append(
+            f"""
 ====================================
 RETRIEVED PORTFOLIO KNOWLEDGE
 ====================================
@@ -51,67 +117,56 @@ Use the facts below to answer the visitor's question.
 
 {context_text}
 """
-
-
-async def _generate_with_failover(
-    message: str, system_prompt: str
-) -> tuple[str, str]:
-    """
-    Try Gemini → Groq. Returns (content, generatedBy).
-    Raises HTTPException(503) if both providers fail.
-    """
-    loop = asyncio.get_running_loop()
-
-    def _call_gemini() -> str:
-        full_prompt = f"{system_prompt}\n\nUser: {message}"
-        resp = gemini_client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=full_prompt,
         )
-        return resp.text or ""
 
-    def _call_groq() -> str:
-        client = Groq(api_key=settings.GROQ_API_KEY)
-        resp = client.chat.completions.create(
-            model=settings.GROQ_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message},
-            ],
-            temperature=0.3,
-            max_tokens=1024,
+    if history:
+        parts.append(
+            f"""
+====================================
+{_format_history_block(history)}
+====================================
+"""
         )
-        return resp.choices[0].message.content or ""
 
-    # 1) Try Gemini (primary)
+    return "\n".join(parts)
+
+
+async def _query_with_timeout(query: str, top_k: int = 3) -> list[dict]:
+    """Wrap `query_knowledge` in a hard timeout so a stuck embedding API
+    can't hang the request thread forever. TimeoutError → 504 to caller."""
     try:
-        logger.info("Attempting primary AI: Gemini")
-        content = await loop.run_in_executor(None, _call_gemini)
-        return format_groq_response(content), "Gemini"
-    except Exception as gemini_err:
-        logger.warning("Gemini failed, falling back to Groq: %s", gemini_err)
-
-    # 2) Fallback to Groq
-    try:
-        content = await loop.run_in_executor(None, _call_groq)
-        return format_groq_response(content), "Groq"
-    except Exception as groq_err:
-        logger.error("Groq also failed: %s", groq_err)
-
-    raise HTTPException(
-        status_code=503,
-        detail="All AI providers are currently unavailable. Please try again.",
-    )
+        return await asyncio.wait_for(
+            asyncio.to_thread(query_knowledge, query, top_k),
+            timeout=QUERY_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError as exc:
+        logger.warning(
+            "query_knowledge timed out after %.1fs for query=%r",
+            QUERY_TIMEOUT_SECONDS,
+            query[:80],
+        )
+        raise HTTPException(
+            status_code=504,
+            detail="Knowledge base query timed out. Please try again.",
+        ) from exc
 
 
 # ==========================================
-# 💬 POST /chat — non-streaming (existing contract)
+# 🔁 Shared helpers (per-request temperature + RAG)
 # ==========================================
-@router.post("/chat")
-@limiter.limit("10/minute")
-async def chat(request: Request, chat_request: ChatRequest):
+# Both /chat and /chat/stream now stream SSE, so the request prep
+# (validate, fetch context, resolve temperature) lives in one place.
+
+
+def _resolve_chat_params(chat_request: ChatRequest) -> dict:
+    """
+    Shared preprocessing for both /chat and /chat/stream. Validates
+    inputs, caps the conversation history, and resolves the temperature.
+
+    Raises HTTPException for the cases the frontend should see as
+    synchronous errors (vector store not ready, empty message).
+    """
     if not is_knowledge_ready():
-        # Refuse early — saves an LLM call while ChromaDB is still ingesting.
         raise HTTPException(
             status_code=503,
             detail="Vector store is still loading. Please retry in a few seconds.",
@@ -121,37 +176,35 @@ async def chat(request: Request, chat_request: ChatRequest):
     if not message:
         raise HTTPException(status_code=400, detail="A message is required.")
 
-    try:
-        context_chunks = query_knowledge(message, top_k=5)
-        system_prompt = _build_system_prompt(context_chunks)
+    # Keep only the most recent MAX_HISTORY_TURNS — older turns are
+    # either redundant or would blow past the context window.
+    history = chat_request.history[-MAX_HISTORY_TURNS:]
+    # Per-request override falls back to the env-default temperature.
+    temperature = (
+        chat_request.temperature
+        if chat_request.temperature is not None
+        else DEFAULT_TEMPERATURE
+    )
 
-        sources = [
-            {"source": chunk["source"], "score": chunk["score"]}
-            for chunk in context_chunks
-        ]
-
-        response, generated_by = await _generate_with_failover(
-            message, system_prompt
-        )
-
-        return {
-            "response": response,
-            "sources": sources,
-            "generatedBy": generated_by,
-        }
-
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("Chat request failed: %s", exc)
-        raise HTTPException(
-            status_code=500, detail="AI service is temporarily unavailable."
-        ) from exc
+    return {
+        "message": message,
+        "history": history,
+        "temperature": temperature,
+    }
 
 
-# ==========================================
-# 🌊 POST /chat/stream — SSE (new)
-# ==========================================
+async def _gather_chat_context(message, history) -> tuple[str, list[dict]]:
+    """Run RAG + build the system prompt. Shared by both endpoints."""
+    # `query_knowledge` is async + timeout-guarded (504 on hang).
+    context_chunks = await _query_with_timeout(message, top_k=3)
+    system_prompt = _build_system_prompt(context_chunks, history)
+    sources = [
+        {"source": chunk["source"], "score": chunk["score"]}
+        for chunk in context_chunks
+    ]
+    return system_prompt, sources
+
+
 async def _sse_event(data: dict | str) -> bytes:
     """Encode one SSE message."""
     if isinstance(data, dict):
@@ -159,6 +212,28 @@ async def _sse_event(data: dict | str) -> bytes:
     return f"data: {data}\n\n".encode("utf-8")
 
 
+async def _sse_keepalive() -> bytes:
+    """SSE comment line — ignored by EventSource clients but keeps the
+    connection alive across idle intermediaries (Cloudflare, Render proxy)."""
+    return b":keepalive\n\n"
+
+
+# ==========================================
+# 🌊 POST /chat — streams SSE (same shape as /chat/stream)
+# ==========================================
+# Both endpoints stream now (the frontend prefers /chat/stream for the
+# faster TTFB and only falls back to /chat when SSE is blocked). Doing
+# it as SSE here too means a stuck non-streaming LLM call can never
+# block the request thread for the full pre-token latency.
+@router.post("/chat")
+@limiter.limit("10/minute")
+async def chat(request: Request, chat_request: ChatRequest):
+    return await _chat_stream_response(request, chat_request, log_tag="chat")
+
+
+# ==========================================
+# 🌊 POST /chat/stream — SSE
+# ==========================================
 @router.post("/chat/stream")
 @limiter.limit("10/minute")
 async def chat_stream(request: Request, chat_request: ChatRequest):
@@ -166,57 +241,92 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
     Streams tokens via Server-Sent Events.
 
     Event sequence:
+      0. { "event": "meta",    "data": {"promptVersion": "1.x.y"} } → telemetry
       1. { "event": "sources", "data": [...] }  → RAG sources (so the UI can show them)
       2. { "event": "token",   "data": "..."  }  → incremental AI text
       3. { "event": "done",    "data": "Gemini"|"Groq" }  → final model name
       4. { "event": "error",   "data": "..." }    → on any failure
+
+    While no token has emitted yet, a `:keepalive` SSE comment is
+    yielded every SSE_KEEPALIVE_SECONDS so intermediary proxies don't
+    drop the connection during long pre-token latency.
     """
-    if not is_knowledge_ready():
-        raise HTTPException(
-            status_code=503,
-            detail="Vector store is still loading. Please retry in a few seconds.",
-        )
+    return await _chat_stream_response(
+        request, chat_request, log_tag="chat/stream"
+    )
 
-    message = chat_request.message.strip()
-    if not message:
-        raise HTTPException(status_code=400, detail="A message is required.")
 
-    context_chunks = query_knowledge(message, top_k=5)
-    system_prompt = _build_system_prompt(context_chunks)
+async def _chat_stream_response(
+    request: Request,
+    chat_request: ChatRequest,
+    log_tag: str,
+) -> StreamingResponse:
+    """
+    Internal helper backing both /chat and /chat/stream. Validates the
+    request, runs RAG, then drives the Gemini → Groq stream with
+    keepalives. Returns a StreamingResponse either way.
+    """
+    params = _resolve_chat_params(chat_request)
+    message = params["message"]
+    history = params["history"]
+    temperature = params["temperature"]
 
-    sources = [
-        {"source": chunk["source"], "score": chunk["score"]}
-        for chunk in context_chunks
-    ]
+    logger.info(
+        "%s request: prompt_version=%s, history_turns=%d, temperature=%.2f, msg_preview=%r",
+        log_tag,
+        PROMPT_VERSION,
+        len(history),
+        temperature,
+        message[:80],
+    )
 
+    system_prompt, sources = await _gather_chat_context(message, history)
     full_prompt = f"{system_prompt}\n\nUser: {message}"
 
     async def event_generator():
+        # 0) Emit metadata first — includes prompt version for A/B tracking.
+        yield await _sse_event(
+            {"event": "meta", "data": {"promptVersion": PROMPT_VERSION}}
+        )
+
         # 1) Emit sources first so the UI can render them immediately.
         yield await _sse_event({"event": "sources", "data": sources})
 
         # 2) Try Gemini streaming → fall back to Groq streaming.
         accumulated: list[str] = []
         generated_by = "Offline"
+        last_activity = time.monotonic()
+
+        async def _maybe_keepalive() -> bytes | None:
+            """Emit a keepalive if no token arrived within the window."""
+            nonlocal last_activity
+            if time.monotonic() - last_activity >= SSE_KEEPALIVE_SECONDS:
+                last_activity = time.monotonic()
+                return await _sse_keepalive()
+            return None
 
         # --- Gemini stream ---
         def _gemini_stream():
             return gemini_client.models.generate_content_stream(
-                model="gemini-2.5-flash",
+                model=GEMINI_MODEL,
                 contents=full_prompt,
+                config=genai_types.GenerateContentConfig(
+                    automatic_function_calling=_AFC_DISABLED,
+                    max_output_tokens=MAX_OUTPUT_TOKENS,
+                    temperature=temperature,
+                ),
             )
 
         # --- Groq stream ---
         def _groq_stream():
-            client = Groq(api_key=settings.GROQ_API_KEY)
-            return client.chat.completions.create(
+            return groq_client.chat.completions.create(
                 model=settings.GROQ_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": message},
                 ],
-                temperature=0.3,
-                max_tokens=1024,
+                temperature=temperature,
+                max_tokens=MAX_OUTPUT_TOKENS,
                 stream=True,
             )
 
@@ -233,7 +343,12 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                 piece = getattr(chunk, "text", None) or ""
                 if piece:
                     accumulated.append(piece)
+                    last_activity = time.monotonic()
                     yield await _sse_event({"event": "token", "data": piece})
+                else:
+                    ka = await _maybe_keepalive()
+                    if ka is not None:
+                        yield ka
         except Exception as gemini_err:
             logger.warning("Gemini stream failed: %s", gemini_err)
 
@@ -249,7 +364,12 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     delta = chunk.choices[0].delta.content or ""
                     if delta:
                         accumulated.append(delta)
+                        last_activity = time.monotonic()
                         yield await _sse_event({"event": "token", "data": delta})
+                    else:
+                        ka = await _maybe_keepalive()
+                        if ka is not None:
+                            yield ka
             except Exception as groq_err:
                 logger.error("Groq stream also failed: %s", groq_err)
                 if not tried_gemini and not accumulated:
@@ -275,3 +395,5 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
             "Connection": "keep-alive",
         },
     )
+
+

@@ -51,7 +51,7 @@ I love creating modern web applications, solving problems using **Data Structure
 
 <p>
 
-<img src="https://skillicons.dev/icons?i=react,vite,js,html,css,bootstrap"/>
+<img src="https://skillicons.dev/icons?i=react,vite,js,html,css"/>
 
 </p>
 
@@ -156,6 +156,32 @@ npm run dev
 ```bash
 npm run build
 ```
+
+
+### Analyze Bundle (optional)
+
+Generate a treemap of every chunk (raw + gzipped + brotli sizes) so you can
+spot bloat. Requires `vite.config.js`'s visualizer plugin, which is
+loaded only when explicitly opted in:
+
+```bash
+ANALYZE=1 npm run build
+```
+
+The report lands at `stats.html` in the project root. Open it in a
+browser to see which
+chunks dominate the initial paint. Useful targets if sizes creep:
+
+| Chunk       | Roughly what lives there                           |
+|-------------|----------------------------------------------------|
+| `react-*`   | `react`, `react-dom`, scheduler                    |
+| `motion-*`  | `framer-motion`                                    |
+| `icons-*`   | `react-icons` (tree-shaken via barrel imports)    |
+| `markdown-*`| `react-markdown` + remark plugins (lazy-loaded)    |
+| `index-*`   | App entry + your own components                    |
+
+`markdown-*` is intentionally lazy — it ships only when the chat
+assistant is first opened, not at first paint.
 
 
 ---
