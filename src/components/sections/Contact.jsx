@@ -30,7 +30,7 @@ const VALIDATION = {
         },
     },
     email: {
-        // Simple but effective — full RFC parsing happens on the EmailJS side.
+        // Simple but effective — full RFC parsing happens on the backend.
         pattern: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
         messages: {
             required: "Please enter your email.",
@@ -69,6 +69,56 @@ function validateField(name, value) {
 
 const initialForm = { name: "", email: "", message: "" };
 
+// ==========================================
+// 🧩 FIELD — defined OUTSIDE Contact so React preserves its identity
+// across renders. Defining it inside Contact would create a new
+// component type on every keystroke, unmounting the <input> and
+// stealing focus. (This was the root cause of the focus-loss bug.)
+// ==========================================
+function Field({
+    name,
+    label,
+    type = "text",
+    as = "input",
+    formData,
+    errors,
+    touched,
+    onChange,
+    onBlur,
+    ...rest
+}) {
+    const showError = touched[name] && errors[name];
+    const Tag = as;
+    return (
+        <div className="contact-field">
+            <Tag
+                type={as === "input" ? type : undefined}
+                name={name}
+                value={formData[name]}
+                onChange={(e) => onChange(name, e.target.value)}
+                onBlur={() => onBlur(name)}
+                placeholder={label}
+                aria-invalid={!!showError}
+                aria-describedby={
+                    showError ? `contact-error-${name}` : undefined
+                }
+                maxLength={VALIDATION[name]?.max ?? undefined}
+                required
+                {...rest}
+            />
+            {showError && (
+                <span
+                    id={`contact-error-${name}`}
+                    className="contact-field-error"
+                    role="alert"
+                >
+                    {errors[name]}
+                </span>
+            )}
+        </div>
+    );
+}
+
 function Contact() {
     const [formData, setFormData] = useState(initialForm);
     const [errors, setErrors] = useState({});
@@ -81,26 +131,29 @@ function Contact() {
     // pretend success without sending the email.
     const [honeypot, setHoneypot] = useState("");
 
-    const contactLinks = [
-        {
-            icon: <FaEnvelope />,
-            title: "Email",
-            value: "riturajlabs@outlook.com",
-            link: "mailto:riturajlabs@outlook.com",
-        },
-        {
-            icon: <FaLinkedin />,
-            title: "LinkedIn",
-            value: "linkedin.com/in/riturajlabs",
-            link: "https://linkedin.com/in/riturajlabs",
-        },
-        {
-            icon: <FaGithub />,
-            title: "GitHub",
-            value: "github.com/riturajlabs",
-            link: "https://github.com/riturajlabs",
-        },
-    ];
+    const contactLinks = useMemo(
+        () => [
+            {
+                icon: <FaEnvelope />,
+                title: "Email",
+                value: "riturajlabs@outlook.com",
+                link: "mailto:riturajlabs@outlook.com",
+            },
+            {
+                icon: <FaLinkedin />,
+                title: "LinkedIn",
+                value: "linkedin.com/in/riturajlabs",
+                link: "https://linkedin.com/in/riturajlabs",
+            },
+            {
+                icon: <FaGithub />,
+                title: "GitHub",
+                value: "github.com/riturajlabs",
+                link: "https://github.com/riturajlabs",
+            },
+        ],
+        []
+    );
 
     // Recompute validity whenever form changes.
     const isValid = useMemo(() => {
@@ -111,7 +164,10 @@ function Contact() {
         );
     }, [formData]);
 
-    function updateField(name, value) {
+    // Stable handlers — using `useCallback` here is optional (Field is
+    // now a stable component), but it keeps referential equality tidy
+    // and makes the component easier to reason about.
+    const updateField = (name, value) => {
         setFormData((prev) => ({ ...prev, [name]: value }));
         // Live-clear an error once the user starts fixing it.
         if (errors[name]) {
@@ -125,20 +181,39 @@ function Contact() {
                 setErrors((prev) => ({ ...prev, [name]: next }));
             }
         }
-    }
+    };
 
-    function handleBlur(name) {
+    const handleBlur = (name) => {
         setTouched((prev) => ({ ...prev, [name]: true }));
         const msg = validateField(name, formData[name]);
         setErrors((prev) => (msg ? { ...prev, [name]: msg } : prev));
-    }
+    };
 
     async function handleSubmit(e) {
         e.preventDefault();
-        if (loading || !isValid) return;
+        if (loading) return;
+
+        // Final validation pass on submit (covers untouched fields).
+        const nextErrors = {
+            name: validateField("name", formData.name),
+            email: validateField("email", formData.email),
+            message: validateField("message", formData.message),
+        };
+        const hasErrors = Object.values(nextErrors).some(Boolean);
+        setErrors(nextErrors);
+        // Mark every field touched so messages render.
+        setTouched({ name: true, email: true, message: true });
+
+        if (hasErrors) {
+            setStatus({
+                kind: "error",
+                text: "Please fix the highlighted fields and try again.",
+            });
+            return;
+        }
 
         // 🐝 Honeypot: if a bot filled the hidden field, pretend success
-        // without actually sending. Saves EmailJS quota.
+        // without actually sending. Saves backend quota.
         if (honeypot) {
             setStatus({ kind: "success", text: "Message sent successfully 🚀" });
             setFormData(initialForm);
@@ -161,45 +236,13 @@ function Contact() {
             console.error("[Contact] sendEmail failed:", error);
             setStatus({
                 kind: "error",
-                text: "Failed to send message. Please email me directly or try again.",
+                text:
+                    error?.message ||
+                    "Failed to send message. Please email me directly or try again.",
             });
         } finally {
             setLoading(false);
         }
-    }
-
-    // Renders a field with inline error display.
-    function Field({ name, label, type = "text", as = "input", ...rest }) {
-        const showError = touched[name] && errors[name];
-        const Tag = as;
-        return (
-            <div className="contact-field">
-                <Tag
-                    type={as === "input" ? type : undefined}
-                    name={name}
-                    value={formData[name]}
-                    onChange={(e) => updateField(name, e.target.value)}
-                    onBlur={() => handleBlur(name)}
-                    placeholder={label}
-                    aria-invalid={!!showError}
-                    aria-describedby={
-                        showError ? `contact-error-${name}` : undefined
-                    }
-                    maxLength={VALIDATION[name]?.max ?? undefined}
-                    required
-                    {...rest}
-                />
-                {showError && (
-                    <span
-                        id={`contact-error-${name}`}
-                        className="contact-field-error"
-                        role="alert"
-                    >
-                        {errors[name]}
-                    </span>
-                )}
-            </div>
-        );
     }
 
     return (
@@ -263,18 +306,33 @@ function Contact() {
                             name="name"
                             label="Your Name"
                             autoComplete="name"
+                            formData={formData}
+                            errors={errors}
+                            touched={touched}
+                            onChange={updateField}
+                            onBlur={handleBlur}
                         />
                         <Field
                             name="email"
                             label="Your Email"
                             type="email"
                             autoComplete="email"
+                            formData={formData}
+                            errors={errors}
+                            touched={touched}
+                            onChange={updateField}
+                            onBlur={handleBlur}
                         />
                         <Field
                             name="message"
                             label="Your Message"
                             as="textarea"
                             rows={5}
+                            formData={formData}
+                            errors={errors}
+                            touched={touched}
+                            onChange={updateField}
+                            onBlur={handleBlur}
                         />
 
                         {/* 🐝 Honeypot: hidden field bots love to fill. */}
@@ -300,8 +358,8 @@ function Contact() {
 
                         <button
                             type="submit"
-                            disabled={loading || !isValid}
-                            aria-disabled={loading || !isValid}
+                            disabled={loading}
+                            aria-disabled={loading}
                         >
                             {loading ? "Sending..." : "Send Message"}
                             <FaPaperPlane />

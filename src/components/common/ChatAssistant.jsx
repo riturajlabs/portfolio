@@ -16,6 +16,8 @@ const MAX_CACHE_SIZE = 50;
 const REQUEST_TIMEOUT_MS = 25000;
 
 // Resolved once at module init — every request reuses the same values.
+// On Vercel, `VITE_BACKEND_URL` should be `https://portfolio-lxdx.onrender.com`
+// (no trailing slash) so production fetches don't hit `localhost:8000`.
 const API_URL =
     import.meta.env.VITE_BACKEND_URL ||
     import.meta.env.VITE_API_URL ||

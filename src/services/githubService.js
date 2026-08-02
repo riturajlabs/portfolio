@@ -9,6 +9,8 @@
  * renders.
  */
 
+// Resolved once at module init. The Vercel env var `VITE_BACKEND_URL`
+// should be set to `https://portfolio-lxdx.onrender.com` (no trailing slash).
 const BACKEND_URL =
     import.meta.env.VITE_BACKEND_URL ||
     import.meta.env.VITE_API_URL ||
