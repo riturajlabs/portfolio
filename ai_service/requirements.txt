@@ -4,6 +4,7 @@ groq
 chromadb
 google-genai
 pydantic
+email-validator
 python-dotenv
 slowapi
 httpx

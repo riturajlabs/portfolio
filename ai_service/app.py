@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from routes.chat import router
 from routes.github import router as github_router
+from routes.contact import router as contact_router
 from core.startup import startup_knowledge_loading, is_knowledge_ready
 from core.rate_limit import limiter, rate_limit_exceeded_handler
 
@@ -78,6 +79,7 @@ app.add_middleware(
 
 app.include_router(router)
 app.include_router(github_router)
+app.include_router(contact_router)
 
 
 # ==========================================
