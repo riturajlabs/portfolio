@@ -9,10 +9,23 @@ Why custom?
   - Our `google-genai` client is already constructed at app init, so we
     reuse it instead of standing up a second one.
 
-Wire contract (ChromaDB):
-  - `__call__(input: Documents) -> Embeddings` — sync entry point.
-  - `name()` returns a deterministic name so Chroma collections can be
-    reconstructed on subsequent runs without re-embedding unchanged rows.
+ChromaDB contract (verified against chromadb 0.5+):
+  - Ingestion (`collection.add` / `get_or_create_collection(...).add`):
+      calls `__call__(input: list[str]) -> list[list[float]]`.
+      No `is_query` flag is passed at ingestion time.
+  - Query (`collection.query(query_texts=...)`):
+      calls `embed_query(input: str) -> list[float]` — note the kwarg is
+      `input`, not `text`. Earlier we had the right name but our wrapper
+      raised `TypeError: ... unexpected keyword argument 'input'`
+      because we never actually exposed `embed_query` to ChromaDB (only
+      `__call__`). ChromaDB's CollectionCommon dispatches to
+      `embed_query` at query time, so the method must exist with the
+      exact signature `embed_query(self, input: str)`.
+
+Task-type handling:
+  - For retrieval, Gemini has separate `RETRIEVAL_DOCUMENT` and
+    `RETRIEVAL_QUERY` task types. We route based on which method
+    ChromaDB called: `__call__` → document, `embed_query` → query.
 """
 from __future__ import annotations
 
@@ -46,8 +59,6 @@ class GeminiEmbeddingFunction:
 
     def __init__(self, client: genai.Client | None = None) -> None:
         if client is None:
-            # Lazy construction: only here if the caller forgot to pass
-            # the shared client (e.g. ad-hoc scripts / tests).
             import os
 
             client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", ""))
@@ -62,7 +73,7 @@ class GeminiEmbeddingFunction:
         return f"google-genai/{_MODEL_NAME}"
 
     def __call__(self, input: Iterable[str]) -> list[list[float]]:
-        """Sync entry point required by ChromaDB.
+        """Sync entry point — called by ChromaDB at ingestion time.
 
         ChromaDB passes a list of documents; we batch them into a single
         `embed_content` call so the API handles internal rate limits.
@@ -71,27 +82,51 @@ class GeminiEmbeddingFunction:
         if not texts:
             return []
 
-        # Run the async batch from sync context. Each call sends the full
-        # batch in one HTTP request — the SDK handles chunking server-side.
+        # ChromaDB requires `RETRIEVAL_DOCUMENT` for indexed chunks.
+        return self._embed_sync(texts, _TASK_TYPE_DOCUMENT)
+
+    def embed_query(self, input: str) -> list[float]:
+        """Called by ChromaDB at query time.
+
+        ⚠️  Argument name MUST be `input` — that's what ChromaDB passes.
+        Earlier versions of this file used `text`, which raised
+        `TypeError: embed_query() got an unexpected keyword argument 'input'`.
+
+        Routes through the same batched path with `RETRIEVAL_QUERY`.
+        """
+        if not input:
+            return []
+        results = self._embed_sync([input], _TASK_TYPE_QUERY)
+        return results[0] if results else []
+
+    # ---- Internals -------------------------------------------------------
+    def _embed_sync(self, texts: list[str], task_type: str) -> list[list[float]]:
+        """
+        Run the async batched `embed_content` call from sync context.
+
+        ChromaDB can call us from a worker thread (ingestion) or from
+        the FastAPI event loop (query). Both paths must work:
+          - No running loop → `asyncio.run` is fine.
+          - Loop already running → we offload to a private thread so we
+            don't try to nest event loops. The underlying genai client
+            uses its own httpx pool, so cross-thread invocation is safe.
+        """
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = None
 
         if loop and loop.is_running():
-            # We're inside a FastAPI request/ingestion thread that already
-            # has a loop. Run the coroutine and wait — safe because the
-            # underlying client uses its own httpx pool, not the loop.
             import concurrent.futures
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
                 future = ex.submit(
                     asyncio.run,
-                    self._aembed(texts, _TASK_TYPE_DOCUMENT),
+                    self._aembed(texts, task_type),
                 )
                 return future.result()
         else:
-            return asyncio.run(self._aembed(texts, _TASK_TYPE_DOCUMENT))
+            return asyncio.run(self._aembed(texts, task_type))
 
     async def _aembed(
         self, texts: list[str], task_type: str
@@ -109,12 +144,6 @@ class GeminiEmbeddingFunction:
         # Response.embeddings is a list of ContentEmbedding objects, each
         # with a `.values` attribute holding the float vector.
         return [list(e.values or []) for e in (response.embeddings or [])]
-
-    # ---- Helper for query-time embedding ---------------------------------
-    async def embed_query(self, text: str) -> list[float]:
-        """Embed a single query string with the retrieval-query task type."""
-        results = await self._aembed([text], _TASK_TYPE_QUERY)
-        return results[0] if results else []
 
 
 # Module-level singleton so we only build one client per process.
