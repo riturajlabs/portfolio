@@ -60,7 +60,7 @@ class ContactResponse(BaseModel):
 _RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 _FROM_EMAIL = os.getenv("CONTACT_FROM_EMAIL", "onboarding@resend.dev")
 _TO_EMAIL = os.getenv("CONTACT_TO_EMAIL", "riturajlabs@outlook.com")
-_RESEND_URL = "https://api.resend.com/v2/emails"
+_RESEND_URL = "https://api.resend.com/emails"
 
 
 def _send_via_resend(req: ContactRequest) -> str:
