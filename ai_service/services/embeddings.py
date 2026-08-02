@@ -14,13 +14,11 @@ ChromaDB contract (verified against chromadb 0.5+):
       calls `__call__(input: list[str]) -> list[list[float]]`.
       No `is_query` flag is passed at ingestion time.
   - Query (`collection.query(query_texts=...)`):
-      calls `embed_query(input: str) -> list[float]` — note the kwarg is
-      `input`, not `text`. Earlier we had the right name but our wrapper
-      raised `TypeError: ... unexpected keyword argument 'input'`
-      because we never actually exposed `embed_query` to ChromaDB (only
-      `__call__`). ChromaDB's CollectionCommon dispatches to
-      `embed_query` at query time, so the method must exist with the
-      exact signature `embed_query(self, input: str)`.
+      calls `embed_query(input: str) -> list[list[float]]` — note:
+        (a) the kwarg is `input`, not `text`, and
+        (b) the return is 2D (one row per query), NOT a flat 1D vector.
+            Earlier we returned `list[float]`, which raised
+            `TypeError: 'float' object cannot be converted to 'Sequence'`.
 
 Task-type handling:
   - For retrieval, Gemini has separate `RETRIEVAL_DOCUMENT` and
@@ -85,19 +83,22 @@ class GeminiEmbeddingFunction:
         # ChromaDB requires `RETRIEVAL_DOCUMENT` for indexed chunks.
         return self._embed_sync(texts, _TASK_TYPE_DOCUMENT)
 
-    def embed_query(self, input: str) -> list[float]:
+    def embed_query(self, input: str) -> list[list[float]]:
         """Called by ChromaDB at query time.
 
-        ⚠️  Argument name MUST be `input` — that's what ChromaDB passes.
-        Earlier versions of this file used `text`, which raised
-        `TypeError: embed_query() got an unexpected keyword argument 'input'`.
+        Contract requirements (both verified against chromadb 0.5+):
+          - Argument name MUST be `input` (not `text`).
+          - Return type MUST be `list[list[float]]` (2D), so that batched
+            queries are supported. Returning a flat `list[float]` raises
+            `TypeError: 'float' object cannot be converted to 'Sequence'`.
 
         Routes through the same batched path with `RETRIEVAL_QUERY`.
         """
         if not input:
-            return []
+            return [[]]
         results = self._embed_sync([input], _TASK_TYPE_QUERY)
-        return results[0] if results else []
+        # Wrap the single vector in a 2D list — one row, one query.
+        return [results[0]] if results else [[]]
 
     # ---- Internals -------------------------------------------------------
     def _embed_sync(self, texts: list[str], task_type: str) -> list[list[float]]:
