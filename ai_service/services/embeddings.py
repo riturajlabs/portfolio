@@ -96,7 +96,7 @@ class GeminiEmbeddingFunction:
         # ChromaDB requires `RETRIEVAL_DOCUMENT` for indexed chunks.
         return self._embed_sync(texts, _TASK_TYPE_DOCUMENT)
 
-    def embed_query(self, input: str) -> list[list[float]]:
+    def embed_query(self, input) -> list[list[float]]:
         """Called by ChromaDB at query time.
 
         Contract requirements (both verified against chromadb 0.5+):
@@ -104,25 +104,38 @@ class GeminiEmbeddingFunction:
           - Return type MUST be `list[list[float]]` (2D), so that batched
             queries are supported. Returning a flat `list[float]` raises
             `TypeError: 'float' object cannot be converted to 'Sequence'`.
+          - The actual type of `input` is `list[str]` (one entry per
+            query in `query_texts=...`). Older ChromaDB versions passed
+            a bare string, so we normalize to a list internally.
 
         Routes through the same batched path with `RETRIEVAL_QUERY`.
         Wrapped in an LRU cache keyed on the normalized query — identical
         repeat questions re-use the first embed, saving a 100-300 ms
         Gemini round-trip per hit.
         """
-        if not input:
+        # Normalize to list[str]. Render's ChromaDB builds pass `input`
+        # as a one-element list (the query_texts list passed to .query);
+        # earlier versions passed a bare string. Handle both.
+        queries = input if isinstance(input, list) else [input]
+        # Flatten any nested lists defensively, then drop empties.
+        queries = [
+            q for q in queries
+            if isinstance(q, str) and q
+        ]
+        if not queries:
             return [[]]
-        # Normalize: collapse whitespace + lowercase so "  Orbit AI  " and
-        # "orbit ai" hit the same cache slot.
-        cache_key = " ".join(input.split()).lower()
+        # Cache key: collapse whitespace + lowercase across the joined
+        # queries so "  Orbit AI  " and "orbit ai" hit the same slot.
+        cache_key = " ".join(" ".join(q.split()).lower() for q in queries)
         cached = _query_cache_get(cache_key)
         if cached is not None:
             return cached
-        results = self._embed_sync([input], _TASK_TYPE_QUERY)
-        vector = [results[0]] if results else [[]]
-        _query_cache_put(cache_key, vector)
-        # Wrap the single vector in a 2D list — one row, one query.
-        return vector
+        results = self._embed_sync(queries, _TASK_TYPE_QUERY)
+        # results is 2D (one row per query); for the single-query case
+        # we still return 2D so ChromaDB's matrix unpacking is happy.
+        vectors = results if results else [[]]
+        _query_cache_put(cache_key, vectors)
+        return vectors
 
     # ---- Internals -------------------------------------------------------
     def _embed_sync(self, texts: list[str], task_type: str) -> list[list[float]]:
