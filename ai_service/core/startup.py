@@ -9,6 +9,7 @@ Moved out of `app.py` so:
 """
 import asyncio
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,15 @@ def _run_ingestion() -> None:
     global _knowledge_ready
     try:
         from services.knowledge_loader import load_knowledge_into_chromadb
-        added = load_knowledge_into_chromadb()
+
+        # 🧹 Wipe stale ChromaDB data when the embedding model changes,
+        # or when the operator opts in via env. Old vectors (different
+        # dim / model) would silently degrade retrieval if mixed.
+        force = os.environ.get("FORCE_REINGEST", "").lower() in (
+            "1", "true", "yes"
+        )
+
+        added = load_knowledge_into_chromadb(force=force)
         logger.info("✅ Knowledge base loaded into ChromaDB (+%d chunks)", added)
         _knowledge_ready = True
     except Exception as exc:  # pragma: no cover

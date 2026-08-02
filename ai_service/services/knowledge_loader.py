@@ -1,23 +1,29 @@
 import hashlib
 import json
 import logging
+import os
+import shutil
 from pathlib import Path
 
 import chromadb
-# 🚀 Naya Import: ChromaDB ka built-in ONNX function
-import os
-from chromadb.utils.embedding_functions import GoogleGenerativeAiEmbeddingFunction
 
 from config.settings import settings
+from services.embeddings import (
+    GeminiEmbeddingFunction,
+    get_embedding_function,
+)
 
 logger = logging.getLogger(__name__)
 
 _client = None
 _collection = None
+_ef: GeminiEmbeddingFunction | None = None
+
 
 def _stable_id(section: str, key: str, text: str) -> str:
     raw = f"{section}:{key}:{text}"
     return hashlib.md5(raw.encode("utf-8")).hexdigest()
+
 
 def _serialize(value) -> str:
     if isinstance(value, str):
@@ -30,6 +36,7 @@ def _serialize(value) -> str:
             for key, item in value.items()
         )
     return str(value)
+
 
 def _chunk_section(section: str, data) -> list[dict]:
     chunks = []
@@ -67,6 +74,7 @@ def _chunk_section(section: str, data) -> list[dict]:
             "metadata": {"source": section},
         }
     ]
+
 
 def _resolve_knowledge_path() -> Path:
     """
@@ -129,37 +137,69 @@ def load_knowledge() -> list[dict]:
     logger.info("Prepared %d knowledge chunks from %s", len(chunks), knowledge_path)
     return chunks
 
+
+def _chroma_path() -> Path:
+    raw = Path(settings.CHROMA_DB_PATH)
+    if not raw.is_absolute():
+        raw = Path(__file__).resolve().parent.parent / raw
+    return raw
+
+
+def _wipe_chroma_db() -> None:
+    """
+    Delete the on-disk ChromaDB directory so old ONNX/built-in-GoogleGen
+    embeddings don't pollute the new google-genai collection.
+
+    Embeddings from different models / dims are not comparable, so mixing
+    them would silently degrade retrieval.
+    """
+    path = _chroma_path()
+    if path.exists():
+        try:
+            shutil.rmtree(path)
+            logger.warning(
+                "🧹 Wiped stale ChromaDB at %s (switching embedding model).",
+                path,
+            )
+        except OSError as exc:
+            logger.error("Could not wipe ChromaDB at %s: %s", path, exc)
+            raise
+
+
 def _get_client() -> chromadb.ClientAPI:
     global _client
     if _client is None:
-        _client = chromadb.PersistentClient(path=settings.CHROMA_DB_PATH)
+        path = _chroma_path()
+        path.mkdir(parents=True, exist_ok=True)
+        _client = chromadb.PersistentClient(path=str(path))
     return _client
 
+
 def _get_collection():
-    global _collection
+    """Return the portfolio collection, wired to our custom Gemini ef."""
+    global _collection, _ef
     if _collection is None:
-        # 🚀 ONNX ki jagah ab Gemini Embeddings use kar rahe hain (RAM bachane ke liye)
-        gemini_api_key = os.environ.get("GEMINI_API_KEY")
-        
-        if not gemini_api_key:
-            logger.warning("GEMINI_API_KEY environment variable me nahi mili!")
-            
-        gemini_ef = GoogleGenerativeAiEmbeddingFunction(
-            api_key=gemini_api_key,
-            task_type="RETRIEVAL_DOCUMENT"
-        )
-        
-        # Collection banate waqt Gemini embedding function de diya
+        if not os.environ.get("GEMINI_API_KEY"):
+            logger.warning(
+                "GEMINI_API_KEY not set — embedding calls will fail."
+            )
+
+        _ef = get_embedding_function()
+
         _collection = _get_client().get_or_create_collection(
             name=settings.COLLECTION_NAME,
-            embedding_function=gemini_ef,
+            embedding_function=_ef,
             metadata={"hnsw:space": "cosine"},
         )
     return _collection
 
+
 def ensure_embeddings(collection, chunks: list[dict]) -> int:
     """Embeds and upserts only the chunks not already present in ChromaDB."""
     added = 0
+    # Batch size for a single `embed_content` call. The Gemini SDK handles
+    # internal chunking, so 64 keeps the request count low without hitting
+    # the per-request input token ceiling.
     batch_size = 64
 
     for start in range(0, len(chunks), batch_size):
@@ -175,7 +215,7 @@ def ensure_embeddings(collection, chunks: list[dict]) -> int:
 
         texts = [c["text"] for c in missing]
 
-        # 🚀 No manual encoding needed! ChromaDB ab khud ONNX use karke vectors banayega
+        # Chroma will call our custom ef's __call__ once with `texts`.
         collection.add(
             ids=[c["id"] for c in missing],
             documents=texts,
@@ -185,16 +225,22 @@ def ensure_embeddings(collection, chunks: list[dict]) -> int:
 
     return added
 
+
 def load_knowledge_into_chromadb(force: bool = False) -> int:
-    """Loads ./knowledge_base.json into the 'portfolio_knowledge' collection."""
-    client = _get_client()
+    """
+    Loads ./knowledge_base.json into the configured Chroma collection.
 
+    If `force=True` (or the on-disk DB predates the current embedding
+    model), the entire persistence directory is wiped before re-ingestion.
+    """
     if force:
-        try:
-            client.delete_collection(settings.COLLECTION_NAME)
-        except Exception:
-            pass
+        # Drop the cached handles so we rebuild against a fresh directory.
+        global _client, _collection
+        _client = None
+        _collection = None
+        _wipe_chroma_db()
 
+    client = _get_client()
     collection = _get_collection()
 
     chunks = load_knowledge()
@@ -207,11 +253,12 @@ def load_knowledge_into_chromadb(force: bool = False) -> int:
     )
     return added
 
+
 def query_knowledge(query: str, top_k: int = 5, score_threshold: float = 0.4) -> list[dict]:
     """Searches the portfolio_knowledge collection and returns relevant text chunks."""
     collection = _get_collection()
 
-    # 🚀 Seedha text query bhejo, Chroma khud embed karega!
+    # Custom ef handles embedding; pass raw text.
     results = collection.query(
         query_texts=[query],
         n_results=top_k,
