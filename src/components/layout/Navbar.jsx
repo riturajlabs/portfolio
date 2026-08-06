@@ -12,9 +12,9 @@ const navigation = [
     { id: "about", label: "About" },
     { id: "skills", label: "Skills" },
     { id: "projects", label: "Projects" },
-    { id: "github", label: "GitHub" },
+
     { id: "certifications", label: "Certifications" },
-    { id: "blog", label: "Blog" },
+    
     { id: "contact", label: "Contact" },
 ];
 

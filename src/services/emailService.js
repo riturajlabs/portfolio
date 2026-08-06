@@ -2,16 +2,18 @@
  * Email service.
  *
  * Sends form submissions to the FastAPI backend at `/api/contact`.
- * The base URL comes from the Vercel env var `VITE_BACKEND_URL`
- * (e.g. `https://portfolio-lxdx.onrender.com`).
  *
- * For local dev, set `VITE_BACKEND_URL=http://localhost:8000` in `.env`.
+ * In production (`VITE_BACKEND_URL` unset) the call is SAME-ORIGIN so it
+ * routes through Vercel's edge middleware (see `middleware.js` at the repo
+ * root), which injects the shared `X-API-Key` header before the rewrite
+ * forwards the request to the Render backend.
+ *
+ * For local dev, set `VITE_BACKEND_URL=http://localhost:8000` in `.env`
+ * to bypass the rewrite and hit FastAPI directly.
  */
 
 const BACKEND_URL =
-    import.meta.env.VITE_BACKEND_URL ||
-    import.meta.env.VITE_API_URL ||
-    "http://localhost:8000";
+    (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export async function sendEmail(formData) {
     const response = await fetch(`${BACKEND_URL}/api/contact`, {

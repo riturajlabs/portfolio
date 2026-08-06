@@ -41,15 +41,18 @@ const CHAT_STORAGE_KEY = "portfolio-chat-session";
 const CHAT_OPENED_KEY = "portfolio-chat-opened";
 
 // Resolved once at module init — every request reuses the same values.
-// We use SAME-ORIGIN relative URLs in production. Vercel's edge
-// middleware (see `middleware.js` at the repo root) injects the shared
-// `X-API-Key` header before the rewrite forwards the request to the
-// Render backend, so the secret never reaches the browser bundle.
+// In production (VITE_BACKEND_URL unset) we use SAME-ORIGIN `/api/chat/*`
+// URLs so Vercel's edge middleware (see `middleware.js` at the repo root)
+// injects the shared `X-API-Key` header before the rewrite forwards the
+// request to the Render backend — the secret never reaches the browser
+// bundle.
 //
-// For local dev, set `VITE_BACKEND_URL=http://localhost:8000` in `.env.local`
-// to bypass the rewrite and hit FastAPI directly.
-const API_URL =
-    import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, "") || "";
+// For local dev, set `VITE_BACKEND_URL=http://localhost:8000` in `.env`
+// to bypass the rewrite and hit FastAPI directly (auth is skipped when
+// `ENV=development`).
+const CHAT_BASE_URL = import.meta.env.VITE_BACKEND_URL
+    ? `${import.meta.env.VITE_BACKEND_URL.replace(/\/$/, "")}/chat`
+    : "/api/chat";
 
 const GREETING_TEXT =
     "Hi there! 👋 I'm Ritu Raj's AI Assistant. I can help you explore his projects, technical skills, education, certifications, and internship opportunities. Feel free to ask anything! 🚀";
@@ -544,7 +547,7 @@ function ChatAssistant() {
 
         try {
             // 🌊 PRIMARY: streaming SSE
-            const streamResponse = await fetch(`${API_URL}/chat/stream`, {
+            const streamResponse = await fetch(`${CHAT_BASE_URL}/stream`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -580,7 +583,7 @@ function ChatAssistant() {
                     // /chat now also streams SSE (same shape), so reuse the
                     // SSE consumer instead of parsing JSON. This also avoids
                     // thread-blocking the request on a stuck LLM call.
-                    const fallbackResponse = await fetch(`${API_URL}/chat`, {
+                    const fallbackResponse = await fetch(`${CHAT_BASE_URL}`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",

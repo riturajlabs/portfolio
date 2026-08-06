@@ -9,12 +9,12 @@
  * renders.
  */
 
-// Resolved once at module init. The Vercel env var `VITE_BACKEND_URL`
-// should be set to `https://portfolio-lxdx.onrender.com` (no trailing slash).
+// Resolved once at module init. In production (`VITE_BACKEND_URL` unset)
+// the call is SAME-ORIGIN `/api/github`, which Vercel rewrites to the
+// Render backend proxy. For local dev, set `VITE_BACKEND_URL` in `.env`
+// (e.g. `http://localhost:8000`) to hit FastAPI directly.
 const BACKEND_URL =
-    import.meta.env.VITE_BACKEND_URL ||
-    import.meta.env.VITE_API_URL ||
-    "http://localhost:8000";
+    (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 const FALLBACK_PROFILE = {
     public_repos: 0,
