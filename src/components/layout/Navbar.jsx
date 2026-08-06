@@ -3,6 +3,7 @@ import { FaBars, FaTimes } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
 import ThemeToggle from "./ThemeToggle";
+import useScrollSpy from "../../hooks/useScrollSpy";
 import profile from "../../data/profile";
 import "../../styles/navbar.css";
 
@@ -10,6 +11,8 @@ const navigation = [
     { id: "home", label: "Home" },
     { id: "about", label: "About" },
     { id: "skills", label: "Skills" },
+    { id: "projects", label: "Projects" },
+    { id: "github", label: "GitHub" },
     { id: "certifications", label: "Certifications" },
     { id: "blog", label: "Blog" },
     { id: "contact", label: "Contact" },
@@ -18,7 +21,7 @@ const navigation = [
 function Navbar() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [activeSection, setActiveSection] = useState("home");
+    const [activeSection, setActiveSection] = useScrollSpy("home");
 
     // Navbar background on scroll
     useEffect(() => {
@@ -43,26 +46,6 @@ function Navbar() {
         };
     }, [menuOpen]);
 
-    // Active section intersection observer
-    useEffect(() => {
-        const sections = document.querySelectorAll("section[id]");
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        setActiveSection(entry.target.id);
-                    }
-                });
-            },
-            { threshold: 0.5 }
-        );
-
-        sections.forEach((section) => observer.observe(section));
-
-        return () => observer.disconnect();
-    }, []);
-
     return (
         <header
             className={`navbar-wrapper ${scrolled ? "navbar-scrolled" : ""}`}
@@ -86,6 +69,7 @@ function Navbar() {
                                 <a
                                     href={`#${item.id}`}
                                     className={activeSection === item.id ? "active-link" : ""}
+                                    onClick={() => setActiveSection(item.id)}
                                 >
                                     {item.label}
                                 </a>
@@ -135,6 +119,8 @@ function Navbar() {
                                         className={activeSection === item.id ? "active-link" : ""}
                                         onClick={(e) => {
                                             e.preventDefault();
+
+                                            setActiveSection(item.id);
                                             
                                             // 1. Sabse pehle menu close karo taaki body ka "overflow: hidden" hat jaye aur page unlock ho.
                                             setMenuOpen(false); 

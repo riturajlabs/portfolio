@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import ScrollToTop from "./components/common/ScrollToTop";
+import ScrollProgress from "./components/common/ScrollProgress";
 
 
 
@@ -27,6 +28,7 @@ function App() {
 
             <ScrollToTop />
 
+            <ScrollProgress />
 
             <Navbar />
 

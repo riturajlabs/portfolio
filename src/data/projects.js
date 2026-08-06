@@ -15,6 +15,12 @@ const projects = [
 
         image: orbitAI,
 
+        highlights: [
+            "End-to-end full-stack AI product: FastAPI + Express backend, MongoDB persistence, and a React client",
+            "LLM integration with RAG-style knowledge grounding and streaming chat responses",
+            "JWT auth, rate limiting, and secure API gateway patterns",
+        ],
+
         techStack: [
             "React",
             "Node.js",
@@ -38,6 +44,12 @@ const projects = [
 
         image: stayora,
 
+        highlights: [
+            "Airbnb-inspired platform with user authentication and authorization",
+            "Property listings, wishlist, reviews, and cloud image uploads",
+            "RESTful API design with Express and MongoDB schema modeling",
+        ],
+
         techStack: [
             "JavaScript",
             "Node.js",
@@ -59,6 +71,12 @@ const projects = [
 
         image: null,
 
+        highlights: [
+            "Pixel-faithful UI clone of a popular trading platform",
+            "Reusable component architecture with Bootstrap theming",
+            "Responsive layouts tested across multiple viewports",
+        ],
+
         techStack: [
             "React",
             "Bootstrap",
@@ -78,6 +96,12 @@ const projects = [
             "Responsive scientific calculator supporting arithmetic operations, trigonometry, factorials, permutations and combinations.",
 
         image: calculator,
+
+        highlights: [
+            "Full scientific feature set: trigonometry, factorials, permutations & combinations",
+            "Keyboard support and accessible semantic markup",
+            "Pure vanilla JavaScript logic with zero external dependencies",
+        ],
 
         techStack: [
             "HTML",

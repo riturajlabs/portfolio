@@ -29,12 +29,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import threading
-from collections import OrderedDict
 from typing import Iterable
 
 from google import genai
 from google.genai import types as genai_types
+
+# Persistent query-embedding cache (SQLite). Replaces the previous
+# in-process OrderedDict LRU so warm caches survive Render restarts.
+# See `services/embedding_cache.py` for the storage layout and pruning
+# policy. The cache is opened lazily on first use; errors degrade to
+# "no cache" so a corrupt DB never breaks `/chat`.
+from services.embedding_cache import get_embedding_cache
 
 logger = logging.getLogger(__name__)
 
@@ -96,33 +101,45 @@ class GeminiEmbeddingFunction:
         # ChromaDB requires `RETRIEVAL_DOCUMENT` for indexed chunks.
         return self._embed_sync(texts, _TASK_TYPE_DOCUMENT)
 
-    def embed_query(self, input: str) -> list[list[float]]:
+    def embed_query(self, input: str | list[str]) -> list[list[float]]:
         """Called by ChromaDB at query time.
 
-        Contract requirements (both verified against chromadb 0.5+):
+        Contract (verified against chromadb 0.5+ AND 1.x):
           - Argument name MUST be `input` (not `text`).
-          - Return type MUST be `list[list[float]]` (2D), so that batched
-            queries are supported. Returning a flat `list[float]` raises
+          - ChromaDB 0.5.x passes a plain `str`; ChromaDB 1.x passes a
+            list of query texts (`[query_text]`). Accept both.
+          - Return type MUST be `list[list[float]]` (2D, one row per
+            query). Returning a flat `list[float]` raises
             `TypeError: 'float' object cannot be converted to 'Sequence'`.
 
         Routes through the same batched path with `RETRIEVAL_QUERY`.
-        Wrapped in an LRU cache keyed on the normalized query — identical
-        repeat questions re-use the first embed, saving a 100-300 ms
-        Gemini round-trip per hit.
+        Wrapped in a SQLite-backed cache (see `services/embedding_cache.py`)
+        keyed on the normalized query — identical repeat questions re-use
+        the first embed, saving a 100-300 ms Gemini round-trip per hit.
         """
-        if not input:
+        queries = [input] if isinstance(input, str) else list(input)
+        if not queries:
             return [[]]
-        # Normalize: collapse whitespace + lowercase so "  Orbit AI  " and
-        # "orbit ai" hit the same cache slot.
-        cache_key = " ".join(input.split()).lower()
-        cached = _query_cache_get(cache_key)
-        if cached is not None:
-            return cached
-        results = self._embed_sync([input], _TASK_TYPE_QUERY)
-        vector = [results[0]] if results else [[]]
-        _query_cache_put(cache_key, vector)
-        # Wrap the single vector in a 2D list — one row, one query.
-        return vector
+
+        # The SQLite cache is keyed on a single normalized query, so it
+        # only serves the single-query path (what ChromaDB actually uses).
+        # Multi-query batches bypass the cache and embed directly.
+        use_cache = len(queries) == 1
+
+        cache = get_embedding_cache() if use_cache else None
+        if cache is not None:
+            cached = cache.get(queries)
+            if cached is not None and cached:
+                return cached
+
+        results = self._embed_sync(queries, _TASK_TYPE_QUERY)
+        if not results:
+            results = [[]] * len(queries)
+
+        if use_cache and cache is not None and results[0]:
+            cache.put(queries, [results[0]])
+
+        return results
 
     # ---- Internals -------------------------------------------------------
     def _embed_sync(self, texts: list[str], task_type: str) -> list[list[float]]:
@@ -177,45 +194,20 @@ _function: GeminiEmbeddingFunction | None = None
 
 
 # ==========================================
-# 🗃️  Query embedding LRU cache
+# 🗃️  Query embedding cache (now SQLite-backed)
 # ==========================================
-# `embed_query` is the only path that takes a single user query string
-# and round-trips to Gemini. Caching it by normalized query string:
-#   - Saves 100-300 ms per repeat question (the embedding API round-trip).
-#   - At 200 entries x 768 floats x 8 bytes ≈ 1.2 MB. Negligible vs the
-#     512 MB Render budget.
-#   - Thread-safe via a single `threading.Lock` (queries are dispatched
-#     to worker threads via `asyncio.to_thread` in chat routes).
-# `OrderedDict.move_to_end` gives true LRU semantics — most-recently
-# used stays at the tail, oldest gets evicted from the front.
-_QUERY_CACHE_MAX = 200
-_query_cache: "OrderedDict[str, list[list[float]]]" = OrderedDict()
-_query_cache_lock = threading.Lock()
-
-
-def _query_cache_get(key: str) -> list[list[float]] | None:
-    with _query_cache_lock:
-        if key not in _query_cache:
-            return None
-        _query_cache.move_to_end(key)
-        return _query_cache[key]
-
-
-def _query_cache_put(key: str, value: list[list[float]]) -> None:
-    with _query_cache_lock:
-        if key in _query_cache:
-            _query_cache.move_to_end(key)
-            _query_cache[key] = value
-            return
-        _query_cache[key] = value
-        if len(_query_cache) > _QUERY_CACHE_MAX:
-            _query_cache.popitem(last=False)  # evict oldest
-
-
+# The in-process OrderedDict LRU that used to live here has been replaced
+# by `services/embedding_cache.py` so warm caches survive process restarts
+# (Render redeploys, cold starts). Operations degrade gracefully — a
+# missing/corrupt cache file just means we re-embed from Gemini on the
+# next call.
+#
+# Quick test helper to drop the persisted cache during local dev:
 def clear_query_cache() -> None:
     """Test helper: drop all cached embeddings."""
-    with _query_cache_lock:
-        _query_cache.clear()
+    cache = get_embedding_cache()
+    if cache is not None:
+        cache.clear()
 
 
 def get_embedding_function() -> GeminiEmbeddingFunction:

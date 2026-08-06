@@ -27,13 +27,6 @@ function Hero() {
         visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
     };
 
-    // Skills array directly from profile
-    const techStack = profile.techStack;
-    const totalSkills = techStack.length;
-    
-    // Circle radius (distance from center). 58% is perfect for placing them just outside the image border.
-    const radius = 58; 
-
     return (
         <section
             id="home"
@@ -145,9 +138,9 @@ function Hero() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.8, delay: 0.2 }}
                     >
-                        <div className="hero-image-wrapper">
-
-                            <div className="image-container">
+                        <div className="hero-visual">
+                            {/* Circular profile image with professional gradient ring */}
+                            <div className="hero-image-frame">
                                 <img
                                     src={profile.profileImage}
                                     alt={profile.name}
@@ -155,34 +148,6 @@ function Hero() {
                                     loading="eager"
                                 />
                             </div>
-
-                            {/* Dynamic Circle Stack */}
-                            <div className="floating-stack">
-                                {techStack.map((tech, index) => {
-                                    // Math: Calculate angles and position dynamically
-                                    // Math.PI / 2 subtract karte hain taaki circle top se start ho (-90 degrees)
-                                    const angle = (index / totalSkills) * (2 * Math.PI) - (Math.PI / 2);
-                                    
-                                    // Calculate exact X and Y coordinates on the circle
-                                    const x = 50 + radius * Math.cos(angle);
-                                    const y = 50 + radius * Math.sin(angle);
-
-                                    return (
-                                        <span
-                                            key={tech}
-                                            className="tech-badge"
-                                            style={{
-                                                top: `${y}%`,
-                                                left: `${x}%`,
-                                                animationDelay: `${index * 0.5}s`,
-                                            }}
-                                        >
-                                            {tech}
-                                        </span>
-                                    );
-                                })}
-                            </div>
-
                         </div>
                     </motion.div>
 

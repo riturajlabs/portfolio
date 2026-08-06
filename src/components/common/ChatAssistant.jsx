@@ -1,6 +1,20 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaRobot, FaTimes, FaPaperPlane, FaCommentDots, FaCheck, FaCopy } from "react-icons/fa";
+import {
+    FaRobot,
+    FaTimes,
+    FaPaperPlane,
+    FaCommentDots,
+    FaCheck,
+    FaCopy,
+    FaThumbsUp,
+    FaThumbsDown,
+    FaRedo,
+    FaStop,
+    FaSpinner,
+    FaPlus,
+    FaBookOpen,
+} from "react-icons/fa";
 import remarkGfm from "remark-gfm";
 // 🚀 Lazy-load markdown — react-markdown + micromark together are ~80 KB
 // (remark-gfm is small and treeshakes well, so it's fine to keep sync).
@@ -13,7 +27,6 @@ import "../../styles/chat.css";
 // ==========================================
 // 🚀 CONSTANTS & CONFIGURATION
 // ==========================================
-const MAX_HISTORY = 10;
 const MAX_CACHE_SIZE = 50;
 // Cap on conversation turns we send to the backend. Backend further
 // trims to its own MAX_HISTORY_TURNS — keep the client's cap slightly
@@ -23,15 +36,23 @@ const MAX_HISTORY_TURNS = 6;
 // Hard request timeout (ms) — Render free tier cold-starts can take 25 s.
 const REQUEST_TIMEOUT_MS = 25000;
 
-// Resolved once at module init — every request reuses the same values.
-// On Vercel, `VITE_BACKEND_URL` should be `https://portfolio-lxdx.onrender.com`
-// (no trailing slash) so production fetches don't hit `localhost:8000`.
-const API_URL =
-    import.meta.env.VITE_BACKEND_URL ||
-    import.meta.env.VITE_API_URL ||
-    "http://localhost:8000";
+// Session persistence keys.
+const CHAT_STORAGE_KEY = "portfolio-chat-session";
+const CHAT_OPENED_KEY = "portfolio-chat-opened";
 
-const API_KEY = import.meta.env.VITE_API_KEY || "";
+// Resolved once at module init — every request reuses the same values.
+// We use SAME-ORIGIN relative URLs in production. Vercel's edge
+// middleware (see `middleware.js` at the repo root) injects the shared
+// `X-API-Key` header before the rewrite forwards the request to the
+// Render backend, so the secret never reaches the browser bundle.
+//
+// For local dev, set `VITE_BACKEND_URL=http://localhost:8000` in `.env.local`
+// to bypass the rewrite and hit FastAPI directly.
+const API_URL =
+    import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, "") || "";
+
+const GREETING_TEXT =
+    "Hi there! 👋 I'm Ritu Raj's AI Assistant. I can help you explore his projects, technical skills, education, certifications, and internship opportunities. Feel free to ask anything! 🚀";
 
 const SUGGESTED_QUESTIONS = [
 
@@ -50,7 +71,7 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 // ==========================================
-// 🧩 REUSABLE COMPONENTS
+// 🧩 REUSABLE COMPONENTS & HELPERS
 // ==========================================
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -66,6 +87,54 @@ const TypingIndicator = () => (
         ))}
     </div>
 );
+
+// Restore a persisted conversation if it is well-formed; otherwise start fresh.
+const loadInitialMessages = () => {
+    try {
+        const raw = sessionStorage.getItem(CHAT_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (
+                Array.isArray(parsed) &&
+                parsed.length > 0 &&
+                parsed.every(
+                    (m) =>
+                        m &&
+                        (m.role === "ai" || m.role === "user") &&
+                        typeof m.text === "string"
+                )
+            ) {
+                return parsed;
+            }
+        }
+    } catch {
+        // Corrupt/legacy storage — fall through to a fresh greeting.
+    }
+    return [{ id: generateId(), role: "ai", text: GREETING_TEXT }];
+};
+
+// Nearest user message before index `idx` (used by the regenerate action).
+const findPrevUserText = (messages, idx) => {
+    for (let i = idx - 1; i >= 0; i--) {
+        if (messages[i].role === "user" && messages[i].text) {
+            return messages[i].text;
+        }
+    }
+    return null;
+};
+
+// Deduplicate RAG sources by name, dropping empty entries.
+const dedupeSources = (sources) => {
+    const seen = new Set();
+    const result = [];
+    for (const s of sources || []) {
+        const name = s?.source;
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
+        result.push(s);
+    }
+    return result;
+};
 
 // Code Block with Copy Button Component
 const CodeBlock = ({ inline, className, children, ...props }) => {
@@ -113,24 +182,41 @@ function ChatAssistant() {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [activeModelName, setActiveModelName] = useState("AI Auto-Failover");
-    
-    const [messages, setMessages] = useState([
-        { 
-            id: generateId(),
-            role: "ai", 
-            text: "Hi there! 👋 I'm Ritu Raj's AI Assistant. I can help you explore his projects, technical skills, education, certifications, and internship opportunities. Feel free to ask anything! 🚀"
+    const [messages, setMessages] = useState(loadInitialMessages);
+    const [copiedId, setCopiedId] = useState("");
+    const [feedback, setFeedback] = useState({});
+    const [hasOpened, setHasOpened] = useState(() => {
+        try {
+            return localStorage.getItem(CHAT_OPENED_KEY) === "true";
+        } catch {
+            return false;
         }
-    ]);
+    });
 
     const messagesEndRef = useRef(null);
     const chatBodyRef = useRef(null);
+    const chatWindowRef = useRef(null);
+    const fabRef = useRef(null);
     const isUserScrolled = useRef(false);
     const inputRef = useRef(null);
     const chatCache = useRef(new Map());
+    const abortControllerRef = useRef(null);
+    const stopRequestedRef = useRef(false);
+    const prevOpenRef = useRef(false);
+    const copyTimeoutRef = useRef(null);
     // Mirror messages into a ref so handleSend sees the LATEST state,
     // not the closure-captured stale value (handleSend is memoized).
     const messagesRef = useRef(messages);
     useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+    // 💾 Persist conversation for this tab session.
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+        } catch {
+            // Storage unavailable (private mode etc.) — non-fatal.
+        }
+    }, [messages]);
 
     const handleScroll = useCallback(() => {
         if (!chatBodyRef.current) return;
@@ -144,10 +230,15 @@ function ChatAssistant() {
         }
     }, [messages, isLoading]);
 
+    // 🎯 Focus input when opening; restore focus to the FAB when closing
+    // (but never steal focus on first page load).
     useEffect(() => {
-        if (isOpen && inputRef.current) {
-            inputRef.current.focus();
+        if (isOpen) {
+            inputRef.current?.focus();
+        } else if (prevOpenRef.current) {
+            fabRef.current?.focus();
         }
+        prevOpenRef.current = isOpen;
     }, [isOpen]);
 
     useEffect(() => {
@@ -158,6 +249,37 @@ function ChatAssistant() {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen]);
+
+    // 🚧 Focus trap: keep Tab navigation inside the chat window.
+    useEffect(() => {
+        if (!isOpen) return;
+        const windowEl = chatWindowRef.current;
+        if (!windowEl) return;
+
+        const handleTab = (e) => {
+            if (e.key !== "Tab") return;
+            const focusables = Array.from(
+                windowEl.querySelectorAll(
+                    'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select, [tabindex]:not([tabindex="-1"])'
+                )
+            ).filter((el) => el.offsetParent !== null);
+            if (focusables.length === 0) return;
+
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+
+        windowEl.addEventListener("keydown", handleTab);
+        return () => windowEl.removeEventListener("keydown", handleTab);
     }, [isOpen]);
 
     useEffect(() => {
@@ -184,6 +306,9 @@ function ChatAssistant() {
         };
     }, []);
 
+    // Clean up the copy-toast timeout on unmount.
+    useEffect(() => () => clearTimeout(copyTimeoutRef.current), []);
+
     const getStatusColor = () => {
         if (activeModelName.toLowerCase().includes('gemini')) return 'var(--status-gemini, #10b981)';
         if (activeModelName.toLowerCase().includes('groq')) return 'var(--status-groq, #f59e0b)';
@@ -191,24 +316,40 @@ function ChatAssistant() {
         return 'var(--status-default, #3b82f6)';
     };
 
+    // Factory that strips the `node` prop react-markdown passes to every
+    // renderer (spreading it onto a DOM element triggers React warnings).
+    const markdownElement = (Tag, className, extraProps = {}) => {
+        const Component = ({ node, ...props }) => {
+            void node;
+            return <Tag className={className} {...extraProps} {...props} />;
+        };
+        return Component;
+    };
+
     const markdownComponents = useMemo(() => ({
-        p: ({node, ...props}) => <p className="markdown-p" {...props} />,
-        strong: ({node, ...props}) => <strong className="markdown-strong" {...props} />,
-        em: ({node, ...props}) => <em className="markdown-em" {...props} />,
-        a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="markdown-link" />,
-        ul: ({node, ...props}) => <ul className="markdown-ul" {...props} />,
-        ol: ({node, ...props}) => <ol className="markdown-ol" {...props} />,
-        li: ({node, ...props}) => <li className="markdown-li" {...props} />,
-        h1: ({node, ...props}) => <h1 className="markdown-h" {...props} />,
-        h2: ({node, ...props}) => <h2 className="markdown-h" {...props} />,
-        h3: ({node, ...props}) => <h3 className="markdown-h" {...props} />,
-        table: ({node, ...props}) => (
-            <div className="markdown-table-wrapper">
-                <table className="markdown-table" {...props} />
-            </div>
-        ),
-        th: ({node, ...props}) => <th className="markdown-th" {...props} />,
-        td: ({node, ...props}) => <td className="markdown-td" {...props} />,
+        p: markdownElement("p", "markdown-p"),
+        strong: markdownElement("strong", "markdown-strong"),
+        em: markdownElement("em", "markdown-em"),
+        a: markdownElement("a", "markdown-link", {
+            target: "_blank",
+            rel: "noopener noreferrer",
+        }),
+        ul: markdownElement("ul", "markdown-ul"),
+        ol: markdownElement("ol", "markdown-ol"),
+        li: markdownElement("li", "markdown-li"),
+        h1: markdownElement("h1", "markdown-h"),
+        h2: markdownElement("h2", "markdown-h"),
+        h3: markdownElement("h3", "markdown-h"),
+        table: ({ node, ...props }) => {
+            void node;
+            return (
+                <div className="markdown-table-wrapper">
+                    <table className="markdown-table" {...props} />
+                </div>
+            );
+        },
+        th: markdownElement("th", "markdown-th"),
+        td: markdownElement("td", "markdown-td"),
         code: CodeBlock
     }), []);
 
@@ -226,6 +367,60 @@ function ChatAssistant() {
         }));
     };
 
+    // ==========================================
+    // MESSAGE ACTIONS
+    // ==========================================
+    const handleCopy = async (id, text) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedId(id);
+            clearTimeout(copyTimeoutRef.current);
+            copyTimeoutRef.current = setTimeout(() => setCopiedId(""), 2000);
+        } catch (error) {
+            console.warn("[Chat] Copy failed:", error);
+        }
+    };
+
+    const toggleFeedback = (id, type) => {
+        setFeedback((prev) => ({
+            ...prev,
+            [id]: prev[id] === type ? "" : type,
+        }));
+    };
+
+    // ⏹️ Stop generating — aborts the in-flight request, keeping partial text.
+    const handleStop = () => {
+        stopRequestedRef.current = true;
+        abortControllerRef.current?.abort();
+    };
+
+    // 🧹 New conversation — clears state, cache and storage.
+    const handleNewChat = () => {
+        if (isLoading) return;
+        try {
+            sessionStorage.removeItem(CHAT_STORAGE_KEY);
+        } catch {
+            // ignore
+        }
+        chatCache.current = new Map();
+        setMessages([{ id: generateId(), role: "ai", text: GREETING_TEXT }]);
+        setFeedback({});
+        setCopiedId("");
+        inputRef.current?.focus();
+    };
+
+    const handleToggleOpen = () => {
+        if (!isOpen) {
+            setHasOpened(true);
+            try {
+                localStorage.setItem(CHAT_OPENED_KEY, "true");
+            } catch {
+                // ignore
+            }
+        }
+        setIsOpen(!isOpen);
+    };
+
     // 🚀 Streaming fetch with AbortController timeout + non-streaming fallback
     const handleSend = useCallback(async (textOverride) => {
         const userMessageText = typeof textOverride === 'string' ? textOverride : input;
@@ -238,6 +433,8 @@ function ChatAssistant() {
         // current question is sent in `message`, the prior conversation
         // is what goes in `history`.
         const history = buildHistory(messagesRef.current);
+
+        stopRequestedRef.current = false;
 
         setMessages(prev => [...prev, userMessage]);
         messagesRef.current = [...messagesRef.current, userMessage];
@@ -265,14 +462,17 @@ function ChatAssistant() {
 
         // AbortController with hard timeout
         const controller = new AbortController();
+        abortControllerRef.current = controller;
         const timeoutId = setTimeout(
             () => controller.abort(),
             REQUEST_TIMEOUT_MS
         );
 
-        const authHeaders = API_KEY
-            ? { "X-API-Key": API_KEY }
-            : {};
+        // 🔑 No client-side API key header. In production the shared key is
+        // injected by Vercel's edge middleware (middleware.js) before the
+        // rewrite forwards to the Render backend. For local dev, VITE_BACKEND_URL
+        // points straight at FastAPI where ENV=development skips auth.
+        const authHeaders = {};
 
         // Common request body — used by both streaming and fallback paths.
         const requestBody = {
@@ -282,7 +482,17 @@ function ChatAssistant() {
 
         let streamedOk = false;
         let finalText = "";
+        let currentSources = [];
         let generatedBy = "AI Auto-Failover";
+
+        // Patch the streaming AI message in state.
+        const patchAiMessage = (patch) => {
+            setMessages(prev =>
+                prev.map(m =>
+                    m.id === aiMessageId ? { ...m, ...patch } : m
+                )
+            );
+        };
 
         // Shared SSE consumer — used by both /chat/stream and the /chat
         // fallback path (since /chat now streams SSE too).
@@ -304,23 +514,28 @@ function ChatAssistant() {
                     if (!line) continue;
                     try {
                         const payload = JSON.parse(line.slice(5).trim());
-                        if (payload.event === "token" && payload.data) {
+                        if (payload.event === "sources" && Array.isArray(payload.data)) {
+                            // 📚 RAG sources — attach to the message so the
+                            // UI can render source chips under the answer.
+                            currentSources = payload.data;
+                            patchAiMessage({ sources: currentSources });
+                        } else if (payload.event === "token" && payload.data) {
                             finalText += payload.data;
                             streamedOk = true;
-                            setMessages(prev =>
-                                prev.map(m =>
-                                    m.id === aiMessageId
-                                        ? { ...m, text: finalText }
-                                        : m
-                                )
-                            );
+                            patchAiMessage({
+                                text: finalText,
+                                sources: currentSources.length ? currentSources : undefined,
+                            });
                         } else if (payload.event === "done") {
                             generatedBy = payload.data || generatedBy;
+                            patchAiMessage({
+                                sources: currentSources.length ? currentSources : undefined,
+                            });
                         } else if (payload.event === "error") {
                             throw new Error(payload.data || "Stream error");
                         }
-                        // 'sources' / 'meta' events: reserved for future UI hooks
-                    } catch (parseErr) {
+                        // 'meta' event: reserved for future UI hooks.
+                    } catch {
                         // ignore malformed line
                     }
                 }
@@ -346,6 +561,15 @@ function ChatAssistant() {
 
             await consumeSse(streamResponse);
         } catch (streamErr) {
+            // If the user pressed Stop, keep whatever was streamed so far —
+            // do NOT fall back or mark as an error.
+            if (stopRequestedRef.current) {
+                patchAiMessage({
+                    sources: currentSources.length ? currentSources : undefined,
+                });
+                return;
+            }
+
             // If SSE failed and we haven't streamed anything yet, fall back.
             if (!streamedOk) {
                 console.warn(
@@ -368,31 +592,35 @@ function ChatAssistant() {
                     });
 
                     if (!fallbackResponse.ok) {
-                        throw new Error(`HTTP ${fallbackResponse.status}`);
+                        throw new Error(`HTTP ${fallbackResponse.status}`, {
+                            cause: streamErr,
+                        });
                     }
 
                     await consumeSse(fallbackResponse);
                 } catch (fallbackErr) {
                     console.error("[Chat] Fallback also failed:", fallbackErr);
-                    setActiveModelName("Offline");
-                    setMessages(prev =>
-                        prev.map(m =>
-                            m.id === aiMessageId
-                                ? {
-                                      ...m,
-                                      text:
-                                          controller.signal.aborted
-                                              ? "⏱️ The AI took too long to respond. Please try again."
-                                              : "The AI service is currently offline or experiencing network issues. Please try again.",
-                                      isError: true,
-                                  }
-                                : m
-                        )
-                    );
+
+                    if (stopRequestedRef.current) {
+                        patchAiMessage({
+                            text: finalText || undefined,
+                            sources: currentSources.length ? currentSources : undefined,
+                        });
+                    } else {
+                        setActiveModelName("Offline");
+                        patchAiMessage({
+                            text:
+                                controller.signal.aborted
+                                    ? "⏱️ The AI took too long to respond. Please try again."
+                                    : "The AI service is currently offline or experiencing network issues. Please try again.",
+                            isError: true,
+                        });
+                    }
                 }
             }
         } finally {
             clearTimeout(timeoutId);
+            abortControllerRef.current = null;
             setIsLoading(false);
 
             // Cache the final text
@@ -411,6 +639,10 @@ function ChatAssistant() {
         e.preventDefault();
         handleSend();
     };
+
+    const lastMsg = messages[messages.length - 1];
+    const isStreamingEmpty =
+        isLoading && lastMsg?.role === "ai" && !lastMsg.text;
 
     return (
         <>
@@ -433,14 +665,15 @@ function ChatAssistant() {
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div
+                            ref={chatWindowRef}
                             className="chat-window"
                             initial={{ opacity: 0, y: 30, scale: 0.95, transformOrigin: "bottom right" }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 30, scale: 0.95 }}
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
                             role="dialog"
+                            aria-modal="true"
                             aria-label="AI Portfolio Assistant"
-                            
                         >
                             {/* HEADER */}
                             <div className="chat-header">
@@ -459,43 +692,132 @@ function ChatAssistant() {
                                         </div>
                                     </div>
                                 </div>
-                                <button 
-                                    className="chat-close-btn" 
-                                    onClick={() => setIsOpen(false)}
-                                    aria-label="Close Chat"
-                                >
-                                    <FaTimes />
-                                </button>
+
+                                <div className="chat-header-actions">
+                                    {messages.length > 1 && (
+                                        <button
+                                            className="chat-newchat-btn"
+                                            onClick={handleNewChat}
+                                            aria-label="New conversation"
+                                            title="New conversation"
+                                        >
+                                            <FaPlus />
+                                        </button>
+                                    )}
+                                    <button 
+                                        className="chat-close-btn" 
+                                        onClick={() => setIsOpen(false)}
+                                        aria-label="Close Chat"
+                                    >
+                                        <FaTimes />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* BODY */}
                             <div className="chat-body" aria-live="polite" ref={chatBodyRef} onScroll={handleScroll}>
-                                {messages.map((msg) => (
-                                    <motion.div 
-                                        key={msg.id} 
-                                        className={`chat-bubble ${msg.role === "ai" ? "ai-msg" : "user-msg"}`}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        {msg.role === "ai" ? (
-                                            <Suspense
-                                                fallback={
-                                                    <span className="chat-bubble-loading">…</span>
-                                                }
-                                            >
-                                                <ReactMarkdown
-                                                    remarkPlugins={[remarkGfm]}
-                                                    components={markdownComponents}
+                                {messages.map((msg, idx) => {
+                                    const isStreamingMsg =
+                                        isLoading &&
+                                        idx === messages.length - 1 &&
+                                        msg.role === "ai";
+                                    const prevUserText = findPrevUserText(messages, idx);
+                                    const sources = dedupeSources(msg.sources);
+
+                                    return (
+                                        <motion.div 
+                                            key={msg.id} 
+                                            className={`chat-bubble ${msg.role === "ai" ? "ai-msg" : "user-msg"}`}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            {msg.role === "ai" ? (
+                                                <Suspense
+                                                    fallback={
+                                                        <span className="chat-bubble-loading">…</span>
+                                                    }
                                                 >
-                                                    {msg.text}
-                                                </ReactMarkdown>
-                                            </Suspense>
-                                        ) : (
-                                            msg.text
-                                        )}
-                                    </motion.div>
-                                ))}
+                                                    <ReactMarkdown
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={markdownComponents}
+                                                    >
+                                                        {msg.text}
+                                                    </ReactMarkdown>
+                                                </Suspense>
+                                            ) : (
+                                                msg.text
+                                            )}
+
+                                            {/* 📚 RAG SOURCE CHIPS */}
+                                            {msg.role === "ai" && msg.text && sources.length > 0 && (
+                                                <div className="chat-sources">
+                                                    <span className="chat-sources-label">
+                                                        <FaBookOpen aria-hidden="true" />
+                                                        Sources
+                                                    </span>
+                                                    {sources.map((s, i) => (
+                                                        <span
+                                                            key={`${s.source}-${i}`}
+                                                            className="chat-source-chip"
+                                                            title={
+                                                                typeof s.score === "number"
+                                                                    ? `Relevance ${Math.round(s.score * 100)}%`
+                                                                    : undefined
+                                                            }
+                                                        >
+                                                            {s.source}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* 👍 PER-MESSAGE ACTIONS */}
+                                            {msg.role === "ai" && msg.text && !isStreamingMsg && (
+                                                <div className="chat-msg-actions">
+                                                    <button
+                                                        type="button"
+                                                        className={`chat-action ${copiedId === msg.id ? "active" : ""}`}
+                                                        onClick={() => handleCopy(msg.id, msg.text)}
+                                                        aria-label="Copy response"
+                                                        title="Copy response"
+                                                    >
+                                                        {copiedId === msg.id ? <FaCheck /> : <FaCopy />}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`chat-action ${feedback[msg.id] === "up" ? "active" : ""}`}
+                                                        onClick={() => toggleFeedback(msg.id, "up")}
+                                                        aria-label="Good response"
+                                                        title="Helpful"
+                                                    >
+                                                        <FaThumbsUp />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className={`chat-action ${feedback[msg.id] === "down" ? "active" : ""}`}
+                                                        onClick={() => toggleFeedback(msg.id, "down")}
+                                                        aria-label="Bad response"
+                                                        title="Not helpful"
+                                                    >
+                                                        <FaThumbsDown />
+                                                    </button>
+                                                    {prevUserText && (
+                                                        <button
+                                                            type="button"
+                                                            className="chat-action"
+                                                            onClick={() => handleSend(prevUserText)}
+                                                            aria-label="Regenerate response"
+                                                            title="Regenerate"
+                                                        >
+                                                            <FaRedo />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    );
+                                })}
                                 
                                 {/* SUGGESTED QUESTIONS */}
                                 {messages.length === 1 && !isLoading && (
@@ -520,6 +842,27 @@ function ChatAssistant() {
                                 {isLoading && <TypingIndicator />}
                                 <div ref={messagesEndRef} />
                             </div>
+
+                            {/* 🔍 STREAMING STATUS / STOP */}
+                            {isLoading && (
+                                <div className="chat-stream-status">
+                                    <span className="chat-searching-hint">
+                                        <FaSpinner className="chat-spinner" aria-hidden="true" />
+                                        {isStreamingEmpty
+                                            ? "Searching my knowledge base…"
+                                            : "Generating response…"}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="chat-stop-btn"
+                                        onClick={handleStop}
+                                        aria-label="Stop generating"
+                                    >
+                                        <FaStop aria-hidden="true" />
+                                        Stop
+                                    </button>
+                                </div>
+                            )}
 
                             {/* FOOTER */}
                             <form className="chat-footer" onSubmit={onSubmit}>
@@ -548,7 +891,7 @@ function ChatAssistant() {
                 {/* FLOATING BUTTON WITH LABEL */}
                 <div className="chat-fab-wrapper">
                     <AnimatePresence>
-                        {!isOpen && (
+                        {!isOpen && !hasOpened && (
                             <motion.div
                                 className="chat-fab-label"
                                 initial={{ opacity: 0, y: 10 }}
@@ -562,14 +905,21 @@ function ChatAssistant() {
                     </AnimatePresence>
 
                     <motion.button
+                        ref={fabRef}
                         className={`chat-fab ${!isOpen ? "chat-fab-pulse" : ""}`}
-                        onClick={() => setIsOpen(!isOpen)}
+                        onClick={handleToggleOpen}
                         whileHover={{ scale: 1.08 }}
                         whileTap={{ scale: 0.92 }}
                         aria-label={isOpen ? "Close AI Chat" : "Open AI Chat"}
+                        aria-haspopup="dialog"
+                        aria-expanded={isOpen}
                     >
                         {isOpen ? <FaTimes /> : <FaCommentDots />}
                     </motion.button>
+
+                    {!isOpen && !hasOpened && (
+                        <span className="chat-fab-notification" aria-hidden="true" />
+                    )}
                 </div>
             </div>
         </>

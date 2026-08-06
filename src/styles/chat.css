@@ -207,6 +207,185 @@ body.chat-open {
 }
 
 /* ===================================================
+   HEADER ACTIONS (New Chat + Close)
+=================================================== */
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.chat-newchat-btn {
+    color: var(--muted);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    background: transparent;
+    border: none;
+    display: flex;
+    padding: 8px;
+    border-radius: 50%;
+}
+
+.chat-newchat-btn:hover {
+    color: var(--primary);
+    background: var(--bg);
+}
+
+/* ===================================================
+   RAG SOURCE CHIPS
+=================================================== */
+.chat-sources {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+}
+
+.chat-sources-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-right: 2px;
+}
+
+.chat-source-chip {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--secondary);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: default;
+}
+
+/* ===================================================
+   PER-MESSAGE ACTIONS
+=================================================== */
+.chat-msg-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    opacity: 0.55;
+    transition: opacity var(--transition-fast);
+}
+
+.ai-msg:hover .chat-msg-actions,
+.chat-msg-actions:focus-within {
+    opacity: 1;
+}
+
+.chat-action {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.chat-action:hover {
+    color: var(--primary);
+    border-color: var(--primary);
+    background: var(--bg);
+}
+
+.chat-action.active {
+    color: var(--primary);
+    background: rgba(37, 99, 235, 0.12);
+    border-color: var(--primary);
+}
+
+/* ===================================================
+   STREAMING STATUS / STOP BAR
+=================================================== */
+.chat-stream-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+.chat-searching-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.chat-spinner {
+    animation: chat-spin 0.9s linear infinite;
+    color: var(--primary);
+}
+
+@keyframes chat-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.chat-stop-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger, #ef4444);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.chat-stop-btn:hover {
+    background: var(--danger, #ef4444);
+    color: #fff;
+}
+
+/* ===================================================
+   FAB NOTIFICATION DOT
+=================================================== */
+.chat-fab-notification {
+    position: absolute;
+    top: -2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--danger, #ef4444);
+    border: 2px solid var(--bg);
+    animation: notification-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes notification-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+/* ===================================================
    CHAT BODY (Messages)
 =================================================== */
 .chat-body {

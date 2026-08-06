@@ -16,6 +16,13 @@ from services.embeddings import (
 
 logger = logging.getLogger(__name__)
 
+# Score threshold for retrieval matches. Cosine similarity ranges 0-1;
+# 0.65 is tight enough to drop low-signal chunks and force the model
+# into the "I don't have that on hand" fallback for off-topic queries,
+# while leaving headroom for paraphrased portfolio questions.
+# Override at runtime via SCORE_THRESHOLD env var.
+DEFAULT_SCORE_THRESHOLD = float(os.getenv("SCORE_THRESHOLD", "0.65"))
+
 _client = None
 _collection = None
 _ef: GeminiEmbeddingFunction | None = None
@@ -258,8 +265,8 @@ def _get_collection():
                 "hnsw:space": "cosine",
                 # HNSW graph quality vs. memory:
                 #   - M: max connections per node. Higher = better recall
-                #     and more memory. Default 16 is overkill for ~55 chunks;
-                #     8 keeps the graph small and still perfect-recall here.
+                #     and more memory. 16 is the chroma default and a safe
+                #     middle ground for KB growth past a few hundred chunks.
                 #   - construction_ef: candidate list size during build.
                 #     Bumping from 100→200 catches edge-case neighbours but
                 #     takes a couple of seconds longer at ingestion.
@@ -267,9 +274,11 @@ def _get_collection():
                 #     is the default; we leave it untouched so query latency
                 #     stays low. If we ever want top-5 recall headroom,
                 #     raise this to 200.
-                # These are no-ops at 55 chunks but cost nothing to set —
-                # they pay off when the KB grows past a few thousand chunks.
-                "hnsw:M": 8,
+                # At 55 chunks the choice is essentially free; setting
+                # M=16 (instead of M=8) keeps the indexed lookup quality
+                # intact as the KB grows without us touching the
+                # metadata block again.
+                "hnsw:M": 16,
                 "hnsw:construction_ef": 200,
                 "hnsw:search_ef": 100,
             },
@@ -375,7 +384,7 @@ def _classify_source(query: str) -> str | None:
 def query_knowledge(
     query: str,
     top_k: int = 3,
-    score_threshold: float = 0.55,
+    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
 ) -> list[dict]:
     """Searches the portfolio_knowledge collection and returns relevant text chunks."""
     collection = _get_collection()

@@ -240,7 +240,7 @@
     background: var(--card);
     color: var(--text);
     border: 1px solid var(--border);
-    transition: var(--transition);
+    transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s ease, background .3s ease, color .3s ease, border-color .3s ease;
     cursor: pointer;
     font-size: 1.1rem;
 }
@@ -249,8 +249,13 @@
     background: var(--primary);
     color: white;
     border-color: transparent;
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 25px rgba(37, 99, 235, 0.4);
+}
+
+.back-top:active {
+    transform: translateY(-1px) scale(0.95);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
 }
 
 /* ===================================================
