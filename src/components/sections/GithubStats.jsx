@@ -77,17 +77,32 @@ function GithubStats() {
 
 
 
-                {/* ================= LOADING ================= */}
+                {/* ================= LOADING (SKELETONS) ================= */}
 
                 {
                     loading && (
+                        <div className="github-loading" aria-label="Loading GitHub data">
 
-                        <div className="github-loading">
+                            {/* Profile skeleton */}
+                            <div className="github-profile-skeleton">
+                                <div className="skeleton skeleton-avatar"></div>
+                                <div className="skeleton skeleton-line w-60"></div>
+                                <div className="skeleton skeleton-line w-40"></div>
+                            </div>
 
-                            Loading GitHub data...
+                            {/* Stat card skeletons */}
+                            <div className="github-cards">
+                                {
+                                    [0, 1, 2, 3].map((i) => (
+                                        <div key={i} className="github-card github-card-skeleton">
+                                            <div className="skeleton skeleton-title"></div>
+                                            <div className="skeleton skeleton-line w-60"></div>
+                                        </div>
+                                    ))
+                                }
+                            </div>
 
                         </div>
-
                     )
                 }
 
@@ -119,6 +134,55 @@ function GithubStats() {
                     !loading && !error && (
 
                         <>
+
+
+                            {/* ================= PROFILE CARD ================= */}
+
+                            {
+                                profile && (
+
+                                    <div className="github-profile">
+
+                                        <a
+                                            href={profile.html_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="github-profile-link"
+                                            aria-label={`${profile.name || profile.login} on GitHub`}
+                                        >
+                                            <img
+                                                src={profile.avatar_url}
+                                                alt={profile.name || profile.login}
+                                                className="github-avatar"
+                                                loading="lazy"
+                                            />
+
+                                            <div className="github-profile-info">
+
+                                                <h3>
+                                                    {profile.name || profile.login}
+                                                </h3>
+
+                                                <span>
+                                                    @{profile.login}
+                                                </span>
+
+                                            </div>
+
+                                        </a>
+
+                                        {
+                                            profile.bio && (
+                                                <p className="github-bio">
+                                                    {profile.bio}
+                                                </p>
+                                            )
+                                        }
+
+                                    </div>
+
+                                )
+                            }
 
 
                             <div className="github-cards">

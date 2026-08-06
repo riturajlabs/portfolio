@@ -25,7 +25,10 @@ def _run_ingestion() -> None:
     """Blocking ingestion; safe to run in a thread executor."""
     global _knowledge_ready
     try:
-        from services.knowledge_loader import load_knowledge_into_chromadb
+        from services.knowledge_loader import (
+            _get_collection,
+            load_knowledge_into_chromadb,
+        )
 
         # 🧹 Wipe stale ChromaDB data when the embedding model changes,
         # or when the operator opts in via env. Old vectors (different
@@ -36,6 +39,21 @@ def _run_ingestion() -> None:
 
         added = load_knowledge_into_chromadb(force=force)
         logger.info("✅ Knowledge base loaded into ChromaDB (+%d chunks)", added)
+
+        # 🟢 Pre-warm `collection.count()` so the first /chat request
+        # doesn't pay the ChromaDB init cost (1-3 s on Render wake-up).
+        # `get_or_create_collection` was already invoked by
+        # `load_knowledge_into_chromadb`, but the underlying HNSW index
+        # is lazily touched only on the first query. Calling `count()`
+        # here forces it to materialise before traffic arrives.
+        try:
+            collection = _get_collection()
+            count = collection.count()
+            logger.info("✅ Collection count pre-warmed: %d documents", count)
+        except Exception as exc:  # pragma: no cover
+            # Don't fail ingestion if pre-warm fails — first chat will retry.
+            logger.warning("⚠️ Collection count pre-warm failed: %s", exc)
+
         _knowledge_ready = True
     except Exception as exc:  # pragma: no cover
         logger.error("❌ Failed to load knowledge base: %s", exc)

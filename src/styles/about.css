@@ -105,9 +105,11 @@
     gap: 1.2rem;
     padding: 1.8rem;
     border-radius: var(--radius);
-    background: var(--card);
+    background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 55%),
+        var(--card);
     border: 1px solid var(--border);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Bouncy transition */
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease; /* Smooth elevation */
     position: relative;
     overflow: hidden;
 }
@@ -123,8 +125,8 @@
 }
 
 .about-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--shadow-primary, 0 10px 25px rgba(37, 99, 235, 0.25));
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-primary, 0 10px 25px rgba(37, 99, 235, 0.25)), 0 0 0 1px rgba(37, 99, 235, 0.12), 0 0 30px rgba(37, 99, 235, 0.1);
     border-color: rgba(37, 99, 235, 0.4);
 }
 

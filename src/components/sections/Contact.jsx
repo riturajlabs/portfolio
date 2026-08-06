@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 import {
@@ -7,6 +7,8 @@ import {
     FaLinkedin,
     FaPaperPlane,
     FaCheckCircle,
+    FaCopy,
+    FaCheck,
 } from "react-icons/fa";
 
 import SectionTitle from "../common/SectionTitle";
@@ -85,10 +87,12 @@ function Field({
     touched,
     onChange,
     onBlur,
+    counter,
     ...rest
 }) {
     const showError = touched[name] && errors[name];
     const Tag = as;
+    const maxLength = VALIDATION[name]?.max ?? undefined;
     return (
         <div className="contact-field">
             <Tag
@@ -102,7 +106,7 @@ function Field({
                 aria-describedby={
                     showError ? `contact-error-${name}` : undefined
                 }
-                maxLength={VALIDATION[name]?.max ?? undefined}
+                maxLength={maxLength}
                 required
                 {...rest}
             />
@@ -113,6 +117,12 @@ function Field({
                     role="alert"
                 >
                     {errors[name]}
+                </span>
+            )}
+            {counter !== undefined && (
+                <span className="contact-field-counter">
+                    {counter}
+                    {maxLength ? `/${maxLength}` : ""}
                 </span>
             )}
         </div>
@@ -130,6 +140,20 @@ function Contact() {
     // Honeypot: a hidden field bots tend to fill. If non-empty, silently
     // pretend success without sending the email.
     const [honeypot, setHoneypot] = useState("");
+    const [copied, setCopied] = useState("");
+    const [shake, setShake] = useState(false);
+    const copyTimeoutRef = useRef(null);
+
+    const handleCopyEmail = async (email) => {
+        try {
+            await navigator.clipboard.writeText(email);
+            setCopied(email);
+            clearTimeout(copyTimeoutRef.current);
+            copyTimeoutRef.current = setTimeout(() => setCopied(""), 2000);
+        } catch (error) {
+            console.warn("[Contact] Copy failed:", error);
+        }
+    };
 
     const contactLinks = useMemo(
         () => [
@@ -138,6 +162,7 @@ function Contact() {
                 title: "Email",
                 value: "riturajlabs@outlook.com",
                 link: "mailto:riturajlabs@outlook.com",
+                copy: "riturajlabs@outlook.com",
             },
             {
                 icon: <FaLinkedin />,
@@ -155,15 +180,6 @@ function Contact() {
         []
     );
 
-    // Recompute validity whenever form changes.
-    const isValid = useMemo(() => {
-        return (
-            !validateField("name", formData.name) &&
-            !validateField("email", formData.email) &&
-            !validateField("message", formData.message)
-        );
-    }, [formData]);
-
     // Stable handlers — using `useCallback` here is optional (Field is
     // now a stable component), but it keeps referential equality tidy
     // and makes the component easier to reason about.
@@ -174,7 +190,8 @@ function Contact() {
             const next = validateField(name, value);
             if (!next) {
                 setErrors((prev) => {
-                    const { [name]: _drop, ...rest } = prev;
+                    const rest = { ...prev };
+                    delete rest[name];
                     return rest;
                 });
             } else {
@@ -205,6 +222,8 @@ function Contact() {
         setTouched({ name: true, email: true, message: true });
 
         if (hasErrors) {
+            setShake(true);
+            window.setTimeout(() => setShake(false), 600);
             setStatus({
                 kind: "error",
                 text: "Please fix the highlighted fields and try again.",
@@ -271,31 +290,53 @@ function Contact() {
 
                         <div className="contact-links">
                             {contactLinks.map((item) => (
-                                <a
+                                <div
                                     key={item.title}
-                                    href={item.link}
-                                    target={
-                                        item.title !== "Email"
-                                            ? "_blank"
-                                            : undefined
-                                    }
-                                    rel="noopener noreferrer"
+                                    className="contact-link-row"
                                 >
-                                    <span className="contact-icon">
-                                        {item.icon}
-                                    </span>
-                                    <div>
-                                        <h4>{item.title}</h4>
-                                        <span>{item.value}</span>
-                                    </div>
-                                </a>
+                                    <a
+                                        href={item.link}
+                                        target={
+                                            item.title !== "Email"
+                                                ? "_blank"
+                                                : undefined
+                                        }
+                                        rel="noopener noreferrer"
+                                    >
+                                        <span className="contact-icon">
+                                            {item.icon}
+                                        </span>
+                                        <div>
+                                            <h4>{item.title}</h4>
+                                            <span>{item.value}</span>
+                                        </div>
+                                    </a>
+
+                                    {item.copy && (
+                                        <button
+                                            type="button"
+                                            className="contact-copy-btn"
+                                            onClick={() =>
+                                                handleCopyEmail(item.copy)
+                                            }
+                                            aria-label={`Copy ${item.title} address`}
+                                            title="Copy to clipboard"
+                                        >
+                                            {copied === item.copy ? (
+                                                <FaCheck />
+                                            ) : (
+                                                <FaCopy />
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
                             ))}
                         </div>
                     </motion.div>
 
                     {/* FORM */}
                     <motion.form
-                        className="contact-form"
+                        className={`contact-form ${shake ? "shake" : ""}`}
                         onSubmit={handleSubmit}
                         initial={{ opacity: 0, x: 40 }}
                         whileInView={{ opacity: 1, x: 0 }}
@@ -328,6 +369,7 @@ function Contact() {
                             label="Your Message"
                             as="textarea"
                             rows={5}
+                            counter={formData.message.length}
                             formData={formData}
                             errors={errors}
                             touched={touched}
@@ -382,6 +424,14 @@ function Contact() {
                     </motion.form>
                 </div>
             </div>
+
+            {/* Copy-to-clipboard toast */}
+            {copied && (
+                <div className="contact-copy-toast" role="status">
+                    <FaCheck aria-hidden="true" />
+                    Email copied to clipboard!
+                </div>
+            )}
         </section>
     );
 }
