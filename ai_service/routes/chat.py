@@ -39,11 +39,14 @@ QUERY_TIMEOUT_SECONDS = float(os.getenv("CHAT_QUERY_TIMEOUT", "10.0"))
 # Keepalive cadence for SSE — sent only while no tokens have arrived.
 SSE_KEEPALIVE_SECONDS = float(os.getenv("CHAT_SSE_KEEPALIVE", "15.0"))
 GEMINI_MODEL = os.getenv("CHAT_GEMINI_MODEL", "gemini-2.5-flash")
-# Sampling temperature for both providers. 0.3 is plenty for grounded
-# portfolio answers — we don't want the model to invent creative
-# variations on the source material. Override via env if you want
-# higher (e.g. for a "creative ideas" branch later).
-DEFAULT_TEMPERATURE = float(os.getenv("CHAT_TEMPERATURE", "0.3"))
+
+# ==========================================
+# 🛑 HALLUCINATION FIX: LOWERED TEMPERATURE TO 0.1
+# ==========================================
+# Sampling temperature for both providers. Lowered to 0.1 to strictly prevent
+# the LLM from inventing creative variations or fake projects. It will now
+# act completely factual based on your provided JSON data.
+DEFAULT_TEMPERATURE = float(os.getenv("CHAT_TEMPERATURE", "0.1"))
 
 
 # ==========================================
@@ -103,7 +106,7 @@ class ChatRequest(BaseModel):
     # recent turns, dropping older ones.
     history: list[HistoryMessage] = Field(default_factory=list)
     # Per-request temperature override. Falls back to CHAT_TEMPERATURE env
-    # (default 0.3) when not provided. Bounded to keep Groq happy
+    # (default 0.1) when not provided. Bounded to keep Groq happy
     # (its max is 2.0; >1.5 is rarely useful).
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
 
@@ -529,5 +532,3 @@ async def _chat_stream_response(
             "Connection": "keep-alive",
         },
     )
-
-
