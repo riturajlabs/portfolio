@@ -538,7 +538,7 @@
 }
 
 .contact-status-success {
-    color: var(--accent, #10b981);
+    color: green;
 }
 
 .contact-status-error {
