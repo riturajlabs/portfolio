@@ -21,6 +21,8 @@
       "destination": "https://portfolio-lxdx.onrender.com/ready"
     }
   ],
+
+
   "headers": [
     {
       "source": "/(.*)",
@@ -46,10 +48,6 @@
           "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
         },
         {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://vercel-insights.com https://*.vercel-insights.com https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://portfolio-lxdx.onrender.com https://vercel-insights.com https://*.vercel-insights.com; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
-        },
-        {
           "key": "Cross-Origin-Opener-Policy",
           "value": "same-origin"
         },
@@ -59,6 +57,7 @@
         }
       ]
     },
+
     {
       "source": "/assets/(.*)",
       "headers": [
@@ -68,6 +67,7 @@
         }
       ]
     },
+
     {
       "source": "/images/(.*)",
       "headers": [
@@ -77,6 +77,7 @@
         }
       ]
     },
+
     {
       "source": "/favicon.png",
       "headers": [

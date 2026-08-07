@@ -1,30 +1,3 @@
-/**
- * Vercel Edge Middleware
- *
- * Adds X-API-Key header before forwarding protected
- * API requests to backend.
- *
- * Secret comes from:
- * BACKEND_API_KEY
- *
- * IMPORTANT:
- * - Never use VITE_ prefix
- * - Never expose this key to browser
- *
- * Production flow:
- *
- * Browser
- *   |
- *   | /api/chat
- *   |
- * Vercel Middleware
- *   |
- *   | X-API-Key injected
- *   |
- * Render AI Service
- */
-
-
 import { NextResponse } from "next/server";
 
 
@@ -35,18 +8,15 @@ const PROTECTED_PATHS = [
 
 
 export const config = {
-
     matcher: [
         "/api/chat/:path*",
         "/api/contact",
     ],
-
 };
 
 
 
 export default function middleware(request) {
-
 
     const pathname = request.nextUrl.pathname;
 
@@ -56,47 +26,33 @@ export default function middleware(request) {
     );
 
 
-    /*
-     * Public routes
-     */
+    // Public routes
     if (!needsKey) {
-
         return NextResponse.next();
-
     }
-
 
 
     const apiKey = process.env.BACKEND_API_KEY;
 
 
-
-    /*
-     * Production safety:
-     * If env missing, block request.
-     */
+    // Production safety
     if (!apiKey) {
 
-        return new Response(
+        return new NextResponse(
             JSON.stringify({
-                error:
-                "API key not configured on proxy."
+                error: "API key not configured on proxy"
             }),
             {
                 status: 503,
-                headers:{
-                    "Content-Type":"application/json"
-                }
+                headers: {
+                    "content-type": "application/json",
+                },
             }
         );
-
     }
 
 
 
-    /*
-     * Clone headers
-     */
     const requestHeaders = new Headers(
         request.headers
     );
@@ -111,11 +67,10 @@ export default function middleware(request) {
 
     return NextResponse.next({
 
-        request:{
+        request: {
             headers: requestHeaders,
         },
 
     });
-
 
 }
