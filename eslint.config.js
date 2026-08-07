@@ -18,4 +18,12 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  // Node/edge-runtime files (Vercel middleware + Vite config) use
+  // `process.env` which isn't a browser global.
+  {
+    files: ['middleware.js', 'vite.config.js'],
+    languageOptions: {
+      globals: { process: 'readonly' },
+    },
+  },
 ])

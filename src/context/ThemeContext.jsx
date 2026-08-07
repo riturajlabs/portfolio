@@ -1,11 +1,9 @@
 import {
-    createContext,
     useEffect,
     useState,
 } from "react";
 
-
-export const ThemeContext = createContext(null);
+import { ThemeContext } from "./themeContext";
 
 
 

@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/chat",
+      "destination": "https://portfolio-lxdx.onrender.com/chat"
+    },
+    {
       "source": "/api/chat/:path*",
       "destination": "https://portfolio-lxdx.onrender.com/chat/:path*"
     },
