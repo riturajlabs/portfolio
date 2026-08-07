@@ -36,6 +36,7 @@ stats.html
 *.sw?
 .vercel
 .env*
+!.env.example
 .claude/
 stats.html
 .claude

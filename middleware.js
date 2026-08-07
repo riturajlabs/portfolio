@@ -41,32 +41,48 @@ export default function middleware(request) {
     return undefined;
   }
 
-  const key = process.env.BACKEND_API_KEY;
+  const key =
+    typeof process !== "undefined" && process.env
+      ? process.env.BACKEND_API_KEY
+      : "";
   if (!key) {
     // Fail closed: in production a missing key is a deploy error.
     // On Vercel preview branches without the env set, the visitor sees
     // a 503 so we don't silently leak unkeyed requests.
-    return new Response(
-      JSON.stringify({
-        error: "API key not configured on proxy.",
-      }),
-      {
-        status: 503,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return jsonResponse({ error: "API key not configured on proxy." }, 503);
   }
 
-  // Clone the request and inject the header. The original request
-  // body is consumed by the stream, so we re-wrap it.
-  const headers = new Headers(request.headers);
-  headers.set("X-API-Key", key);
+  try {
+    // Clone the request and inject the header. The original request
+    // body is a ReadableStream that we re-wrap for the rewrite.
+    //
+    // ⚠️ `duplex: "half"` is only allowed when a body is present —
+    // passing it alongside a null body throws `TypeError:
+    // RequestInit.duplex is only allowed when body is present`, which
+    // surfaces as `MIDDLEWARE_INVOCATION_FAILED` (HTTP 500) on every
+    // protected request, including bodyless GETs. Use the conditional
+    // spread so GETs (no body) stay valid.
+    const headers = new Headers(request.headers);
+    headers.set("X-API-Key", key);
 
-  return new Request(request.url, {
-    method: request.method,
-    headers,
-    body: request.body,
-    // duplex is required when forwarding a body in some runtimes.
-    duplex: "half",
+    const init = { method: request.method, headers };
+    if (request.body) {
+      init.body = request.body;
+      init.duplex = "half";
+    }
+    return new Request(request.url, init);
+  } catch (err) {
+    console.error("[middleware] failed to forward protected request:", err);
+    return jsonResponse(
+      { error: "Proxy failed to forward the request." },
+      502
+    );
+  }
+}
+
+function jsonResponse(body, status) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
   });
 }
