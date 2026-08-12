@@ -57,7 +57,7 @@ const projects = [
             "MongoDB",
         ],
 
-        live: "https://stayora-cuh3.onrender.com/",
+        live: "https://stayora-production.up.railway.app/",
         github: "https://github.com/riturajlabs/Stayora",
     },
 
