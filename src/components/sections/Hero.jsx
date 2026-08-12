@@ -143,9 +143,10 @@ function Hero() {
                             <div className="hero-image-frame">
                                 <img
                                     src={profile.profileImage}
-                                    alt={profile.name}
+                                    alt="Ritu Raj - Full Stack Developer and AI/ML Student"
                                     className="hero-image"
                                     loading="eager"
+                                    fetchPriority="high"
                                 />
                             </div>
                         </div>

@@ -1,4 +1,12 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+
+# Let search engines and AI crawlers reach images & resources
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: bingbot
+Allow: /
 
 Sitemap: https://riturajlabs.vercel.app/sitemap.xml

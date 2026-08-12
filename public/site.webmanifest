@@ -1,0 +1,33 @@
+{
+  "name": "Ritu Raj | Full Stack Developer | AI & ML Student | RituRajLabs",
+  "short_name": "RituRajLabs",
+  "description": "Official portfolio of Ritu Raj (RituRajLabs), Full Stack Developer, MERN Stack Developer and AI & Machine Learning student. Explore projects, skills, certifications and the development journey.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#2563EB",
+  "lang": "en",
+  "categories": ["portfolio", "developer", "education"],
+  "icons": [
+    {
+      "src": "/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -5,6 +5,9 @@
 // - Open Graph
 // - Twitter Cards
 // - Search Engines
+// NOTE: Values here MUST match the static baseline tags in
+// index.html (they carry data-rh="true" so React Helmet adopts
+// them without creating duplicates).
 // =========================================================
 
 const seo = {
@@ -18,11 +21,11 @@ const seo = {
 
 
     title:
-        "Ritu Raj (RituRajLabs) | Full Stack Developer | MERN Stack | AI & ML Student",
+        "Ritu Raj | Full Stack Developer | MERN Stack & AI/ML Student",
 
 
     description:
-        "Official portfolio of Ritu Raj (RituRajLabs), Full Stack Developer and AI & Machine Learning student. Explore React, Node.js, MongoDB, Java, AI projects, technical skills, certifications and development journey.",
+        "Portfolio of Ritu Raj (RituRajLabs), Full Stack Developer & AI/ML Student. MERN Stack: React, Node.js, Express, MongoDB. Open to Software Developer Internship.",
 
 
 
@@ -44,13 +47,13 @@ const seo = {
 
         "React Developer",
 
-        "JavaScript Developer",
-
         "Node.js Developer",
 
         "Express.js Developer",
 
         "MongoDB Developer",
+
+        "JavaScript Developer",
 
         "Backend Developer",
 
@@ -59,6 +62,8 @@ const seo = {
         "Software Developer",
 
         "Software Engineer",
+
+        "Software Developer Internship",
 
         "AI ML Student",
 
@@ -98,7 +103,11 @@ const seo = {
 
 
     image:
-        "https://riturajlabs.vercel.app/images/portfolio-og.png",
+        "https://riturajlabs.vercel.app/images/portfolio-og.jpg",
+
+
+    imageAlt:
+        "Ritu Raj - Full Stack Developer & AI/ML Student portfolio",
 
 
 
@@ -108,6 +117,10 @@ const seo = {
 
     twitterCard:
         "summary_large_image",
+
+
+    twitterSite:
+        "@riturajlabs",
 
 
 
@@ -131,7 +144,10 @@ const seo = {
 
     // =====================================================
     // Search Console Verification
-    // Add values after verification
+    // File-based verification is already deployed
+    // (googlea403830185afcdb8.html + BingSiteAuth.xml) and the
+    // corresponding <meta> tags are static in index.html, so this
+    // stays empty to avoid duplicate tags at runtime.
     // =====================================================
 
     verification: {
@@ -160,31 +176,66 @@ const seo = {
         jobTitle:
             "Full Stack Developer & AI/ML Student",
 
+        email:
+            "riturajlabs@outlook.com",
+
+        address: {
+            locality: "Pune",
+            region: "Maharashtra",
+            country: "IN"
+        },
+
+        nationality:
+            "India",
+
+        credential:
+            "B.Sc. Artificial Intelligence & Machine Learning",
+
         knowsAbout: [
 
-            "React",
+            "React.js",
 
             "JavaScript",
+
+            "HTML & CSS",
+
+            "Bootstrap",
 
             "Node.js",
 
             "Express.js",
 
-            "MongoDB",
+            "FastAPI",
 
-            "Java",
+            "REST APIs",
 
             "Python",
 
-            "Artificial Intelligence",
-
             "Machine Learning",
 
-            "Data Structures and Algorithms"
+            "PyTorch",
+
+            "LangChain",
+
+            "MongoDB",
+
+            "PostgreSQL",
+
+            "Git & GitHub",
+
+            "Linux"
 
         ]
 
-    }
+    },
+
+    sameAs: [
+
+        "https://github.com/riturajlabs",
+
+        "https://linkedin.com/in/riturajlabs"
+
+    ]
 
 };
 

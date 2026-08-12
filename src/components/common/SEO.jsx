@@ -1,5 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import seo from "../../config/seo";
+import projects from "../../data/projects";
 
 
 export default function SEO({
@@ -11,6 +12,8 @@ export default function SEO({
     keywords = seo.keywords,
 
     image = seo.image,
+
+    imageAlt = seo.imageAlt,
 
     url = seo.url,
 
@@ -27,36 +30,126 @@ export default function SEO({
             : keywords;
 
 
+    const personId = `${seo.url}#person`;
+    const websiteId = `${seo.url}#website`;
+
+
+    // =========================================================
+    // Structured Data — Schema.org @graph
+    // Person + WebSite + software projects. Mirrors the static
+    // baseline shipped in index.html (data-rh replaces it cleanly).
+    // =========================================================
+
+    const projectApps =
+        projects
+            .filter((project) => project.live && project.live !== "#")
+            .map((project) => {
+                const app = {
+                    "@type": "SoftwareApplication",
+                    "name": project.title,
+                    "url": project.live,
+                    "applicationCategory":
+                        project.category === "AI"
+                            ? "AIApplication"
+                            : "WebApplication",
+                    "operatingSystem": "Web",
+                    "description": project.description,
+                    "author": {
+                        "@id": personId
+                    },
+                };
+
+                if (project.github && project.github !== "#") {
+                    app.codeRepository = project.github;
+                }
+
+                return app;
+            });
+
 
     const structuredData = {
 
         "@context": "https://schema.org",
 
-        "@type": "Person",
+        "@graph": [
 
-        "name": seo.person.name,
+            {
 
-        "alternateName": seo.person.alternateName,
+                "@type": "Person",
 
-        "url": seo.url,
+                "@id": personId,
 
-        "image": seo.image,
+                "name": seo.person.name,
 
-        "jobTitle": seo.person.jobTitle,
+                "alternateName": seo.person.alternateName,
 
-        "description": seo.description,
+                "url": seo.url,
 
+                "image": seo.image,
 
-        "sameAs": [
+                "jobTitle": seo.person.jobTitle,
 
-            "https://github.com/riturajlabs",
+                "description": seo.description,
 
-            "https://linkedin.com/in/riturajlabs"
+                "email": `mailto:${seo.person.email}`,
 
-        ],
+                "address": {
 
+                    "@type": "PostalAddress",
 
-        "knowsAbout": seo.person.knowsAbout
+                    "addressLocality": seo.person.address.locality,
+
+                    "addressRegion": seo.person.address.region,
+
+                    "addressCountry": seo.person.address.country
+
+                },
+
+                "nationality": seo.person.nationality,
+
+                "knowsAbout": seo.person.knowsAbout,
+
+                "hasCredential": {
+
+                    "@type": "EducationalOccupationalCredential",
+
+                    "credentialCategory": "degree",
+
+                    "name": seo.person.credential
+
+                },
+
+                "sameAs": seo.sameAs
+
+            },
+
+            {
+
+                "@type": "WebSite",
+
+                "@id": websiteId,
+
+                "url": seo.url,
+
+                "name": seo.siteName,
+
+                "alternateName": seo.person.alternateName,
+
+                "description": seo.description,
+
+                "publisher": {
+
+                    "@id": personId
+
+                },
+
+                "inLanguage": "en"
+
+            },
+
+            ...projectApps
+
+        ]
 
     };
 
@@ -198,6 +291,18 @@ export default function SEO({
             />
 
 
+            <meta
+                property="og:image:alt"
+                content={imageAlt}
+            />
+
+
+            <meta
+                property="og:locale"
+                content={seo.locale}
+            />
+
+
 
             {/* ========================= */}
             {/* Twitter */}
@@ -207,6 +312,12 @@ export default function SEO({
             <meta
                 name="twitter:card"
                 content={seo.twitterCard}
+            />
+
+
+            <meta
+                name="twitter:site"
+                content={seo.twitterSite}
             />
 
 
@@ -225,6 +336,12 @@ export default function SEO({
             <meta
                 name="twitter:image"
                 content={image}
+            />
+
+
+            <meta
+                name="twitter:image:alt"
+                content={imageAlt}
             />
 
 

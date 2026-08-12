@@ -26,6 +26,11 @@ function ProjectCard({ project }) {
     const hasGithub =
         project.github && project.github !== "#";
 
+    const imageAlt =
+        project.image
+            ? `${project.title} - ${project.category || "web"} project built with ${technologies.join(", ") || "modern web technologies"}`
+            : project.title;
+
     // Modal lifecycle: lock body scroll, close on Escape,
     // focus the close button, restore focus to the trigger on close.
     useEffect(() => {
@@ -69,8 +74,9 @@ function ProjectCard({ project }) {
                     <div className="project-image">
                         <img
                             src={project.image}
-                            alt={project.title}
+                            alt={imageAlt}
                             loading="lazy"
+                            decoding="async"
                         />
 
                         <div className="project-image-overlay">
@@ -179,7 +185,7 @@ function ProjectCard({ project }) {
                                 <div className="project-modal-image">
                                     <img
                                         src={project.image}
-                                        alt={project.title}
+                                        alt={imageAlt}
                                     />
                                 </div>
                             )}

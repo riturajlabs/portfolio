@@ -9,93 +9,308 @@
 
   <meta charset="UTF-8">
 
-
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0">
-
 
   <meta
     http-equiv="X-UA-Compatible"
     content="IE=edge">
 
-
-
   <!-- ========================================================= -->
-  <!-- SEO FALLBACK -->
-  <!-- React Helmet will override this -->
+  <!-- Primary SEO (server-delivered baseline)
+       Every tag below also carries `data-rh="true"` so the
+       react-helmet-async <SEO /> component adopts and manages it
+       at runtime WITHOUT producing duplicates. Crawlers that do
+       not execute JavaScript (Bing, social/AI bots) still receive
+       the full metadata directly from this served HTML. -->
   <!-- ========================================================= -->
-
 
   <title>
-    Ritu Raj Portfolio
+    Ritu Raj | Full Stack Developer | MERN Stack & AI/ML Student
   </title>
 
-
   <meta
+    data-rh="true"
     name="description"
-    content="Ritu Raj Portfolio - Full Stack Developer and AI & Machine Learning Student."
-  >
-
+    content="Portfolio of Ritu Raj (RituRajLabs), Full Stack Developer & AI/ML Student. MERN Stack: React, Node.js, Express, MongoDB. Open to Software Developer Internship.">
 
   <meta
+    data-rh="true"
+    name="keywords"
+    content="Ritu Raj, RituRajLabs, Ritu Raj Portfolio, Full Stack Developer, MERN Stack Developer, React Developer, Node.js Developer, Express.js Developer, MongoDB Developer, JavaScript Developer, Backend Developer, Frontend Developer, Software Developer, Software Engineer, AI ML Student, Artificial Intelligence, Machine Learning, Generative AI, Java Developer, Python Developer, Web Developer, Developer Portfolio, Software Developer Internship">
+
+  <meta
+    data-rh="true"
     name="author"
-    content="Ritu Raj"
-  >
-
+    content="Ritu Raj">
 
   <meta
+    data-rh="true"
     name="robots"
-    content="index, follow"
-  >
+    content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
 
+  <meta
+    data-rh="true"
+    name="googlebot"
+    content="index,follow,max-image-preview:large,max-snippet:-1">
 
+  <meta
+    data-rh="true"
+    name="bingbot"
+    content="index,follow,max-image-preview:large">
+
+  <link
+    data-rh="true"
+    rel="canonical"
+    href="https://riturajlabs.vercel.app/">
+
+  <!-- ========================================================= -->
+  <!-- Search Engine Verification (file-based verification already
+       shipped via googlea403830185afcdb8.html + BingSiteAuth.xml;
+       meta tags are belt-and-suspenders and are NOT helmet-managed) -->
+  <!-- ========================================================= -->
+
+  <meta
+    name="google-site-verification"
+    content="googlea403830185afcdb8.html">
+
+  <meta
+    name="msvalidate.01"
+    content="7A22FF42FFEF7A6270FB8FF3A861031F">
+
+  <!-- ========================================================= -->
+  <!-- Open Graph -->
+  <!-- ========================================================= -->
+
+  <meta
+    data-rh="true"
+    property="og:type"
+    content="website">
+
+  <meta
+    data-rh="true"
+    property="og:site_name"
+    content="Ritu Raj Portfolio">
+
+  <meta
+    data-rh="true"
+    property="og:title"
+    content="Ritu Raj | Full Stack Developer | MERN Stack & AI/ML Student">
+
+  <meta
+    data-rh="true"
+    property="og:description"
+    content="Portfolio of Ritu Raj (RituRajLabs), Full Stack Developer & AI/ML Student. MERN Stack: React, Node.js, Express, MongoDB. Open to Software Developer Internship.">
+
+  <meta
+    data-rh="true"
+    property="og:url"
+    content="https://riturajlabs.vercel.app/">
+
+  <meta
+    data-rh="true"
+    property="og:image"
+    content="https://riturajlabs.vercel.app/images/portfolio-og.jpg">
+
+  <meta
+    data-rh="true"
+    property="og:image:width"
+    content="1200">
+
+  <meta
+    data-rh="true"
+    property="og:image:height"
+    content="630">
+
+  <meta
+    data-rh="true"
+    property="og:image:alt"
+    content="Ritu Raj - Full Stack Developer & AI/ML Student portfolio">
+
+  <meta
+    data-rh="true"
+    property="og:locale"
+    content="en_US">
+
+  <!-- ========================================================= -->
+  <!-- Twitter Cards -->
+  <!-- ========================================================= -->
+
+  <meta
+    data-rh="true"
+    name="twitter:card"
+    content="summary_large_image">
+
+  <meta
+    data-rh="true"
+    name="twitter:title"
+    content="Ritu Raj | Full Stack Developer | MERN Stack & AI/ML Student">
+
+  <meta
+    data-rh="true"
+    name="twitter:description"
+    content="Portfolio of Ritu Raj (RituRajLabs), Full Stack Developer & AI/ML Student. MERN Stack: React, Node.js, Express, MongoDB. Open to Software Developer Internship.">
+
+  <meta
+    data-rh="true"
+    name="twitter:image"
+    content="https://riturajlabs.vercel.app/images/portfolio-og.jpg">
+
+  <meta
+    data-rh="true"
+    name="twitter:image:alt"
+    content="Ritu Raj - Full Stack Developer & AI/ML Student portfolio">
 
   <!-- ========================================================= -->
   <!-- Theme -->
   <!-- ========================================================= -->
 
-
   <meta
     name="theme-color"
     content="#2563EB">
-
 
   <meta
     name="color-scheme"
     content="dark light">
 
-
-
   <!-- ========================================================= -->
-  <!-- PWA -->
-  <!-- ========================================================= -->
-  <!--
-    No web manifest or service worker is registered. The previous
-    site.webmanifest didn't make the site "installable" (browsers
-    require a registered service worker before prompting the user
-    to add to home screen) and cost us a 404 risk on misconfigured
-    hosts. Mobile theme color is still set via the <meta name="theme-color">
-    tag above.
-  -->
-
-
-
-  <!-- ========================================================= -->
-  <!-- Icons -->
+  <!-- Icons & Manifest -->
   <!-- ========================================================= -->
 
+  <link
+    rel="icon"
+    href="/favicon.ico"
+    sizes="48x48">
 
   <link
     rel="icon"
     type="image/png"
     href="/favicon.png">
 
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="32x32"
+    href="/favicon-32x32.png">
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="192x192"
+    href="/favicon-192x192.png">
+
+  <link
+    rel="icon"
+    type="image/png"
+    sizes="512x512"
+    href="/favicon-512x512.png">
 
   <link
     rel="apple-touch-icon"
-    href="/favicon.png">
+    sizes="180x180"
+    href="/apple-touch-icon.png">
 
+  <link
+    rel="manifest"
+    href="/site.webmanifest">
+
+  <!-- ========================================================= -->
+  <!-- Structured Data (Schema.org) — Person + WebSite + Projects
+       Note: no separate PWA service worker is registered; the
+       manifest is served for metadata/favicon purposes only. -->
+  <!-- ========================================================= -->
+
+  <script
+    data-rh="true"
+    type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Person",
+          "@id": "https://riturajlabs.vercel.app/#person",
+          "name": "Ritu Raj",
+          "alternateName": "RituRajLabs",
+          "url": "https://riturajlabs.vercel.app/",
+          "image": "https://riturajlabs.vercel.app/images/portfolio-og.jpg",
+          "jobTitle": "Full Stack Developer & AI/ML Student",
+          "description": "Portfolio of Ritu Raj (RituRajLabs), Full Stack Developer & AI/ML Student. MERN Stack: React, Node.js, Express, MongoDB. Open to Software Developer Internship.",
+          "email": "mailto:riturajlabs@outlook.com",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Pune",
+            "addressRegion": "Maharashtra",
+            "addressCountry": "IN"
+          },
+          "nationality": "India",
+          "knowsAbout": [
+            "React.js", "JavaScript", "HTML & CSS", "Bootstrap",
+            "Node.js", "Express.js", "FastAPI", "REST APIs",
+            "Python", "Machine Learning", "PyTorch", "LangChain",
+            "MongoDB", "PostgreSQL", "Git & GitHub", "Linux"
+          ],
+          "hasCredential": {
+            "@type": "EducationalOccupationalCredential",
+            "credentialCategory": "degree",
+            "name": "B.Sc. Artificial Intelligence & Machine Learning"
+          },
+          "sameAs": [
+            "https://github.com/riturajlabs",
+            "https://linkedin.com/in/riturajlabs"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://riturajlabs.vercel.app/#website",
+          "url": "https://riturajlabs.vercel.app/",
+          "name": "Ritu Raj Portfolio",
+          "alternateName": "RituRajLabs",
+          "description": "Portfolio of Ritu Raj (RituRajLabs), Full Stack Developer & AI/ML Student. MERN Stack: React, Node.js, Express, MongoDB. Open to Software Developer Internship.",
+          "publisher": {
+            "@id": "https://riturajlabs.vercel.app/#person"
+          },
+          "inLanguage": "en"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Orbit AI",
+          "url": "https://orbit-ai-client.vercel.app/",
+          "applicationCategory": "AIApplication",
+          "operatingSystem": "Web",
+          "description": "AI-powered conversational assistant built with full-stack architecture, LLM integration, backend APIs and database persistence.",
+          "author": {
+            "@id": "https://riturajlabs.vercel.app/#person"
+          },
+          "codeRepository": "https://github.com/riturajlabs/Orbit-AI"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Stayora",
+          "url": "https://stayora-production.up.railway.app/",
+          "applicationCategory": "WebApplication",
+          "operatingSystem": "Web",
+          "description": "Airbnb-inspired full-stack rental platform featuring authentication, property listings, wishlist, reviews and cloud image uploads.",
+          "author": {
+            "@id": "https://riturajlabs.vercel.app/#person"
+          },
+          "codeRepository": "https://github.com/riturajlabs/Stayora"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Scientific Calculator",
+          "url": "https://ritu-scientific-calculator.netlify.app",
+          "applicationCategory": "WebApplication",
+          "operatingSystem": "Web",
+          "description": "Responsive scientific calculator supporting arithmetic, trigonometry, factorials, permutations and combinations.",
+          "author": {
+            "@id": "https://riturajlabs.vercel.app/#person"
+          },
+          "codeRepository": "https://github.com/riturajlabs/Scientific-Calculator-Web-App"
+        }
+      ]
+    }
+  </script>
 
 </head>
 
@@ -111,17 +326,6 @@
     type="module"
     src="/src/main.jsx">
   </script>
-
-  
-  <h1 style="
-  position:absolute;
-  left:-9999px;
-  top:-9999px;
-  ">
-  Ritu Raj | Full Stack Developer | AI & Machine Learning Student
-  </h1>
-
-  <div id="root"></div>
 
 
 </body>

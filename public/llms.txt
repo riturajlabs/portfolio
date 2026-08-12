@@ -1,49 +1,45 @@
 # Ritu Raj Portfolio
 
-> Official portfolio of Ritu Raj (RituRajLabs), Full Stack Developer and AI & Machine Learning Student.
+> Official portfolio of Ritu Raj (RituRajLabs), Full Stack Developer and AI & Machine Learning Student, based in Pune, Maharashtra, India.
 
 ## Website
 
 - Homepage: https://riturajlabs.vercel.app
-- Portfolio: https://riturajlabs.vercel.app
+- Sitemap: https://riturajlabs.vercel.app/sitemap.xml
+- Robots: https://riturajlabs.vercel.app/robots.txt
 
 ## About
 
-Ritu Raj is a Full Stack Developer and AI & Machine Learning student.
-He builds modern web applications using React, JavaScript, Node.js, Express, MongoDB, Java and Python.
-His interests include Artificial Intelligence, Machine Learning, Generative AI, Data Structures & Algorithms and Software Engineering.
+Ritu Raj is a Full Stack Developer (MERN Stack) and AI & Machine Learning student pursuing a B.Sc. in Artificial Intelligence & Machine Learning.
+He builds modern web applications using React, JavaScript, Node.js, Express, MongoDB, Java and Python, and is open to Software Developer Internships.
+His interests include Artificial Intelligence, Machine Learning, Generative AI, RAG systems, AI Agents, Data Structures & Algorithms and Software Engineering.
+
+## Education
+
+- B.Sc. Artificial Intelligence & Machine Learning
 
 ## Skills
 
-- React
-- JavaScript
-- Node.js
-- Express.js
-- MongoDB
-- Java
-- Python
-- HTML5
-- CSS3
-- Bootstrap
-- Git
-- GitHub
-- REST APIs
-- Artificial Intelligence
-- Machine Learning
-- Generative AI
-- Data Structures & Algorithms
+- Frontend: React.js, JavaScript, HTML & CSS, Bootstrap
+- Backend: Node.js, Express.js, FastAPI, REST APIs
+- AI & ML: Python, Machine Learning, PyTorch, LangChain
+- Database & Tools: MongoDB, PostgreSQL, Git & GitHub, Linux
 
 ## Projects
 
-- Stayora
-- Orbit AI
-- Scientific Calculator
-- Portfolio Website
+- Orbit AI: AI-powered conversational assistant (full-stack, LLM integration). Live: https://orbit-ai-client.vercel.app | Code: https://github.com/riturajlabs/Orbit-AI
+- Stayora: Airbnb-inspired full-stack rental platform. Live: https://stayora-production.up.railway.app | Code: https://github.com/riturajlabs/Stayora
+- Scientific Calculator: Responsive scientific calculator. Live: https://ritu-scientific-calculator.netlify.app | Code: https://github.com/riturajlabs/Scientific-Calculator-Web-App
+
+## Certifications
+
+- Full Stack Development, Data Science and Artificial Intelligence certifications (see website)
 
 ## Profiles
 
 - GitHub: https://github.com/riturajlabs
 - LinkedIn: https://linkedin.com/in/riturajlabs
+- Email: riturajlabs@outlook.com
 
 ## Resume
 
