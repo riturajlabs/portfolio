@@ -58,19 +58,12 @@ const GREETING_TEXT =
     "Hi there! 👋 I'm Ritu Raj's AI Assistant. I can help you explore his projects, technical skills, education, certifications, and internship opportunities. Feel free to ask anything! 🚀";
 
 const SUGGESTED_QUESTIONS = [
-
-    "Tell me about yourself 👨‍💻",
-
-    "Explain your projects 🚀",
-
-    "Tell me about Orbit AI 🤖",
-
-    "What technologies do you know? 💻",
-
-    "Are you available for internships? 💼",
-
+    "Tell me about Ritu Raj 👨‍💻",
+    "Show me your best projects 🚀",
+    "Can I see Ritu's resume? 📄",
+    "Explain Orbit AI 🤖",
+    "What technologies does Ritu know? 💻",
     "Why should we hire Ritu Raj? ⭐"
-
 ];
 
 // ==========================================

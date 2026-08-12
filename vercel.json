@@ -2,27 +2,27 @@
   "rewrites": [
     {
       "source": "/api/chat",
-      "destination": "https://portfolio-lxdx.onrender.com/chat"
+      "destination": "https://riturajlabs.up.railway.app/chat"
     },
     {
       "source": "/api/chat/:path*",
-      "destination": "https://portfolio-lxdx.onrender.com/chat/:path*"
+      "destination": "https://riturajlabs.up.railway.app/chat/:path*"
     },
     {
       "source": "/api/contact",
-      "destination": "https://portfolio-lxdx.onrender.com/api/contact"
+      "destination": "https://riturajlabs.up.railway.app/api/contact"
     },
     {
       "source": "/api/github",
-      "destination": "https://portfolio-lxdx.onrender.com/api/github"
+      "destination": "https://riturajlabs.up.railway.app/api/github"
     },
     {
       "source": "/health",
-      "destination": "https://portfolio-lxdx.onrender.com/health"
+      "destination": "https://riturajlabs.up.railway.app/health"
     },
     {
       "source": "/ready",
-      "destination": "https://portfolio-lxdx.onrender.com/ready"
+      "destination": "https://riturajlabs.up.railway.app/ready"
     }
   ],
 
