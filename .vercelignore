@@ -1,2 +1,9 @@
 # Bundle analyzer output — must not be deployed
 stats.html
+
+# Local env files — must never enter the Vercel build context.
+# Vite inlines any VITE_* value found here into the public JS bundle.
+.env
+.env.local
+.env.development
+.env.production
