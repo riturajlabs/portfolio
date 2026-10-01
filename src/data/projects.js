@@ -1,9 +1,45 @@
 import orbitAI from "../assets/images/orbit-ai.webp";
 import stayora from "../assets/images/stayora.webp";
-// import zerodha from "../assets/images/zerodha.webp";
+import zerodha from "../assets/images/zerodha.png";
 import calculator from "../assets/images/calculator.webp";
+import webchatAI from "../assets/images/webchatAI.png";
+
+
 
 const projects = [
+    {
+        id: 5,
+        title: "WebChat AI",
+        featured: true,
+        category: "AI SaaS",
+
+        description:
+            "Multi-tenant RAG-powered AI knowledge assistant SaaS platform that enables businesses to embed intelligent chat assistants on their websites using zero-code integration.",
+
+        image: webchatAI,
+
+        highlights: [
+            "Production-grade AI assistant with RAG pipeline, semantic search, vector database, and grounded LLM responses",
+            "Zero-code embeddable widget SDK with real-time streaming chat using SSE architecture",
+            "Multi-tenant SaaS architecture with FastAPI backend, Next.js dashboard, MongoDB Atlas Vector Search, and secure API authentication",
+        ],
+
+        techStack: [
+            "Next.js",
+            "React",
+            "TypeScript",
+            "FastAPI",
+            "Python",
+            "MongoDB Atlas",
+            "Vector Search",
+            "RAG",
+            "Gemini AI",
+            "Playwright",
+        ],
+
+        live: "https://webchat-ai-dashboard.vercel.app/",
+        github: "https://github.com/riturajlabs/webchat-AI",
+    },
     {
         id: 1,
         title: "Orbit AI",
@@ -57,7 +93,7 @@ const projects = [
             "MongoDB",
         ],
 
-        live: "https://stayora-production.up.railway.app/",
+        live: "https://stayora-cuh3.onrender.com",
         github: "https://github.com/riturajlabs/Stayora",
     },
 
@@ -69,7 +105,7 @@ const projects = [
         description:
             "Trading platform UI clone focused on responsive design, reusable components, and modern frontend architecture.",
 
-        image: null,
+        image: zerodha,
 
         highlights: [
             "Pixel-faithful UI clone of a popular trading platform",
@@ -83,8 +119,8 @@ const projects = [
             "JavaScript",
         ],
 
-        live: "#",
-        github: "#",
+        live: "https://zerodha-clone-ui.vercel.app/",
+        github: "https://github.com/riturajlabs/Zerodha-Clone",
     },
 
     {

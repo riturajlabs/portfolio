@@ -281,6 +281,30 @@
       {
         "name": "Model Integration",
         "level": "Intermediate"
+      },
+      {
+        "name": "Vector Databases",
+        "level": "Intermediate"
+      },
+      {
+        "name": "Gemini API",
+        "level": "Intermediate"
+      },
+      {
+        "name": "FastAPI",
+        "level": "Intermediate"
+      },
+      {
+        "name": "Embeddings",
+        "level": "Intermediate"
+      },
+      {
+        "name": "LLM Applications",
+        "level": "Intermediate"
+      },
+      {
+        "name": "RAG Architecture",
+        "level": "Intermediate"
       }
     ],
     "developerTools": [
@@ -334,7 +358,10 @@
       ],
       "ai": [
         "LangChain",
-        "Groq API"
+        "Gemini API",
+        "Groq API",
+        "RAG",
+        "Vector Search"
       ],
       "deployment": [
         "Vercel",
@@ -426,7 +453,7 @@
         "Deployment on Vercel"
       ],
       "liveDemo": "https://orbit-ai-client.vercel.app",
-      "github": "https://github.com/riturajlabs",
+      "github": "https://github.com/riturajlabs/Orbit-AI",
       "image": "orbit-ai",
       "completionYear": 2026
     },
@@ -458,7 +485,7 @@
           "Mongoose"
         ],
         "deployment": [
-          "Railway"
+          "Render"
         ]
       },
       "features": [
@@ -488,8 +515,8 @@
         "Authentication",
         "Deployment"
       ],
-      "liveDemo": "https://stayora-cuh3.onrender.com/",
-      "github": "https://github.com/riturajlabs",
+      "liveDemo": "https://stayora-cuh3.onrender.com",
+      "github": "https://github.com/riturajlabs/Stayora",
       "image": "stayora",
       "completionYear": 2026
     },
@@ -526,9 +553,88 @@
         "Responsive Design"
       ],
       "liveDemo": "https://ritu-scientific-calculator.netlify.app",
-      "github": "https://github.com/riturajlabs",
+      "github": "https://github.com/riturajlabs/Scientific-Calculator-Web-App",
       "image": "calculator",
       "completionYear": 2025
+    },
+    {
+      "id": 4,
+      "name": "WebChat AI",
+      "slug": "webchat-ai",
+      "category": "AI SaaS",
+      "featured": true,
+      "status": "Completed",
+      "overview": {
+        "short": "A multi-tenant RAG-powered AI knowledge assistant SaaS that turns any website into a grounded, embeddable AI chatbot.",
+        "detailed": "WebChat AI is a production-ready multi-tenant AI SaaS platform that lets businesses create and embed AI knowledge assistants trained on their own website content. It crawls websites, extracts and chunks knowledge, generates embeddings, stores them in MongoDB Atlas with vector search, and answers questions with Retrieval-Augmented Generation (RAG) grounded in retrieved context. Responses are streamed in real time, and the finished assistant ships as an embeddable AI chatbot widget."
+      },
+      "technologies": {
+        "frontend": [
+          "Next.js",
+          "React",
+          "TypeScript"
+        ],
+        "backend": [
+          "Python",
+          "FastAPI"
+        ],
+        "database": [
+          "MongoDB Atlas"
+        ],
+        "ai": [
+          "Gemini AI",
+          "RAG",
+          "Embeddings",
+          "LLM Integration",
+          "Vector Search"
+        ],
+        "infrastructure": [
+          "Playwright",
+          "SSE Streaming",
+          "Docker"
+        ],
+        "deployment": [
+          "Vercel",
+          "Railway"
+        ]
+      },
+      "features": [
+        "Multi-Tenant SaaS Architecture",
+        "Zero-Code Embeddable AI Chat Widget",
+        "Website Crawling and Knowledge Extraction",
+        "RAG-Based Grounded AI Responses",
+        "Vector Database Search",
+        "Real-Time Streaming Chat",
+        "Secure Authentication and API Management"
+      ],
+      "architecture": [
+        "Next.js Dashboard",
+        "FastAPI Backend",
+        "MongoDB Atlas Vector Search",
+        "Playwright Web Scraper",
+        "Embedding Pipeline",
+        "LLM Generation Layer",
+        "Embeddable Widget SDK"
+      ],
+      "challenges": [
+        "Building a complete RAG pipeline",
+        "Handling website content ingestion",
+        "Reducing AI hallucinations using retrieval grounding",
+        "Designing multi-tenant architecture",
+        "Managing AI provider reliability and latency"
+      ],
+      "learnings": [
+        "Generative AI Application Development",
+        "RAG Architecture",
+        "Vector Search",
+        "Backend System Design",
+        "AI API Integration",
+        "Production Deployment"
+      ],
+      "liveDemo": "https://webchat-ai-dashboard.vercel.app",
+      "github": "https://github.com/riturajlabs/webchat-AI",
+      "image": "webchat-ai",
+      "completionYear": 2026
     }
   ],
   "certifications": [
@@ -675,7 +781,10 @@
       ],
       "ai": [
         "LangChain",
-        "Groq API"
+        "Gemini API",
+        "Groq API",
+        "RAG",
+        "Vector Search"
       ],
       "programming": [
         "JavaScript",
@@ -684,6 +793,8 @@
       ]
     },
     "interviewHighlights": [
+      "Built a production-ready RAG SaaS platform using FastAPI, Next.js, vector search, and LLM integrations.",
+      "Designed AI knowledge assistants using web crawling, embeddings, retrieval pipelines, and streaming responses.",
       "Built AI-powered applications using LangChain and Groq Llama 3.3.",
       "Developed full-stack applications with React, Node.js, Express.js, and MongoDB.",
       "Experience designing REST APIs and implementing Authentication.",
@@ -715,6 +826,7 @@
         "question": "What are your stipend expectations?",
         "answer": "My priority is gaining industry experience, learning from experienced engineers, and contributing effectively to the team. I am open to discussing a stipend that aligns with the company's internship structure."
       }
+      
     ]
   },
   "socials": {
@@ -768,9 +880,10 @@
       }
     },
     "projectLinks": {
-      "orbitAI": "https://your-orbit-ai.vercel.app",
+      "orbitAI": "https://orbit-ai-client.vercel.app",
       "stayora": "https://stayora-cuh3.onrender.com",
-      "scientificCalculator": "https://ritu-scientific-calculator.netlify.app"
+      "scientificCalculator": "https://ritu-scientific-calculator.netlify.app",
+      "webchatAI": "https://webchat-ai-dashboard.vercel.app"
     },
     "availability": {
       "openForInternships": true,
@@ -787,6 +900,9 @@
       "What technologies do you know?",
       "Explain your projects",
       "Tell me about Orbit AI",
+      "Tell me about WebChat AI",
+      "Explain RAG architecture",
+      "How does WebChat AI reduce AI hallucinations?",
       "Are you available for internships?",
       "Show your certifications"
     ],
@@ -821,7 +937,7 @@
       },
       {
         "question": "Which project are you most proud of?",
-        "answer": "Orbit AI is one of the most advanced projects because it combines Full Stack Development with Artificial Intelligence. It demonstrates backend architecture, API integration, authentication, and practical Generative AI implementation."
+        "answer": "WebChat AI is the one he is most proud of because it is a real production AI system rather than a demo. It required RAG architecture, vector search, and multi-tenant SaaS design: website crawling, knowledge extraction, embeddings, retrieval-augmented generation with Gemini, streaming responses, and an embeddable widget. Orbit AI is also a strong project, as it combines Full Stack Development with Artificial Intelligence and demonstrates backend architecture, API integration, authentication, and practical Generative AI implementation."
       },
       {
         "question": "Are you available for internship?",
@@ -870,6 +986,18 @@
       {
         "question": "How do you learn new technologies?",
         "answer": "Ritu follows a learn-by-building approach. He studies documentation, understands fundamentals, and applies concepts by creating practical projects."
+      },
+      {
+        "question": "Tell me about WebChat AI",
+        "answer": "WebChat AI is a multi-tenant RAG-powered AI knowledge assistant SaaS platform. It allows businesses to create custom AI chatbots trained on their website content using web crawling, embeddings, vector search, and Large Language Models. It includes an embeddable widget, real-time streaming responses, and secure backend architecture."
+      },
+      {
+        "question": "Explain RAG architecture",
+        "answer": "RAG stands for Retrieval-Augmented Generation. The pipeline first ingests content by crawling websites and extracting text, which is then split into chunks and converted into embeddings stored in a vector database. At query time, the user's question is embedded and matched against those stored vectors using similarity vector search, so the most relevant chunks are retrieved and supplied as context to the LLM. The model then generates an answer grounded in that retrieved context instead of relying on memory alone, and the response can be streamed back token by token. In WebChat AI this pipeline runs as a FastAPI service backed by MongoDB Atlas vector search with Gemini for generation."
+      },
+      {
+        "question": "How does WebChat AI reduce AI hallucinations?",
+        "answer": "WebChat AI reduces hallucinations by grounding every answer in retrieved, verifiable content instead of letting the model answer from memory. Website content is crawled, extracted, chunked, embedded, and stored in a vector database. When a user asks a question, the system performs a similarity vector search to fetch the most relevant chunks and passes them to the LLM as context, with instructions to answer only from the provided sources. Because the responses are limited to the customer's own website content, the assistant stays factual and on-topic instead of inventing details."
       }
     ]
   }
