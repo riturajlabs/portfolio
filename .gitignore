@@ -14,6 +14,9 @@ node_modules/
 dist/
 dist-ssr/
 
+# Prerender (SSR build used to generate /projects/<slug>/ HTML)
+.prerender/
+
 # Bundle analyzer output
 stats.html
 

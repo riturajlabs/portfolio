@@ -216,7 +216,14 @@
     href="/site.webmanifest">
 
   <!-- ========================================================= -->
-  <!-- Structured Data (Schema.org) — Person + WebSite + Projects
+  <!-- Structured Data (Schema.org) — Person + WebSite only.
+       Per-project SoftwareApplication entities are NOT declared
+       here: each project now has its own canonical page at
+       /projects/<slug>/ which emits the authoritative node, so
+       declaring them again on the homepage created two competing
+       authorities for one entity (they had already drifted: a stale
+       Railway URL and only 3 of 5 projects). The homepage carries
+       the site + author identity; project pages carry the projects.
        Note: no separate PWA service worker is registered; the
        manifest is served for metadata/favicon purposes only. -->
   <!-- ========================================================= -->
@@ -271,42 +278,6 @@
             "@id": "https://riturajlabs.vercel.app/#person"
           },
           "inLanguage": "en"
-        },
-        {
-          "@type": "SoftwareApplication",
-          "name": "Orbit AI",
-          "url": "https://orbit-ai-client.vercel.app/",
-          "applicationCategory": "AIApplication",
-          "operatingSystem": "Web",
-          "description": "AI-powered conversational assistant built with full-stack architecture, LLM integration, backend APIs and database persistence.",
-          "author": {
-            "@id": "https://riturajlabs.vercel.app/#person"
-          },
-          "codeRepository": "https://github.com/riturajlabs/Orbit-AI"
-        },
-        {
-          "@type": "SoftwareApplication",
-          "name": "Stayora",
-          "url": "https://stayora-production.up.railway.app/",
-          "applicationCategory": "WebApplication",
-          "operatingSystem": "Web",
-          "description": "Airbnb-inspired full-stack rental platform featuring authentication, property listings, wishlist, reviews and cloud image uploads.",
-          "author": {
-            "@id": "https://riturajlabs.vercel.app/#person"
-          },
-          "codeRepository": "https://github.com/riturajlabs/Stayora"
-        },
-        {
-          "@type": "SoftwareApplication",
-          "name": "Scientific Calculator",
-          "url": "https://ritu-scientific-calculator.netlify.app",
-          "applicationCategory": "WebApplication",
-          "operatingSystem": "Web",
-          "description": "Responsive scientific calculator supporting arithmetic, trigonometry, factorials, permutations and combinations.",
-          "author": {
-            "@id": "https://riturajlabs.vercel.app/#person"
-          },
-          "codeRepository": "https://github.com/riturajlabs/Scientific-Calculator-Web-App"
         }
       ]
     }

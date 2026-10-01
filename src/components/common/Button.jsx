@@ -12,6 +12,7 @@ function Button({
     className = "",
     disabled = false,
     download,
+    ariaLabel,
 }) {
     const classes = `btn btn-${variant} ${className}`.trim();
 
@@ -23,6 +24,7 @@ function Button({
                 rel={rel}
                 download={download}
                 className={classes}
+                aria-label={ariaLabel}
             >
                 {children}
             </a>
@@ -35,6 +37,7 @@ function Button({
             onClick={onClick}
             className={classes}
             disabled={disabled}
+            aria-label={ariaLabel}
         >
             {children}
         </button>
@@ -60,6 +63,8 @@ Button.propTypes = {
     rel: PropTypes.string,
     className: PropTypes.string,
     disabled: PropTypes.bool,
+    download: PropTypes.any,
+    ariaLabel: PropTypes.string,
 };
 
 export default Button;

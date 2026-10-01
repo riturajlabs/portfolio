@@ -223,6 +223,9 @@
 
 .project-buttons {
     display: flex;
+    /* Four actions now (project page, preview, GitHub, live demo),
+       so let them wrap rather than crushing the labels. */
+    flex-wrap: wrap;
     gap: 1rem;
     margin-top: auto;
 }

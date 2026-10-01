@@ -11,6 +11,8 @@ import {
 
 import Button from "./Button";
 
+import { projectPagePath } from "../../lib/projectPages";
+
 function ProjectCard({ project }) {
     const [open, setOpen] = useState(false);
     const detailsBtnRef = useRef(null);
@@ -26,10 +28,7 @@ function ProjectCard({ project }) {
     const hasGithub =
         project.github && project.github !== "#";
 
-    const imageAlt =
-        project.image
-            ? `${project.title} - ${project.category || "web"} project built with ${technologies.join(", ") || "modern web technologies"}`
-            : project.title;
+    const imageAlt = project.imageAlt || project.title;
 
     // Modal lifecycle: lock body scroll, close on Escape,
     // focus the close button, restore focus to the trigger on close.
@@ -112,10 +111,25 @@ function ProjectCard({ project }) {
                     )}
 
                     <div className="project-buttons">
+                        {/* The dedicated project page. A real anchor is
+                            what makes these pages discoverable to a
+                            crawler; the Details modal below is only a
+                            preview and must not be the sole way in.
+                            The aria-label keeps the accessible name
+                            both descriptive and inclusive of the
+                            visible text (WCAG 2.5.3 Label in Name). */}
+                        <Button
+                            href={projectPagePath(project.slug)}
+                            variant="primary"
+                            ariaLabel={`View project: ${project.title}`}
+                        >
+                            View project
+                        </Button>
+
                         <button
                             ref={detailsBtnRef}
                             type="button"
-                            className="btn btn-secondary"
+                            className="btn btn-ghost"
                             onClick={() => setOpen(true)}
                             aria-haspopup="dialog"
                         >
@@ -129,9 +143,10 @@ function ProjectCard({ project }) {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 variant="outline"
+                                ariaLabel={`View ${project.title} source code on GitHub`}
                             >
                                 <FaGithub />
-                                <span>Code</span>
+                                <span>GitHub</span>
                             </Button>
                         )}
 
@@ -140,7 +155,8 @@ function ProjectCard({ project }) {
                                 href={project.live}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                variant="primary"
+                                variant="outline"
+                                ariaLabel={`View ${project.title} live demo`}
                             >
                                 <FaExternalLinkAlt />
                                 <span>Live Demo</span>
@@ -225,15 +241,26 @@ function ProjectCard({ project }) {
                                 )}
 
                                 <div className="project-modal-actions">
+                                    <Button
+                                        href={projectPagePath(
+                                            project.slug
+                                        )}
+                                        variant="primary"
+                                        ariaLabel={`View project: ${project.title}`}
+                                    >
+                                        View project
+                                    </Button>
+
                                     {hasGithub && (
                                         <Button
                                             href={project.github}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             variant="outline"
+                                            ariaLabel={`View ${project.title} source code on GitHub`}
                                         >
                                             <FaGithub />
-                                            <span>Code</span>
+                                            <span>GitHub</span>
                                         </Button>
                                     )}
 
@@ -242,7 +269,8 @@ function ProjectCard({ project }) {
                                             href={project.live}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            variant="primary"
+                                            variant="outline"
+                                            ariaLabel={`View ${project.title} live demo`}
                                         >
                                             <FaExternalLinkAlt />
                                             <span>Live Demo</span>
@@ -262,7 +290,9 @@ ProjectCard.propTypes = {
     project: PropTypes.shape({
         title: PropTypes.string.isRequired,
         description: PropTypes.string.isRequired,
+        slug: PropTypes.string,
         image: PropTypes.string,
+        imageAlt: PropTypes.string,
         github: PropTypes.string,
         live: PropTypes.string,
         featured: PropTypes.bool,

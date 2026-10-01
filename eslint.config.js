@@ -26,4 +26,13 @@ export default defineConfig([
       globals: { process: 'readonly' },
     },
   },
+  // Build-time prerender scripts run in Node and deliberately re-export
+  // non-component helpers for the generator, so the Fast Refresh
+  // "only export components" rule has nothing to say about them.
+  {
+    files: ['scripts/**/*.js', 'scripts/**/*.jsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

@@ -14,7 +14,7 @@ const navigation = [
     { id: "projects", label: "Projects" },
 
     { id: "certifications", label: "Certifications" },
-    
+    { id: "blog", label: "Blog" },
     { id: "contact", label: "Contact" },
 ];
 
@@ -59,7 +59,7 @@ function Navbar() {
                         className="logo"
                         onClick={() => setMenuOpen(false)}
                     >
-                        <h1 className="logo-name">{profile.name}</h1>
+                        <span className="logo-name">{profile.name}</span>
                     </a>
 
                     {/* ================= DESKTOP NAV (FIXED) ================= */}

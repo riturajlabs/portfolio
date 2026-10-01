@@ -1,6 +1,5 @@
 import { Helmet } from "react-helmet-async";
 import seo from "../../config/seo";
-import projects from "../../data/projects";
 
 
 export default function SEO({
@@ -36,36 +35,17 @@ export default function SEO({
 
     // =========================================================
     // Structured Data — Schema.org @graph
-    // Person + WebSite + software projects. Mirrors the static
-    // baseline shipped in index.html (data-rh replaces it cleanly).
+    // Person + WebSite only, mirroring the static baseline in
+    // index.html.
+    //
+    // Per-project SoftwareApplication entities are deliberately NOT
+    // emitted here. Every project now has its own canonical page at
+    // /projects/<slug>/ which declares the authoritative node, so a
+    // second copy on the homepage would be a competing authority for
+    // the same entity — one that had already drifted from the static
+    // baseline and pointed `url` at the external demo host rather
+    // than the portfolio page that actually describes it.
     // =========================================================
-
-    const projectApps =
-        projects
-            .filter((project) => project.live && project.live !== "#")
-            .map((project) => {
-                const app = {
-                    "@type": "SoftwareApplication",
-                    "name": project.title,
-                    "url": project.live,
-                    "applicationCategory":
-                        project.category === "AI"
-                            ? "AIApplication"
-                            : "WebApplication",
-                    "operatingSystem": "Web",
-                    "description": project.description,
-                    "author": {
-                        "@id": personId
-                    },
-                };
-
-                if (project.github && project.github !== "#") {
-                    app.codeRepository = project.github;
-                }
-
-                return app;
-            });
-
 
     const structuredData = {
 
@@ -145,9 +125,7 @@ export default function SEO({
 
                 "inLanguage": "en"
 
-            },
-
-            ...projectApps
+            }
 
         ]
 
