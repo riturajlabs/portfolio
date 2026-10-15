@@ -1,17 +1,18 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
 from slowapi.errors import RateLimitExceeded
 
-from routes.chat import router
-from routes.github import router as github_router
-from routes.contact import router as contact_router
-from core.startup import startup_knowledge_loading, is_knowledge_ready
 from core.rate_limit import limiter, rate_limit_exceeded_handler
+from core.startup import is_knowledge_ready, startup_knowledge_loading
+from routes.admin import router as admin_router
+from routes.chat import router
+from routes.contact import router as contact_router
+from routes.github import router as github_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ async def lifespan(app: FastAPI):
 
         get_embedding_function()
         logger.info("✅ Embedding function warmed at startup.")
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         # Don't crash the app if warm-up fails — first request will retry.
         logger.warning("⚠️ Embedding function warm-up failed: %s", exc)
 
@@ -94,6 +95,7 @@ app.add_middleware(
 app.include_router(router)
 app.include_router(github_router)
 app.include_router(contact_router)
+app.include_router(admin_router)
 
 
 # ==========================================
@@ -136,6 +138,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "app:app",
         host="0.0.0.0",
-        port=int(os.getenv("PORT", 8000)),
+        port=int(os.getenv("PORT", "8000")),
         reload=os.getenv("ENV", "development") == "development",
     )

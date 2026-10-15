@@ -1,0 +1,15 @@
+/* TEAM */
+    Name: Ritu Raj
+    Role: Full Stack Developer & AI/ML Student
+    Contact: riturajlabs@outlook.com
+    GitHub: https://github.com/riturajlabs
+    LinkedIn: https://linkedin.com/in/riturajlabs
+    Location: Pune, Maharashtra, India
+
+/* SITE */
+    Language: English
+    Standards: HTML5, CSS3, JavaScript, ARIA
+    Frontend: React, Vite
+    Backend: FastAPI, PostgreSQL
+    AI: ChromaDB, Groq, Gemini
+    Hosting: Vercel, Render

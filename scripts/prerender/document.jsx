@@ -77,7 +77,8 @@ function dropHoistedImagePreload(markup, imagePath) {
 /**
  * Render a full project HTML document.
  *
- * @param {object} project  entry from src/data/projects.js
+ * @param {object} project  entry from src/generated/content.js
+ *        (the build-time snapshot of `GET /api/content`)
  * @param {string[]} stylesheets  root-relative stylesheet URLs,
  *        already resolved from the real Vite build manifest so no
  *        hashed filename is ever hardcoded

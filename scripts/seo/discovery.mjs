@@ -235,8 +235,10 @@ export function buildRobotsTxt({ sitemaps }) {
  * held here as constants rather than derived, because they describe
  * the person, not the projects. Every factual identity value they
  * quote is asserted against the real data by validateLlmsTxt, and the
- * Projects section is generated entirely from src/data/projects.js —
- * which is what fixes the stale entries this file used to carry.
+ * Projects section is generated entirely from the build-time content
+ * snapshot (`src/generated/content.js`, the validated `GET
+ * /api/content` payload) — which is what fixes the stale entries this
+ * file used to carry.
  */
 export function buildLlmsTxt({ identity, projects, resumeUrl, sitemaps }) {
     const siteLines = [

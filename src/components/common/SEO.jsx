@@ -1,5 +1,8 @@
 import { Helmet } from "react-helmet-async";
-import seo from "../../config/seo";
+
+import { seo } from "../../lib/publicContent";
+
+import { robotsDirective, serializeStructuredData } from "../../lib/projectPages";
 
 
 export default function SEO({
@@ -22,11 +25,28 @@ export default function SEO({
 
 }) {
 
-
     const keywordString =
         Array.isArray(keywords)
             ? keywords.join(", ")
             : keywords;
+
+    const robotsValue = robotsDirective(robots);
+
+
+    // `seo.person.address` is optional in the content contract
+    // (Person.address is `PostalAddress | None`), and a PostalAddress may
+    // legitimately omit any of its parts. Only emit the PostalAddress node
+    // when there is at least one real value to carry, and omit individual
+    // missing parts rather than inventing them.
+    const personAddress = seo.person.address;
+
+    const hasPostalAddress =
+        Boolean(personAddress) &&
+        Boolean(
+            personAddress.locality ||
+            personAddress.region ||
+            personAddress.country
+        );
 
 
     const personId = `${seo.url}#person`;
@@ -73,17 +93,31 @@ export default function SEO({
 
                 "email": `mailto:${seo.person.email}`,
 
-                "address": {
+                "address": hasPostalAddress
+                    ? {
 
-                    "@type": "PostalAddress",
+                        "@type": "PostalAddress",
 
-                    "addressLocality": seo.person.address.locality,
+                        ...(personAddress.locality && {
 
-                    "addressRegion": seo.person.address.region,
+                            "addressLocality": personAddress.locality
 
-                    "addressCountry": seo.person.address.country
+                        }),
 
-                },
+                        ...(personAddress.region && {
+
+                            "addressRegion": personAddress.region
+
+                        }),
+
+                        ...(personAddress.country && {
+
+                            "addressCountry": personAddress.country
+
+                        })
+
+                    }
+                    : undefined,
 
                 "nationality": seo.person.nationality,
 
@@ -168,19 +202,19 @@ export default function SEO({
 
             <meta
                 name="robots"
-                content={robots}
+                content={robotsValue}
             />
 
 
             <meta
                 name="googlebot"
-                content={robots}
+                content={robotsValue}
             />
 
 
             <meta
                 name="bingbot"
-                content={robots}
+                content={robotsValue}
             />
 
 
@@ -332,7 +366,7 @@ export default function SEO({
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{
-                    __html: JSON.stringify(structuredData)
+                    __html: serializeStructuredData(structuredData)
                 }}
             />
 

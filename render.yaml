@@ -1,0 +1,127 @@
+# Render Blueprint — the portfolio backend (`backend/` FastAPI + PostgreSQL API).
+#
+# Scope: this file defines ONLY the `portfolio-api` web service that `vercel.json`
+# proxies /api/admin/*, /api/contact and /api/github to. It does NOT define the
+# `portfolio-lxdx` AI service (managed separately in the dashboard, left untouched)
+# and it does NOT create a database: `DATABASE_URL` is supplied by the operator
+# (`sync: false`), so no secret value is invented and no existing database is
+# recreated.
+#
+# WARNING: Render matches service definitions by `name`. If a service named
+# `portfolio-api` already exists in this workspace (e.g. one created by hand),
+# syncing this Blueprint ADOPTS it and applies the settings below. Confirm that is
+# intended, or remove/rename this service before creating the Blueprint.
+#
+# Secrets use `sync: false`: Render prompts for a value at Blueprint creation and
+# stores it in the service environment. Nothing secret is committed here.
+#
+# Configuration only. The deploy sequence is `docs/DEPLOYMENT.md` §6.2, and the
+# backend Render specifics are explained in §6.5. The first administrator and
+# the initial CMS content are created by the one-time bootstrap endpoint
+# (`scripts/bootstrap-content.mjs`, §6.6), not by a Render Shell or a seed file.
+#
+# Schema/validation: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: portfolio-api
+    runtime: python
+    # Monorepo root: only backend/ is built. The frontend (Vercel) and ai_service
+    # (separate Render service) are not built from this definition.
+    rootDir: backend
+    # Match the region of the database and the existing `portfolio-lxdx` service.
+    # Omitted so Render uses the workspace default rather than a guessed value.
+    # region: oregon
+    # Free tier mirrors the existing AI service. See `docs/DEPLOYMENT.md` §6.5.
+    plan: free
+    # backend/ has no requirements.txt; dependencies live in pyproject.toml.
+    #
+    # Migrations run in the build, not in a pre-deploy command. A Free web
+    # service has no Shell and no one-off jobs (Render docs, "Deploy for Free"),
+    # and `preDeployCommand` is a paid-plan feature — so the build is the only
+    # pre-start hook available for free. `alembic upgrade head` is idempotent:
+    # on the first deploy it creates the schema, and on every later deploy it is
+    # a no-op. If it fails, the deploy fails closed before the service starts,
+    # which is why the health check below can require `/ready`.
+    buildCommand: pip install . && python -m alembic upgrade head
+    # Procfile parity: backend/Procfile declares the same command.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # docs/DEPLOYMENT.md §7: only route traffic to a database that is reachable AND
+    # migrated. `/health` stays the dependency-free liveness probe.
+    healthCheckPath: /ready
+    # Keep deploys manual so the §6.2 ordering (migrate -> seed -> verify -> deploy)
+    # is not short-circuited by a push. Set to `commit` to auto-deploy on push.
+    autoDeployTrigger: "off"
+    envVars:
+      # --- Python version (Render ignores runtime.txt; also in backend/.python-version) ---
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # --- Non-secret runtime configuration ---
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: TRUSTED_PROXY_HEADER
+        value: cf-connecting-ip
+      # Add any custom front-end domains here, comma-separated. `*` is refused in
+      # production/staging at startup.
+      - key: ALLOWED_ORIGINS
+        value: https://riturajlabs.vercel.app
+      - key: AI_SERVICE_URL
+        value: https://portfolio-lxdx.onrender.com
+      - key: AI_SERVICE_TIMEOUT_SECONDS
+        value: "30"
+      - key: DEPLOY_HOOK_TIMEOUT_SECONDS
+        value: "10"
+      - key: GITHUB_USERNAME
+        value: riturajlabs
+      - key: CONTACT_FROM_EMAIL
+        value: onboarding@resend.dev
+      - key: CONTACT_TO_EMAIL
+        value: riturajlabs@outlook.com
+      # --- Object storage for admin-uploaded project images (Neon Object Storage) ---
+      # The bucket must be `public_read` (neon.ts declares it): the uploaded image
+      # URL is baked into the static build and fetched by anonymous browsers. The
+      # bucket name is not a secret — the whole point is that it is public.
+      - key: S3_BUCKET
+        value: media
+      # --- Private object storage for the admin-uploaded resume (Neon Object
+      # Storage). Deliberately a *different* bucket from the public `media`: a
+      # resume is a document, so `uploads` must stay private and is read only
+      # through `GET /api/resume` (docs/DEPLOYMENT.md §3.1). Declared explicitly
+      # (not left to the code defaults) so the platform cannot silently drift to
+      # another bucket. `S3_RESUME_MAX_BYTES` is the 10 MB upload cap.
+      - key: S3_RESUME_BUCKET
+        value: uploads
+      - key: S3_RESUME_MAX_BYTES
+        value: "10000000"
+      # --- Operator-supplied secrets (Render prompts; no value committed) ---
+      - key: DATABASE_URL
+        sync: false
+      # One-time bootstrap: while set, `POST /api/admin/bootstrap` is enabled so
+      # the first administrator + initial CMS content can be created over HTTPS
+      # (a Free web service has no Shell). ≥32 chars. REMOVE this after a
+      # successful `npm run admin:bootstrap` and redeploy; the endpoint then
+      # answers 404. See `docs/DEPLOYMENT.md` §6.6.
+      - key: ADMIN_BOOTSTRAP_TOKEN
+        sync: false
+      - key: DEPLOY_HOOK_URL
+        sync: false
+      - key: AI_SERVICE_ADMIN_TOKEN
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      # Object-storage credentials from `neon deploy` (or the same values copied
+      # from the object-storage credential the Neon dashboard shows). Capabilities
+      # scoped to one bucket, so they belong in the secret store. The endpoint is
+      # branch-scoped and changes if the branch is recreated.
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_ENDPOINT_URL_S3
+        sync: false
+      - key: AWS_REGION
+        sync: false

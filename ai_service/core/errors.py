@@ -14,7 +14,7 @@ def get_ai_error_message(error: Exception | str) -> str:
     error_text = str(error).lower()
     
     
-    logger.error(f"AI Service Error: {str(error)}")
+    logger.error(f"AI Service Error: {error!s}")
 
     # 1. API Key / Authentication Error (401, 403)
     if any(keyword in error_text for keyword in ["401", "403", "api key", "unauthorized"]):

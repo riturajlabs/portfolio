@@ -8,18 +8,18 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from groq import Groq
 from google import genai
 from google.genai import types as genai_types
+from groq import Groq
 from pydantic import BaseModel, ConfigDict, Field
 
 from config.settings import settings
-from core.prompts import PROMPT_VERSION, pick_system_prompt, SYSTEM_PROMPT_WITH_EXAMPLES
+from core.prompts import PROMPT_VERSION, SYSTEM_PROMPT_WITH_EXAMPLES, pick_system_prompt
+from core.rate_limit import _RATE_LIMIT_STR, limiter
 from core.security import verify_api_key
 from core.startup import is_knowledge_ready
-from core.rate_limit import limiter
-from services.knowledge_loader import query_knowledge
 from services import llm_response_cache
+from services.knowledge_loader import query_knowledge
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 logger = logging.getLogger(__name__)
@@ -183,7 +183,7 @@ async def _query_with_timeout(
             asyncio.to_thread(query_knowledge, query, **kwargs),
             timeout=QUERY_TIMEOUT_SECONDS,
         )
-    except asyncio.TimeoutError as exc:
+    except TimeoutError as exc:
         logger.warning(
             "query_knowledge timed out after %.1fs for query=%r",
             QUERY_TIMEOUT_SECONDS,
@@ -264,7 +264,7 @@ async def _sse_event(data: dict | str) -> bytes:
     """Encode one SSE message."""
     if isinstance(data, dict):
         data = json.dumps(data, ensure_ascii=False)
-    return f"data: {data}\n\n".encode("utf-8")
+    return f"data: {data}\n\n".encode()
 
 
 async def _sse_keepalive() -> bytes:
@@ -281,7 +281,7 @@ async def _sse_keepalive() -> bytes:
 # it as SSE here too means a stuck non-streaming LLM call can never
 # block the request thread for the full pre-token latency.
 @router.post("/chat")
-@limiter.limit("10/minute")
+@limiter.limit(_RATE_LIMIT_STR)
 async def chat(request: Request, chat_request: ChatRequest):
     return await _chat_stream_response(request, chat_request, log_tag="chat")
 
@@ -290,7 +290,7 @@ async def chat(request: Request, chat_request: ChatRequest):
 # 🌊 POST /chat/stream — SSE
 # ==========================================
 @router.post("/chat/stream")
-@limiter.limit("10/minute")
+@limiter.limit(_RATE_LIMIT_STR)
 async def chat_stream(request: Request, chat_request: ChatRequest):
     """
     Streams tokens via Server-Sent Events.
@@ -495,7 +495,7 @@ async def _chat_stream_response(
                             ka = await _maybe_keepalive()
                             if ka is not None:
                                 yield ka
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.warning("%s stream failed: %s", provider, exc)
 
         for provider in order:

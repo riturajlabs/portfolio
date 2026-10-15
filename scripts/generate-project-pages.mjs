@@ -15,6 +15,13 @@
 // intrinsic image dimensions declared in
 // src/lib/projectPages.js against the actual WebP file headers,
 // so a wrong width/height fails the build instead of shipping.
+//
+// A project image may also be an object-storage URL (an admin
+// upload) instead of a committed WebP. There is no local file to
+// read in that case, so the header read is skipped and the
+// dimensions the server measured at upload time (carried by the
+// content snapshot) are used as the reference; the emitted markup
+// is still checked against them.
 // =========================================================
 
 import fs from "node:fs";
@@ -203,48 +210,80 @@ console.log(
 const generated = [];
 const problems = [];
 
+// A project image is either the committed `/images/projects/<slug>.webp` path or
+// an absolute object-storage URL. Mirrors `IMAGE_URL_PATTERN` in
+// `backend/app/schemas/admin_content.py` and the content snapshot validator: only
+// http(s) counts as remote, so nothing else can slip past the local-file check.
+function isRemoteImage(value) {
+    return typeof value === "string" && /^https?:\/\//i.test(value);
+}
+
 for (const project of indexable) {
-    const expectedSlugPath = `/images/projects/${project.slug}.webp`;
-
-    // The image filename and the slug must stay in lockstep:
-    // the page, the canonical URL and the asset all key off the
-    // slug, so a mismatch is a build error, not a 404 later.
-    if (project.image !== expectedSlugPath) {
-        problems.push(
-            `${project.title}: image "${project.image}" does not match ` +
-            `slug-derived path "${expectedSlugPath}"`
-        );
-        continue;
-    }
-
-    const imagePath = path.join(
-        distDir,
-        "images",
-        "projects",
-        `${project.slug}.webp`
-    );
-
-    if (!fs.existsSync(imagePath)) {
-        problems.push(
-            `${project.title}: missing image asset ${imagePath}`
-        );
-        continue;
-    }
-
-    const imageBuffer = fs.readFileSync(imagePath);
+    const declared = PROJECT_IMAGE_DIMENSIONS[project.slug];
 
     let actual;
-    try {
-        actual = readWebpSize(imageBuffer);
-    } catch (error) {
-        problems.push(
-            `${project.title}: ${imagePath} is not a readable WebP — ` +
-            error.message
-        );
-        continue;
-    }
+    let imageBytes = null;
+    let imageLabel;
 
-    const declared = PROJECT_IMAGE_DIMENSIONS[project.slug];
+    if (isRemoteImage(project.image)) {
+        // Uploaded image: it lives in object storage, so there is no local file
+        // to read and the build must not fetch the object. The server measured
+        // it at upload time and that size travels in the content snapshot, so the
+        // recorded dimensions are the reference the emitted markup is checked
+        // against.
+        if (!declared || !(declared.width > 0) || !(declared.height > 0)) {
+            problems.push(
+                `${project.title}: no recorded dimensions for uploaded image ` +
+                `"${project.image}"`
+            );
+            continue;
+        }
+
+        actual = { width: declared.width, height: declared.height, chunk: "remote" };
+        imageLabel = project.image;
+    } else {
+        const expectedSlugPath = `/images/projects/${project.slug}.webp`;
+
+        // The image filename and the slug must stay in lockstep:
+        // the page, the canonical URL and the asset all key off the
+        // slug, so a mismatch is a build error, not a 404 later.
+        if (project.image !== expectedSlugPath) {
+            problems.push(
+                `${project.title}: image "${project.image}" does not match ` +
+                `slug-derived path "${expectedSlugPath}"`
+            );
+            continue;
+        }
+
+        const imagePath = path.join(
+            distDir,
+            "images",
+            "projects",
+            `${project.slug}.webp`
+        );
+
+        if (!fs.existsSync(imagePath)) {
+            problems.push(
+                `${project.title}: missing image asset ${imagePath}`
+            );
+            continue;
+        }
+
+        const imageBuffer = fs.readFileSync(imagePath);
+        imageLabel = path.basename(imagePath);
+
+        try {
+            actual = readWebpSize(imageBuffer);
+        } catch (error) {
+            problems.push(
+                `${project.title}: ${imagePath} is not a readable WebP — ` +
+                error.message
+            );
+            continue;
+        }
+
+        imageBytes = imageBuffer.length;
+    }
 
     // Compare against what the document actually emitted, which is
     // the single source consumers will trust.
@@ -281,7 +320,7 @@ for (const project of indexable) {
 
     if (!emittedMatches || !declaredMatches || preloadsInBody.length > 0) {
         problems.push(
-            `${project.title}: ${path.basename(imagePath)} is really ` +
+            `${project.title}: ${imageLabel} is really ` +
             `${actual.width}x${actual.height} (${actual.chunk}), but ` +
             `PROJECT_IMAGE_DIMENSIONS declares ` +
             `${declared ? `${declared.width}x${declared.height}` : "nothing"} ` +
@@ -302,7 +341,7 @@ for (const project of indexable) {
         title: project.title,
         slug: project.slug,
         bytes: Buffer.byteLength(html),
-        imageBytes: imageBuffer.length,
+        imageBytes,
         dimensions: `${actual.width}x${actual.height}`,
         chunk: actual.chunk,
         output: path.relative(rootDir, outputPath),

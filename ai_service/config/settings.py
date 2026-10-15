@@ -10,6 +10,19 @@ class Settings:
     # Shared secret between frontend and backend. Must be set in production.
     AI_SERVICE_KEY: str = os.getenv("AI_SERVICE_KEY", "")
 
+    # --- Trusted client IP (rate-limit bucketing) ---
+    # Header the Vercel edge (`middleware.js`) stamps with the signed real
+    # client IP. Empty (default) disables header trust entirely, so local dev
+    # and tests key on the socket peer. Only `x-vercel-client-ip` is accepted;
+    # see core/client_ip.py.
+    TRUSTED_CLIENT_IP_HEADER: str = os.getenv("TRUSTED_CLIENT_IP_HEADER", "")
+    # Secret used to verify the edge signature. Defaults to AI_SERVICE_KEY so no
+    # extra secret is required; set it separately to rotate independently, but
+    # it must then carry the same value as BACKEND_API_KEY on the Vercel project.
+    CLIENT_IP_SIGNING_SECRET: str = os.getenv(
+        "CLIENT_IP_SIGNING_SECRET", AI_SERVICE_KEY
+    )
+
     # --- AI API Keys ---
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
@@ -30,6 +43,22 @@ class Settings:
     # with legacy layouts.
     KNOWLEDGE_FILE: str = os.getenv("KNOWLEDGE_FILE", "./knowledge_base.json")
     COLLECTION_NAME: str = os.getenv("COLLECTION_NAME", "portfolio_knowledge")
+
+    # --- Content API (Phase 9): canonical knowledge source ---
+    # Where GET /api/content lives. Production MUST set this to the deployed
+    # backend URL (https://portfolio-api.onrender.com/api/content); the local
+    # default points at the dev backend so `uvicorn` keeps working out of the
+    # box. The backend contract is mirrored + validated in
+    # services/content_api.py; fetch failures fail closed (no silent fallback).
+    CONTENT_API_URL: str = os.getenv(
+        "CONTENT_API_URL", "http://127.0.0.1:8001/api/content"
+    )
+    # Hard cap on the GET, so a stalled backend can't hang startup ingestion.
+    CONTENT_API_TIMEOUT: float = float(os.getenv("CONTENT_API_TIMEOUT", "10"))
+    # Which knowledge source feeds the Chroma collection:
+    #   "api"  (default) → GET /api/content, validated against the contract.
+    #   "file"            → legacy knowledge_base.json (rollback path).
+    KNOWLEDGE_SOURCE: str = os.getenv("KNOWLEDGE_SOURCE", "api")
 
     # --- Retrieval tuning ---
     # top_k=5 + score_threshold=0.7 outperforms (3, 0.65) on multi-part

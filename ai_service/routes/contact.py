@@ -114,7 +114,7 @@ def _send_via_resend(req: ContactRequest) -> str:
     # Resend returns {"id": "..."} on success.
     try:
         return resp.json().get("id", "")
-    except Exception:
+    except Exception:  # noqa: BLE001
         return ""
 
 
@@ -145,7 +145,7 @@ async def send_contact(request: Request, payload: ContactRequest):
             detail="Failed to send message. Please try again or email me directly.",
         ) from send_err
     except Exception as exc:  # pragma: no cover — defensive
-        logger.exception("Contact form unexpected error: %s", exc)
+        logger.exception("Contact form unexpected error")
         raise HTTPException(
             status_code=500,
             detail="An unexpected error occurred. Please try again later.",

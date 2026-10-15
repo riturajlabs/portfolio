@@ -9,11 +9,12 @@
 //   dist/robots.txt
 //   dist/llms.txt
 //
-// Everything it emits is derived from src/data/projects.js,
-// src/data/profile.js and src/config/seo.js via the compiled
-// prerender bundle, so adding a project to projects.js needs no edit
-// here and no hand-editing of any generated file. No slug is
-// hardcoded in this script or in scripts/seo/discovery.mjs.
+// Everything it emits is derived from the build-time content snapshot
+// (src/generated/content.js — the validated `GET /api/content`
+// payload) via the compiled prerender bundle, so adding a project to
+// the API needs no edit here and no hand-editing of any generated
+// file. No slug is hardcoded in this script or in
+// scripts/seo/discovery.mjs.
 //
 // ARCHITECTURE (why dist-only)
 // ---------------------------
@@ -232,6 +233,12 @@ for (const entry of inputs.sitemapUrls) {
 for (const entry of inputs.imageEntries) {
     for (const image of entry.images) {
         const relative = absoluteUrlToDistPath(image);
+
+        // Only a same-site image is a file this build must have produced. An
+        // object-storage image (an admin upload) is served from its own origin,
+        // so `absoluteUrlToDistPath` returns null for it and there is nothing to
+        // check in dist/.
+        if (relative === null) continue;
 
         if (!fs.existsSync(relative)) {
             problems.push(`sitemap-images.xml: ${image} has no file in dist/`);

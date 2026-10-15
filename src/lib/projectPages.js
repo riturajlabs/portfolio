@@ -13,12 +13,12 @@
 // a hand-maintained canonical is the classic source of
 // duplicate-content bugs, so it is computed instead.
 //
-// Everything below reads only from `src/config/seo.js` and
-// `src/data/projects.js`. No project fact is invented here.
+// Everything below reads only from `src/generated/content.js` (the
+// build-time snapshot of `GET /api/content`) and the site URL config
+// it carries. No project fact is invented here.
 // =========================================================
 
-import seo from "../config/seo";
-import projects from "../data/projects";
+import { projects, seo } from "../generated/content";
 
 
 
@@ -92,23 +92,51 @@ export const PROJECTS_LIST_PATH = "/#projects";
 // =========================================================
 // IMAGE DIMENSIONS
 // =========================================================
-// Measured during Phase B from the genuine WebP files in
-// `public/images/projects/`. They are declared here so the
-// prerendered <img> can emit width/height (which reserves layout
-// space and avoids CLS) without shipping an image decoder.
+// Measured from the genuine WebP files in `public/images/projects/`
+// and carried by the content API (`image_width`/`image_height`,
+// docs/DATABASE.md §11.3). They are declared here so the prerendered
+// <img> can emit width/height (which reserves layout space and
+// avoids CLS) without shipping an image decoder.
 //
-// Every value is cross-checked at build time against the real
-// file headers by scripts/generate-project-pages.mjs, so a
-// mismatch fails the build instead of silently shipping a wrong
-// intrinsic size.
+// Derived from the build-time snapshot so the declared intrinsic
+// size always travels with the project it belongs to. Every value is
+// cross-checked at build time against the real file headers by
+// scripts/generate-project-pages.mjs, so a mismatch fails the build
+// instead of silently shipping a wrong intrinsic size.
 
-export const PROJECT_IMAGE_DIMENSIONS = {
-    "webchat-ai": { width: 1870, height: 896 },
-    "orbit-ai": { width: 617, height: 322 },
-    "stayora": { width: 512, height: 250 },
-    "scientific-calculator": { width: 1437, height: 756 },
-    "zerodha-clone": { width: 1863, height: 896 },
-};
+export const PROJECT_IMAGE_DIMENSIONS = Object.fromEntries(
+    projects.map((project) => [
+        project.slug,
+        { width: project.image_width, height: project.image_height },
+    ])
+);
+
+// The `<meta name="robots">` directive serialised from the SEO
+// payload's `robots` object ({index, follow}, docs/API.md §5.1.2).
+// Project pages emit the fully verbose directive directly; the
+// homepage's <SEO /> component builds the same string from the same
+// object so the two outputs can never drift.
+export const ROBOTS_DIRECTIVE =
+    "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1";
+
+/**
+ * Serialise the `robots` object ({index, follow}) to the directory
+ * directive string shared by the homepage and every project page.
+ * `crawlable` cannot be true when either flag is false.
+ */
+export function robotsDirective(robots) {
+    const index = robots?.index !== false;
+    const follow = robots?.follow !== false;
+
+    if (index && follow) {
+        return ROBOTS_DIRECTIVE;
+    }
+
+    const parts = [];
+    if (!index) parts.push("noindex");
+    if (!follow) parts.push("nofollow");
+    return parts.join(",");
+}
 
 export function projectImageDimensions(project) {
     const dimensions = PROJECT_IMAGE_DIMENSIONS[project.slug];
@@ -249,8 +277,7 @@ export function buildProjectMetadata(project) {
 
         author: seo.author,
 
-        robots:
-            "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+        robots: robotsDirective(seo.robots),
 
         openGraph: {
             type: "article",

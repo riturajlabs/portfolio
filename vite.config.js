@@ -19,8 +19,46 @@ export default defineConfig(({ mode }) => ({
       : []),
   ],
 
+  server: {
+    // Phase 5 (`docs/DEPLOYMENT.md` §1.5): the backend runs locally on :8001.
+    // Proxying keeps the admin API same-origin in dev, so the `SameSite=Strict`
+    // session cookie works over plain HTTP on localhost — no CORS-credentials
+    // gymnastics, and the browser never talks to :8001 directly.
+    // Phase 8 adds the public write path (`/api/contact`) and the GitHub proxy
+    // (`/api/github`), which moved from `ai_service` to `backend/`; dev mirrors
+    // production's same-origin routing so the deployed rewrite and the local
+    // proxy always agree. `/api/chat` still reaches `ai_service` (:8000) in dev
+    // — nothing here should point it at the content backend.
+    proxy: {
+      "/api/admin": {
+        target: "http://localhost:8001",
+        changeOrigin: true,
+      },
+      "/api/contact": {
+        target: "http://localhost:8001",
+        changeOrigin: true,
+      },
+      "/api/github": {
+        target: "http://localhost:8001",
+        changeOrigin: true,
+      },
+      // Phase 11: the resume download link (`GET /api/resume`) is fetched by the
+      // browser at runtime, so dev mirrors production's rewrite to the backend.
+      "/api/resume": {
+        target: "http://localhost:8001",
+        changeOrigin: true,
+      },
+    },
+  },
+
   build: {
     sourcemap: false,
+
+    // Phase 5: the admin dashboard is a second, isolated entry (ADR-010).
+    // `rollupOptions.input` declares both HTML files so `npm run build` emits a
+    // distinct admin chunk set. The public entry graph is untouched, so the
+    // homepage bundle cannot regress because of admin work.
+    manifest: true,
 
     // Default Vite behaviour eagerly preloads every chunk referenced by
     // the entry graph — including the markdown chunk behind the chat
@@ -42,6 +80,10 @@ export default defineConfig(({ mode }) => ({
     },
 
     rollupOptions: {
+      input: {
+        main: "index.html",
+        admin: "admin.html",
+      },
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
@@ -77,5 +119,21 @@ export default defineConfig(({ mode }) => ({
         },
       },
     },
+  },
+
+  test: {
+    // Phase 5 (`docs/TESTING.md` §3.1): `npm test` runs vitest.
+    // Phase 10 adds `tests/` — repo-level suites that are not product code
+    // (the git tripwires). `tests/migration-validation.test.mjs` matches the
+    // same include but is excluded from the default run by the `test` script:
+    // it validates a built dist/ and has no business running before a build.
+    environment: "jsdom",
+    globals: true,
+    setupFiles: ["./vitest.setup.js"],
+    include: [
+      "src/**/*.{test,spec}.{js,jsx}",
+      "scripts/**/*.{test,spec}.mjs",
+      "tests/**/*.{test,spec}.{js,mjs}",
+    ],
   },
 }));

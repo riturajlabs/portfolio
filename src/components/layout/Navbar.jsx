@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import ThemeToggle from "./ThemeToggle";
 import useScrollSpy from "../../hooks/useScrollSpy";
-import profile from "../../data/profile";
+import { profile } from "../../lib/publicContent";
 import "../../styles/navbar.css";
 
 const navigation = [

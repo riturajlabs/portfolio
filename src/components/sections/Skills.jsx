@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 
 import SectionTitle from "../common/SectionTitle";
 
-import skillCategories from "../../data/skills";
+import { skillCategories } from "../../lib/publicContent";
 
 import "../../styles/skills.css";
 

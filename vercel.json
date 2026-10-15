@@ -1,6 +1,26 @@
 {
   "rewrites": [
     {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/api/admin",
+      "destination": "https://portfolio-api.onrender.com/api/admin"
+    },
+    {
+      "source": "/api/admin/:path*",
+      "destination": "https://portfolio-api.onrender.com/api/admin/:path*"
+    },
+    {
+      "source": "/api/resume",
+      "destination": "https://portfolio-api.onrender.com/api/resume"
+    },
+    {
       "source": "/api/chat",
       "destination": "https://portfolio-lxdx.onrender.com/chat"
     },
@@ -10,11 +30,11 @@
     },
     {
       "source": "/api/contact",
-      "destination": "https://portfolio-lxdx.onrender.com/api/contact"
+      "destination": "https://portfolio-api.onrender.com/api/contact"
     },
     {
       "source": "/api/github",
-      "destination": "https://portfolio-lxdx.onrender.com/api/github"
+      "destination": "https://portfolio-api.onrender.com/api/github"
     },
     {
       "source": "/health",
@@ -58,6 +78,48 @@
         {
           "key": "Cross-Origin-Resource-Policy",
           "value": "same-site"
+        }
+      ]
+    },
+
+    {
+      "source": "/admin.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+
+    {
+      "source": "/admin",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+
+    {
+      "source": "/admin/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
         }
       ]
     },

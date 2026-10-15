@@ -20,9 +20,26 @@ dist-ssr/
 # Bundle analyzer output
 stats.html
 
+# Generated content artifacts — none of these are shipped or committed:
+#   content-snapshot.json   seed source (scripts/extract-content.mjs, .gitignored)
+#   baseline/               pre-migration parity oracle (scripts/capture-baseline.mjs)
+#   last-content-fetch.json build-time fetch metadata (scripts/build-content.mjs)
+.cache/
+
 # Environment Variables
 .env
 .env.*
+!.env.example
+
+# Python (backend/)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.mypy_cache/
 
 # Local files
 *.local
@@ -43,3 +60,8 @@ stats.html
 .claude/
 stats.html
 .claude
+
+# Playwright artifacts
+playwright-report/
+test-results/
+.neon

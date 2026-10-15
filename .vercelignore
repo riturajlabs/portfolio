@@ -7,3 +7,17 @@ stats.html
 .env.local
 .env.development
 .env.production
+
+# Source trees the frontend build never reads. `npm run build` only runs
+# `scripts/*.mjs` + vite against `src/`, `public/` and the API; `backend/` and
+# `ai_service/` are deployed to Render separately, and tests/docs/e2e are not
+# part of the Vercel build. Excluding them keeps the upload context small and
+# keeps a stray `.venv/` or test fixture out of it.
+backend/
+ai_service/
+docs/
+e2e/
+
+# Build-time scratch (the content-fetch log is written during the build, never
+# read from a pre-existing copy). Also holds local baselines/snapshots.
+.cache/

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+  <!-- ========================================================= -->
+  <!-- Phase 5 admin entry. Deliberately minimal: no SEO tags,
+       no social metadata, no structured data. The admin surface
+       must never be indexed, cached or shared (`docs/SECURITY.md`
+       §3.7: `Cache-Control: no-store` + `X-Robots-Tag: noindex`
+       are enforced server-side in `vercel.json`). -->
+  <!-- ========================================================= -->
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="robots"
+    content="noindex, nofollow">
+
+  <meta
+    name="color-scheme"
+    content="dark light">
+
+  <title>
+    Admin · Ritu Raj Portfolio
+  </title>
+
+</head>
+
+<body>
+
+
+  <div id="root"></div>
+
+
+  <script
+    type="module"
+    src="/src/admin/main.jsx">
+  </script>
+
+
+</body>
+
+</html>

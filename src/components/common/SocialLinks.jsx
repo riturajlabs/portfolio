@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import socials from "../../data/socials";
+import { socials } from "../../lib/publicContent";
 
 function SocialLinks({
     className = "",

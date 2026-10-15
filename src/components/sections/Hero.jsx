@@ -6,7 +6,7 @@ import {
     FaMapMarkerAlt,
 } from "react-icons/fa";
 
-import profile from "../../data/profile";
+import { profile } from "../../lib/publicContent";
 import Button from "../common/Button";
 import SocialLinks from "../common/SocialLinks";
 

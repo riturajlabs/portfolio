@@ -1,0 +1,208 @@
+{
+  "about": {
+    "cards": [
+      {
+        "description": "B.Sc. AI & ML student.",
+        "icon_key": "FaGraduationCap",
+        "title": "Education"
+      }
+    ],
+    "description": "An AI and ML student.",
+    "heading": "My Journey",
+    "paragraphs": [
+      "Started with web development."
+    ],
+    "tag": "About Me",
+    "title": "Building Software. Exploring Intelligence."
+  },
+  "certifications": [
+    {
+      "credential_id": "ID-1",
+      "credential_url": "https://example.com/cert",
+      "display_order": 0,
+      "icon": "🌐",
+      "issued_on": "June 2025",
+      "issuer": "Issuer",
+      "title": "Certification Alpha"
+    },
+    {
+      "credential_id": "ID-1",
+      "credential_url": "https://example.com/cert",
+      "display_order": 1,
+      "icon": "🌐",
+      "issued_on": "June 2025",
+      "issuer": "Issuer",
+      "title": "Certification Beta"
+    }
+  ],
+  "meta": {
+    "generated_at": "<pinned: asserted separately>",
+    "version": 1
+  },
+  "profile": {
+    "availableForInternship": true,
+    "description": "A developer.",
+    "greeting": "Hello",
+    "internshipText": "Available for an internship",
+    "location": "Pune, India",
+    "name": "Ritu Raj",
+    "resume": "/resume.pdf",
+    "roles": [
+      "Full Stack Developer"
+    ],
+    "social": {
+      "email": "riturajlabs@outlook.com",
+      "github": "https://github.com/riturajlabs",
+      "linkedin": "https://linkedin.com/in/riturajlabs"
+    },
+    "stats": [
+      {
+        "label": "Projects",
+        "value": "4+"
+      }
+    ],
+    "title": "Full Stack Developer"
+  },
+  "projects": [
+    {
+      "category": null,
+      "description": "Real-time AI chat application.",
+      "display_order": 0,
+      "featured": false,
+      "github": null,
+      "highlights": [],
+      "image": "/images/projects/webchat-ai.webp",
+      "imageAlt": "WebChat AI landing page",
+      "image_height": 750,
+      "image_width": 1200,
+      "indexable": true,
+      "live": null,
+      "longDescription": null,
+      "seoDescription": "A multi-tenant AI support chatbot.",
+      "seoTitle": "WebChat AI: RAG Support Chatbot",
+      "slug": "alpha",
+      "status": "published",
+      "techStack": [],
+      "title": "Alpha"
+    },
+    {
+      "category": null,
+      "description": "Real-time AI chat application.",
+      "display_order": 0,
+      "featured": false,
+      "github": null,
+      "highlights": [
+        "First highlight.",
+        "Second highlight.",
+        "Third highlight."
+      ],
+      "image": "/images/projects/webchat-ai.webp",
+      "imageAlt": "WebChat AI landing page",
+      "image_height": 750,
+      "image_width": 1200,
+      "indexable": true,
+      "live": null,
+      "longDescription": "First highlight.\nSecond highlight.\n\nThird highlight.",
+      "seoDescription": "A multi-tenant AI support chatbot.",
+      "seoTitle": "WebChat AI: RAG Support Chatbot",
+      "slug": "beta",
+      "status": "published",
+      "techStack": [],
+      "title": "Beta"
+    },
+    {
+      "category": null,
+      "description": "Real-time AI chat application.",
+      "display_order": 0,
+      "featured": false,
+      "github": null,
+      "highlights": [],
+      "image": "/images/projects/webchat-ai.webp",
+      "imageAlt": "WebChat AI landing page",
+      "image_height": 750,
+      "image_width": 1200,
+      "indexable": false,
+      "live": null,
+      "longDescription": null,
+      "seoDescription": "A multi-tenant AI support chatbot.",
+      "seoTitle": "WebChat AI: RAG Support Chatbot",
+      "slug": "delta-homepage-only",
+      "status": "published",
+      "techStack": [],
+      "title": "Delta"
+    }
+  ],
+  "seo": {
+    "author": "Ritu Raj",
+    "description": "Portfolio of Ritu Raj.",
+    "image": "https://riturajlabs.vercel.app/images/portfolio-og.jpg",
+    "imageAlt": "Ritu Raj portfolio",
+    "keywords": [
+      "Ritu Raj",
+      "MERN"
+    ],
+    "locale": "en_IN",
+    "person": {
+      "address": {
+        "country": "IN",
+        "locality": "Pune",
+        "region": "Maharashtra"
+      },
+      "alternateName": "riturajlabs",
+      "credential": "B.Sc. Artificial Intelligence & Machine Learning",
+      "email": "riturajlabs@outlook.com",
+      "jobTitle": "Full Stack Developer",
+      "knowsAbout": [
+        "React",
+        "Python"
+      ],
+      "name": "Ritu Raj",
+      "nationality": "Indian"
+    },
+    "robots": {
+      "follow": true,
+      "index": true
+    },
+    "sameAs": [
+      "https://github.com/riturajlabs",
+      "https://linkedin.com/in/riturajlabs"
+    ],
+    "siteName": "Ritu Raj",
+    "title": "Ritu Raj | Full Stack Developer",
+    "twitterCard": "summary_large_image",
+    "twitterSite": "@riturajlabs",
+    "type": "website"
+  },
+  "skills": [
+    {
+      "category": {
+        "display_order": 0,
+        "icon_key": "FaCode",
+        "name": "Frontend Development"
+      },
+      "display_order": 0,
+      "icon_key": "FaReact",
+      "name": "React"
+    },
+    {
+      "category": {
+        "display_order": 0,
+        "icon_key": "FaCode",
+        "name": "Frontend Development"
+      },
+      "display_order": 1,
+      "icon_key": "FaReact",
+      "name": "Node.js"
+    },
+    {
+      "category": {
+        "display_order": 1,
+        "icon_key": "FaCode",
+        "name": "Backend Development"
+      },
+      "display_order": 0,
+      "icon_key": "FaReact",
+      "name": "PostgreSQL"
+    }
+  ]
+}

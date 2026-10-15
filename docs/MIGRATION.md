@@ -1,0 +1,877 @@
+# Migration Plan
+
+**Document Status:** Active — **Phases 0–7 complete (Phase 7 verified 2026-10-06); Phase 8 (frontend write path) is next.**
+**Document Type:** Implementation Plan (Phase 0 deliverable)
+**Depends on:** `ANALYSIS.md`, `ARCHITECTURE.md`, `API.md`, `DATABASE.md`, `DEPLOYMENT.md`, `SECURITY.md`, `TESTING.md`, `PRODUCT_REQUIREMENTS.md`
+**Rule:** this document is the **contract** for the implementation phase. Nothing outside a phase's STATUS note has been built without a phase authorising it.
+
+---
+
+## How To Read This Document
+
+| Label | Meaning |
+|---|---|
+| **CURRENT** | Exists in the verified codebase. |
+| **TARGET** | Will exist after the phase completes. |
+| **PREREQUISITE** | A prior phase must be complete and verified. |
+
+Every phase has: objective, files, dependencies, risks, acceptance criteria and
+rollback. **A phase is not done until its acceptance criteria pass.**
+
+---
+
+# 1. Change Impact Matrix
+
+| Current Area | Current Implementation (verified) | Target Implementation | Change Risk | Migration Strategy |
+|---|---|---|---|---|
+| **Projects** | 5 hardcoded objects in `src/data/projects.js`; consumed by `ProjectCard`, `Projects.jsx`, `lib/projectPages.js`, `.prerender/entry.jsx` | PostgreSQL `project` (with `category text` + `tech_stack text[]` as columns) read via `GET /api/content` | **Critical** — 5 indexable URLs, sitemap, image sitemap, `llms.txt` and JSON-LD all derive from it | Seed DB from the JS file (M6). Build fetches from API (M7). Static JS retained as a committed build fallback. **No `project_technology`/`project_category` tables** — nothing queries them in SQL (`DATABASE.md` §1.3). |
+| **Project images** | 5 WebP files in `public/images/projects/`; `PROJECT_IMAGE_DIMENSIONS` hardcoded; build verifies real headers | Same files, same paths. `image_width`/`image_height` become DB columns | **Critical** — build fails if the contract is violated | Add `image_width`/`image_height` columns; keep the WebP-header verification in the generator; admin form requires both. `PROJECT_IMAGE_DIMENSIONS` becomes snapshot-derived. |
+| **Project SEO** | `seoTitle`, `seoDescription`, canonical derived from slug, `indexable` | Same columns on `project`; unchanged derivation | High — drift breaks canonical uniqueness | Preserve `src/lib/projectPages.js` **byte-identically**. Only its data import changes. |
+| **Skills** | 4 categories + 16 skills with React icon components in `src/data/skills.js` | `skill_category` + `skill` with an `icon_key` string mapped to a **new** client-side icon registry | Medium | Icon **components** must stay in the frontend (they are code, not data). Only the key is stored. **Phase 5 creates `src/components/icons.js` — it does not exist today** (`ADR-008`). Admin exposes a fixed icon-key dropdown. |
+| **Profile / hero** | `src/data/profile.js` (13 keys), used by `Hero`, `Navbar`, `Footer`, `socials.js` | `site_profile` single row, **16 columns** | Medium | Seed from the JS file. **Delete 2 dead keys** — `seo` and `techStack` have zero consumers. **Do not add** `avatar`/`phone`/`email`/`availability` columns: `profileImage` is a Vite asset import and the others do not exist in `profile.js`. `DATABASE.md` §5.1.1. |
+| **Social links** | `data/socials.js:9-25` hardcodes order, labels and icons; URLs come from `profile.social` | **`site_profile.social` jsonb, byte-identical `{github, linkedin, email}`** | Low | **No `social_link` table.** `socials.js` is code and stays untouched (`DATABASE.md` §5.1.2). |
+| **Certifications** | 3 objects in `src/data/certificates.js` | `certification` table | Low | Seed; component prop shape unchanged. |
+| **Education** | One prose card in `About.jsx:18-20` + `seo.person.credential` | **Nothing.** No table, no entity, no admin UI | Low | There is no education section on the site — only prose in `aboutCards[0].description`. `DATABASE.md` §1.3. **Do not import CGPA / semester / graduation year from `knowledge_base.json`** — with no entity there is nowhere for them to go. |
+| **Blog** | 4 placeholder objects in `src/data/blogs.js`, all `link: "#"`, `status: "Coming Soon"`, no route | **Unchanged static file.** No table, no route, no admin UI | None | Deferred. The 4 placeholders are not editable from the admin UI in v1 — their titles are announced topics, not published content. `DATABASE.md` §9. |
+| **About section** | Hardcoded in `About.jsx`: 1 `description`, 1 `heading`, 2 `<p>`, 4 `aboutCards` | **`site_profile.about` jsonb** `{tag, title, description, heading, paragraphs[], cards[]}` | Medium | Seed verbatim from the JSX. `cards[].icon` (a React component) becomes `cards[].icon_key` — **the only public-component change in the migration** (`ADR-008`, `ARCHITECTURE.md` §4.1). |
+| **Nav / footer links** | Two hardcoded arrays (`Navbar.jsx:10`, `Footer.jsx:10`) | **Stays hardcoded in v1** | Low | Out of scope: the layout is single-page and fixed. Documented as a non-goal. |
+| **SEO discovery files** | 4 files generated by `generate-seo-discovery.mjs` from `projects.js`/`profile.js`/`seo.js` | Identical generator, identical validators, data fetched from the API at build time | **Critical** | Change only the data import. All ~20 assertions in the generator stay. Add a build-time assertion that the API returned ≥1 project. |
+| **Contact form** | `Contact.jsx` → `emailService.js` → `POST /api/contact` (ai_service → Resend; public, `X-API-Key` injected but not verified) | Same component; `/api/contact` re-pointed to `backend/` which persists the message and sends via Resend. **Same public auth model** | Medium | Backend swap is one `vercel.json` rewrite destination. Frontend unchanged. |
+| **GitHub stats** | `githubService.js` → `GET /api/github` (ai_service) | Same contract, re-pointed to `backend/` | Low | Same shape `{ profile, repositories }`. Backend keeps the 300 s in-process cache. |
+| **AI assistant** | `ChatAssistant.jsx` → `/api/chat` `/api/chat/stream` → ai_service (Groq/Gemini + ChromaDB) | **Unchanged frontend contract.** `ai_service` rebuilds its ChromaDB index from `GET /api/content` instead of `knowledge_base.json` | **High** — assistant must keep working and stop drifting | Phase-gated behind M9 with its own rollback. Both knowledge sources kept until parity is proven. |
+| **Images / resume / icons** | `public/` committed assets, immutable 1-year cache headers | Unchanged for the portrait, favicons, manifest and OG image. A **project cover image** may now also be uploaded to a `public_read` object-storage bucket (`POST /api/admin/uploads`) and stored as its URL. The **resume** may be uploaded to the private `uploads` bucket (`POST /api/admin/profile/resume`) and served through `GET /api/resume`, with `site_profile.resume_key` tracking it | Low | Originally a non-goal; amended 2026-10-14 (`ADR-012` update, `DATABASE.md` §10). Phase 11 added the resume upload. The build still verifies every project image's dimensions. |
+| **Theme / animations / layout** | `ThemeContext` + `localStorage`, framer-motion, `src/styles/*` | **Unchanged** | None | No UI work in any phase. Any UI change requires a separate documented requirement. |
+| **Analytics** | Vercel Speed Insights | Unchanged | None | Non-goal. |
+| **Deployment** | Vercel (frontend) + Render (ai_service) | Vercel (frontend) + Render (`backend/`) + Render (ai_service) + Neon/PostgreSQL | Medium | Additive. `backend/` ships first with no traffic; rewrites flip after verification. |
+
+---
+
+# 2. Phased Implementation Plan
+
+## Phase 0 — Analysis *(complete)*
+
+**Objective** Understand the codebase, audit the documentation, produce the target contract.
+
+**Files** `docs/*` (all rewritten), `README.md` (corrected).
+
+**Acceptance criteria** — all met:
+- [x] Every route, component, data file and script inventoried with file references.
+- [x] `npm run lint` and `npm run build` verified green.
+- [x] All 8 documents audited with a status per file.
+- [x] Target architecture, data model, API surface, admin design, security and test strategy specified.
+- [x] Risks enumerated with mitigations.
+- [x] No production code modified.
+
+**Rollback** `git checkout -- .` (docs were untracked).
+
+---
+
+## Phase 1 — Backend foundation (`backend/`)
+
+**STATUS 2026-10-04 — foundation implemented.** The service skeleton, settings,
+async engine/session layer, structured logging, `GET /health` and `GET /ready`
+exist and are verified against a real PostgreSQL instance. The file layout below
+is the original sketch; what was actually built is `backend/README.md`. The
+public read API, admin auth, contact, GitHub and CORS work belong to Phases 3,
+4 and 8 and are **not** part of this step.
+
+**PREREQUISITE** Phase 0.
+
+**Objective** Create a standalone FastAPI service that owns portfolio content. No public traffic yet.
+
+**Files (new)**
+```
+backend/
+├── app.py                     FastAPI app, CORS, router mounting, /health, /ready
+├── config/settings.py         env parsing (DATABASE_URL, JWT/session secret, ALLOWED_ORIGINS…)
+├── db/
+│   ├── base.py                SQLAlchemy engine + session factory
+│   ├── models.py              all tables (DATABASE.md §5)
+│   └── seed.py                idempotent seed from src/data/*.js  (M6)
+├── schemas/                   Pydantic request/response models
+├── repositories/              one module per aggregate; all SQL lives here
+├── routers/
+│   ├── content.py             public read
+│   ├── admin_auth.py          login/logout/me
+│   ├── admin_projects.py      CRUD
+│   ├── admin_skills.py        CRUD
+│   ├── admin_site.py          profile, socials, education, certifications, about, blog
+│   ├── admin_media_meta.py    image width/height only
+│   ├── messages.py            contact form
+│   └── github.py              moved from ai_service, contract unchanged
+├── core/
+│   ├── security.py            password hashing, session issue/verify, CSRF
+│   ├── rate_limit.py          slowapi, per-IP + per-key
+│   └── errors.py              error → HTTP mapping
+├── requirements.txt
+├── Procfile
+└── runtime.txt
+```
+
+**Dependencies** none.
+
+**Risks** — must not leak `ai_service` code paths into content serving. R5.
+
+**Acceptance criteria**
+- [x] `GET /health` → 200 without a database.
+- [x] `GET /ready` → 200 only when the database is reachable and migrations are applied.
+- [x] `ALLOWED_ORIGINS` defaults to the Vercel domain + localhost:5173. **Phase 3 tightened this:** `"*"` is now refused at startup in production *and* staging rather than only warned about (`SECURITY.md` §2.3).
+- [x] No module imports anything from `ai_service/`.
+- [x] `uvicorn app.main:app` starts locally against an empty (unmigrated) database and `/ready` reports 503.
+- [x] Response shape for `GET /api/content` matches `DATABASE.md §6` exactly. — Phase 3.
+- [ ] Contact and GitHub endpoints return byte-compatible payloads with their ai_service originals. — Phase 8.
+
+**Rollback** delete `backend/`. Zero production impact — nothing points at it yet.
+
+---
+
+## Phase 2 — Database
+
+**STATUS 2026-10-04 — complete.** One revision, `0001_initial`, creates exactly
+the 9 approved tables. `alembic upgrade head`, `alembic current`, `alembic check`,
+`alembic downgrade base` and a second `upgrade head` were all run against a real
+PostgreSQL server, and the schema is asserted by tests rather than by eye.
+
+Two criteria below are intentionally **not** met here, because each depends on
+work that belongs to a later phase:
+
+- *"Exactly 5 revisions"* — **revised by Phase 6.** `0002_seed_reference` and
+  `0003_seed_content` were **rejected**: seed data is not schema, and an applied
+  Alembic data revision never re-runs, so it cannot be idempotent. Content is
+  loaded by `backend/db/seed.py` (`npm run seed:load`) instead — see
+  `DATABASE.md` §14/§14.1 and `docs/CONTENT_MAPPING.md` §9. `0004_create_admin`
+  and `0005_contact_message` were already deferred to Phases 4 and 8 by this
+  phase's STATUS note, so the schema still ships as one reviewable revision.
+- *"`ALLOWED_ORIGINS` default"* — resolved in Phase 3, when the first
+  browser-visible route appeared. The allow-list is configured in
+  `backend/app/config.py` and enforced in `backend/app/main.py`; see
+  `SECURITY.md` §2.3.
+
+`project.slug` uniqueness uses the unique index as its lookup index — see
+`DATABASE.md` §12; a second index on the same column would be redundant.
+
+**PREREQUISITE** Phase 1.
+
+**Objective** Schema + migrations for exactly the entities approved in `DATABASE.md` §4.
+
+**Files** `backend/db/models.py`, `backend/alembic/`, `backend/db/seed.py`.
+
+**Dependencies** Phase 1.
+
+**Risks** R3 (image dimensions), R9 (slug stability).
+
+**Acceptance criteria**
+- [x] Every table, column, type, nullability, index and constraint matches `DATABASE.md` §5. (`tests/test_database_schema.py`)
+- [x] **`information_schema.tables` reports exactly 9 tables** (`DATABASE.md` §0). Assert this in a test, not by eye.
+- [x] No table from `DATABASE.md` §15 (deferred) exists.
+- [x] `alembic upgrade head` on an empty database succeeds; `downgrade base` succeeds.
+- [x] `alembic check` reports no drift.
+- [ ] Exactly 5 revisions: `0001_initial`, `0002_seed_reference`, `0003_seed_content`, `0004_create_admin`, `0005_contact_message` (`DATABASE.md` §14). — superseded in Phase 6: the two seed revisions were rejected (seeding is `db/seed.py`, not a revision); `0004`/`0005` remain planned for Phases 4/8. One revision ships for now.
+- [x] `project.slug` is `UNIQUE` with the regex CHECK. No partial-unique blog-slug index — there is no blog.
+- [x] `project.image_width`/`image_height` are `NOT NULL` and `CHECK (> 0)`.
+- [x] Index exists for every query pattern listed in `DATABASE.md` §12.
+- [x] Migration review checklist in `DATABASE.md` §16 passes. (`tests/test_constraints.py`, `tests/test_relationships.py`)
+
+**Rollback** `alembic downgrade base`. No production data exists yet.
+
+---
+
+## Phase 3 — Public read API
+
+**STATUS: COMPLETE — 2026-10-04.** Verification evidence is in the table below.
+
+**PREREQUISITE** Phase 2. **Delivered.**
+
+**Objective** Serve the content the public site already consumes.
+
+**Files shipped** `backend/app/routes/content.py`, `backend/app/services/content.py`,
+`backend/app/schemas/content.py`, `backend/app/rate_limit.py`,
+`backend/app/config.py` (CORS + limit settings), `backend/app/main.py` (router +
+CORS), `backend/tests/test_content_api.py`, `backend/tests/test_cors.py`,
+`backend/tests/test_rate_limit.py`. **No migration, no seed, no new dependency.**
+
+**Dependencies** Phase 2. **Risks** R8 (caching).
+
+**Acceptance criteria**
+
+| # | Criterion | Result |
+|---|---|---|
+| 1 | `GET /api/content` returns one aggregated payload (`API.md` §5.1) | **PASS** — exactly the 7 keys `about, certifications, meta, profile, projects, seo, skills`, each with `extra="forbid"` |
+| 2 | `ETag` + `Cache-Control: public, max-age=300, stale-while-revalidate=600` | **PASS** — strong SHA-256; asserted on every 200 |
+| 3 | `304 Not Modified` on a matching `If-None-Match` | **PASS** — bare tag, `*`, and weak `W/` forms; body empty |
+| 4 | Only `status = 'published'` is ever public; `'hidden'` excluded | **PASS** — filtered in SQL, so hidden rows are never read |
+| 5 | Response ≤ 60 KB gzipped for the 5-project dataset | **PASS** — **1 365 B gzipped** (18 424 B raw) with 5 projects × 8-bullet long descriptions |
+| 6 | No `education`, `blog_posts` or `social_links` keys | **PASS** — absent from the schemas, so a stray column could not introduce them |
+| 7 | `seo.sameAs` derived from `profile.social`, not stored | **PASS** — computed in the service layer; no `sameAs` column exists |
+| 8 | **No `GET /api/projects` or `/api/projects/{slug}`** | **PASS** — route table is exactly `/api/content`, `/health`, `/ready`. Verified against the live app and `/openapi.json`. A request to `/api/projects` returns the generic 404 that does not enumerate routes |
+| 9 | Contract tests in `TESTING.md` §7 pass | **PASS** — 239 backend tests, ruff clean |
+
+**Additional decisions recorded** (rationale in `API.md` §5.1.3a,
+`SECURITY.md` §2.3 and §3.6a):
+
+* `404 {"detail": "Site profile not found."}` on a missing singleton; `[]` for empty
+  collections. No fabricated placeholder.
+* `503 {"detail": "Content is temporarily unavailable."}` on any database failure,
+  including a bare `ConnectionRefusedError` that asyncpg raises before SQLAlchemy
+  can wrap it.
+* `500 {"detail": "Internal server error."}` on a contract violation
+  (`extra="forbid"` firing), so a bad jsonb key fails loudly instead of widening the
+  payload.
+* CORS: wildcard refused in **production and staging**; `allow_credentials` always
+  false; `GET` only.
+* Rate limit: 300/min per IP, in-process, `Retry-After` on 429, `/health` and
+  `/ready` excluded, and the limiter resolved **before** the database session.
+
+**Known conflicts left for Phase 6** (not silently resolved) — **resolved in
+Phase 6** (`docs/CONTENT_MAPPING.md` §9, `API.md` §5.1.3a):
+`certifications[].credential_id`/`credential_url` — the source's `credential`
+is a URL and maps to `credential_url`; `credential_id`/`issued_on` stay NULL
+and the source `description` is omitted (no column), reported in
+`_migration.omitted`. `seo.robots` — the source string is transformed to
+`{index, follow}` at extraction, one-way, asserted. `projects[].highlights`
+— remains derived from `long_description` (no column); the snapshot carries
+both representations so parity proves the encoding.
+
+**Rollback** the route is not yet consumed by the frontend. Removing
+`backend/app/routes/content.py` and its registration in `main.py` removes the
+endpoint; no data or schema change is involved.
+
+---
+
+## Phase 4 — Admin authentication
+
+**STATUS: COMPLETE — 2026-10-04.** Verified with 324 backend tests.
+
+**PREREQUISITE** Phase 1, 3.
+
+**Objective** Real authentication for the admin dashboard. Replaces the shared-secret model for admin operations only.
+
+**Files shipped** `backend/app/routes/admin_auth.py`, `backend/app/services/auth.py`, `backend/app/security/passwords.py`, `backend/app/security/tokens.py`, `backend/app/security/client_ip.py`, `backend/app/session_cookie.py`, `backend/app/rate_limit_login.py`, `backend/app/dependencies/admin_auth.py`, `backend/app/schemas/admin_auth.py`, `backend/app/errors.py`. Tests: `test_auth.py`, `test_sessions.py`, `test_csrf.py`, `test_login_rate_limit.py`.
+
+**Dependencies** Phase 2.
+
+**Risks** R6, R7.
+
+**Acceptance criteria**
+- [x] Argon2id password hashing; no plaintext or reversible encoding anywhere.
+- [x] Login sets `portfolio_admin_session` — `HttpOnly`, `Secure` (production/staging), `SameSite=Strict`, `Path=/`.
+- [x] Session stored server-side; logout revokes it. A revoked token stops working immediately.
+- [x] Uniform `401` for unknown-user, wrong-password and disabled-account. Response time equalised with dummy hash.
+- [x] Rate limits: 10 attempts / 15 min per IP **and** 5 failures / 15 min per email.
+- [x] Session lifetime 12 h idle / 7 days absolute.
+- [x] `GET /api/admin/me` 401s without a valid session.
+- [x] Initial admin provisioning is explicitly decoupled from application boot/startup; deferred to deployment/bootstrap.
+- [x] **No admin endpoint is reachable without a session** — verified by automated test iterating every route in OpenAPI.
+
+**Rollback** admin routes are disabled entirely until a session table exists.
+
+---
+
+## Phase 5 — Admin dashboard UI
+
+**STATUS 2026-10-06 — complete.** Separate entry verified by
+`scripts/assert-admin-bundle.mjs` inside `npm run build` (public bundle carries
+no admin/router module; admin emits its own chunk set); CRUD screens talk to the
+real API through `src/admin/api/client.js` (20 vitest tests); styles untouched
+(`git diff --stat src/styles src/data` empty).
+
+**PREREQUISITE** Phase 3, 4.
+
+**Objective** Manage content without touching `src/data/*.js`.
+
+**Files (new)**
+```
+src/admin/
+├── main.jsx                   separate React root
+├── AdminApp.jsx               routes, all under /admin/*
+├── api/client.js              fetch wrapper: credentials, CSRF, error mapping
+├── components/                DataTable, Form, Field, ImagePicker, Toast, ConfirmDialog
+└── pages/
+    ├── Login.jsx
+    ├── Dashboard.jsx
+    ├── Projects.jsx           list + editor + ordering via PUT display_order
+    ├── Skills.jsx             categories + skills
+    ├── Certifications.jsx
+    ├── Profile.jsx            site_profile + about cards + journey prose
+    └── Messages.jsx           read-only inbox
+```
+
+**There is no `Education.jsx`, `SocialLinks.jsx` or `Blog.jsx`.** Those entities
+do not exist (`ARCHITECTURE.md` §17.2, `API.md` §4.1). The admin UI has exactly
+6 screens.
+
+**Routing** `/admin/*` only, via **`react-router-dom`** scoped to this entry
+(`ARCHITECTURE.md` ADR-010 — closed in Phase 1.5). No hand-rolled routing.
+
+**Files** `vite.config.js` (multi-entry `build.rollupOptions.input`),
+`admin.html` (admin entry), `vercel.json` (rewrite `/admin/:path*` →
+`/admin.html` so deep links survive a refresh).
+
+**Note:** Phase 5 **does** modify `vite.config.js` and adds an HTML entry. Phase 0
+claimed it changed neither; that was wrong.
+
+**Dependencies** Phases 3, 4.
+
+**Risks** R11. The public bundle must not grow.
+
+**Acceptance criteria**
+- [x] `/admin/login` and `/admin/*` load as a separate entry; `npm run build` emits a distinct admin chunk set.
+- [x] The **public** entry bundle does not import any admin module **and does not import `react-router-dom`** — `scripts/assert-admin-bundle.mjs` enforces this and fails `npm run build` on a violation (`TESTING.md` §9.2).
+- [x] Every CRUD screen works against the real API with no mocked calls.
+- [x] The slug is **not authored in the UI**: the server derives it from the title on create and it is the project's permanent URL. The editor shows a read-only permalink preview; renaming the title does not move the slug (`API.md` §6.4).
+- [x] An **explicitly supplied** slug change on a **published** project is refused with `409 SLUG_IMMUTABLE`. No redirect UI exists (`DATABASE.md` §8).
+- [x] Project editor requires `image`, `image_width`, `image_height`, `seoTitle`, `seoDescription` — the same fields the build validates. Image dimensions are read from the file in the browser and filled in, falling back to manual entry only if detection fails.
+- [x] Visibility UI exposes **two** independent controls (`status`, `indexable`) and no draft/archive control (`ARCHITECTURE.md` ADR-016).
+- [x] "Rebuild site" calls `POST /api/admin/publish`, which triggers the Vercel deploy hook server-side (`ADR-017`). The hook URL stays server-side; leaving `DEPLOY_HOOK_URL` unset reports `not_configured` rather than failing.
+- [x] No admin CSS imports into the public `src/styles/` files, and no public CSS file changes at all.
+- [x] Admin respects `prefers-reduced-motion`.
+- [x] Keyboard navigable; visible focus on every control.
+
+**Rollback** delete the admin entry and the `/admin` rewrite. The public site is byte-identical without it.
+
+---
+
+## Phase 6 — Content migration
+
+**STATUS 2026-10-06 — complete.** `npm run seed:extract` writes a byte-stable
+snapshot (proved by two runs hashing identically), `npm run seed:load` loads it
+into `portfolio_dev` and reports `unchanged` on re-runs with byte-identical
+`created_at`/`updated_at` across three consecutive runs, and
+`npm run seed:verify` exits 0 against the seeded API and 1 against a tampered
+row. The mapping decisions behind every field (and every deliberate omission)
+are recorded in `docs/CONTENT_MAPPING.md`. Source-to-wire coverage:
+`scripts/extract-content.test.mjs`, `scripts/compare-content.test.mjs`,
+`backend/tests/test_seed.py` (13 tests).
+
+**PREREQUISITE** Phases 2, 3.
+
+**Objective** Move every piece of CURRENT content into the database without losing anything. Do **not** switch the frontend yet.
+
+**Files** `backend/db/seed.py`, `scripts/extract-content.mjs` (emits a normalised JSON snapshot from `src/data/*.js` + `About.jsx` constants), `scripts/compare-content.mjs`.
+
+**Dependencies** Phase 2.
+
+**Risks** R9, R15.
+
+**Acceptance criteria**
+- [x] `npm run seed:extract` produces a deterministic snapshot from the CURRENT JS files **and the `About.jsx` constants**. — `scripts/extract-content.test.mjs`: two runs are byte-identical; About cards/paragraphs/heading and SectionTitle props are asserted in the extractor itself.
+- [x] Seeding is idempotent: running twice produces identical rows. — three consecutive runs: second and third report `unchanged` for all 29 rows and the `(created_at, updated_at)` fingerprint is byte-identical (`test_seed_is_idempotent_across_three_runs`).
+- [x] All rows of the 9 tables are present: **5 projects, 4 skill categories, 16 skills, 3 certifications, 1 profile row, 1 about block (6 text fields + 4 cards)**. **0** blog posts, **0** education rows, **0** social-link rows (`DATABASE.md` §0). — `test_seed_writes_expected_counts`; the §15 forbidden tables are asserted absent from `information_schema`.
+- [x] `profile.js` dead keys `seo` and `techStack` are **not** migrated (they have no consumer) — the seed script asserts this so nobody re-adds them later. — `extra="forbid"` in `Profile` rejects them (`test_validation_rejects_content_that_has_nowhere_to_live`); the extractor asserts the source payload's exact key set excludes them.
+- [x] `image_width`/`image_height` are read from the real WebP headers, **not** copied from `PROJECT_IMAGE_DIMENSIONS` — then cross-checked against it. A mismatch fails the seed. — the extractor parses the WebP headers (VP8X/VP8L/VP8) and fails on mismatch; `test_seeded_dimensions_match_real_webp_headers` re-reads the files in Python and compares against the database.
+- [x] `site_profile.seo` excludes `url` and `verification`, which stay in `src/config/seo.js` (`DATABASE.md` §5.1.3). — extractor asserts their absence from the snapshot; API test asserts their absence from the payload.
+- [x] `scripts/compare-content.mjs` diffs the API response against the extracted snapshot field-by-field and exits non-zero on any difference. — `scripts/compare-content.test.mjs` covers exit 0/1/2; `TESTING.md` §10 check 20 run against the seeded `portfolio_dev`.
+- [x] `profile.resume === "/Ritu_Raj_Full_Stack_Developer_Resume.pdf"`. — asserted in the extractor, in `validate_snapshot`, and through the API.
+- [x] `pydantic` schema validation passes on every seeded row. — `validate_snapshot` runs every row through the `GET /api/content` response models before a connection is opened.
+- [x] Nothing from `knowledge_base.json` is imported into public content except the facts already visible on the site. Specifically: **no CGPA, no semester, no graduation year, no institution not already published.** — the extractor fails on any forbidden-fact pattern (`\bcgpa\b`, `\bgpa\b`, `\bsemester\b`, graduation/class-of) in extracted strings; the snapshot's omissions are enumerated in `_migration.omitted`.
+
+**Rollback** `alembic downgrade base` + re-seed. The JS files are untouched, so the site keeps working throughout.
+
+---
+
+## Phase 7 — Frontend API integration (read path)
+
+**PREREQUISITE** Phases 3, 6.
+
+**Objective** Serve the public site from the API while keeping the site running if the API is unavailable. **The prerender/discovery pipeline changes here.**
+
+**Design (as implemented — replaces the draft below).** Content moves from `src/data/*.js` (migration source) to a **build-time snapshot**; the page never reaches the API at runtime:
+
+```
+PostgreSQL → GET /api/content → scripts/build-content.mjs → src/generated/content.js → bundler → static dist/
+```
+
+- `scripts/build-content.mjs` fetches `CONTENT_API_URL` (deployment default `https://portfolio-api.onrender.com/api/content`; local default `http://127.0.0.1:8001/api/content`), validates the payload strictly, merges `seo.url`/`seo.verification` from `src/config/seo.js`, derives `PROJECT_IMAGE_DIMENSIONS`, and writes two artifacts:
+  - `src/generated/content.js` — committed, byte-deterministic (no timestamps in the file; `meta.generated_at` texts land in `.cache/last-content-fetch.json`, which is gitignored), exports `meta, profile, about, projects, skills, certifications, seo, PROJECT_IMAGE_DIMENSIONS`.
+  - `.cache/last-content-fetch.json` — build-time fetch metadata (gitignored).
+- `src/lib/content.js` is the shared loader/validator: fail-closed, `resolveContentUrl`/`contentTimeoutSeconds`, `fetchContent` (bounded AbortController timeout, `accept: application/json`, reads body text then `JSON.parse`), `validateContent` (strict: unknown top-level key rejected — `_migration` extra=forbid parity with Phase 6; required keys; non-empty projects; unique slugs; `status ∈ {published,hidden}`; positive integer image dimensions; URL checks; `seo.robots` object; `meta.generated_at` parseable).
+- Because the snapshot is a **plain generated data module**, `src/lib/projectPages.js` imports `projects`/`seo` synchronously, keeps every exported contract, and derives `PROJECT_IMAGE_DIMENSIONS` from the snapshot (still an assertion input for the WebP header cross-check in `generate-project-pages.mjs`).
+- **Fail closed:** unreachable / HTTP ≠200 / invalid JSON / schema invalid / zero projects / missing profile → `npm run build` exits 1 with the terminal sentence *"The public build cannot continue because content is unavailable."* There is **no** runtime or build-time fallback to `src/data`. The **only** remaining runtime `src/data` consumer is `Blog.jsx` (blog is intentionally not in the API).
+- The three social icons are pure UI (URLs from `profile.social`) and import directly from `react-icons/fa` exactly as `src/data/socials.js` did; the ADR-008 icon registry stays a closed, database-backed set mirrored by `backend/app/registry.py`.
+- `src/components/icons.js` was renamed to `src/components/icons.jsx` (JSX in a `.js` module breaks the Vite 8/Rolldown transform once publicly referenced).
+
+**Files**
+```
+NEW  src/lib/content.js              loader + strict validation, Node-side (fail-closed)
+NEW  src/lib/content.test.js         33 tests: fetch/validate/no-fallback guards
+NEW  src/lib/publicContent.js        adapter: profile+profileImage, socials, skillCategories, certificates, re-exports projects/seo
+NEW  scripts/build-content.mjs       fetch → validate → merge seo → emit generated snapshot
+NEW  scripts/capture-baseline.mjs    pre-cutover baseline capture (.cache/baseline/)
+NEW  scripts/verify-parity.mjs       post-build parity check vs baseline
+NEW  src/generated/content.js        committed generated snapshot (DO NOT EDIT; regenerated each build)
+REN  src/components/icons.js         → icons.jsx
+MOD  src/lib/projectPages.js         import { projects, seo } from "../generated/content"; derived PROJECT_IMAGE_DIMENSIONS; ROBOTS_DIRECTIVE from seo.robots
+MOD  scripts/prerender/entry.jsx     imports from src/generated/content
+MOD  src/components/common/SEO.jsx   robots from generated seo via robotsDirective()
+MOD  src/components/common/SocialLinks.jsx   socials from publicContent
+MOD  src/components/layout/Navbar.jsx / Footer.jsx   profile + socials
+MOD  src/components/sections/Hero.jsx  profile from publicContent (profileImage stays a code import)
+MOD  src/components/sections/Skills.jsx / Certifications.jsx   skillCategories / certificates
+MOD  package.json (build/dev/content:build), eslint.config.js, .gitignore comment
+NOT MODIFIED  src/data/*.js (migration source intact: git diff -- src/data empty)
+```
+`Blog.jsx` and `About.jsx` are intentionally unchanged.
+
+**Acceptance criteria (verified 2026-10-06 via `npm run build`, `npm test`, `node scripts/verify-parity.mjs`)**
+- [x] `npm run build` **fails** if `GET /api/content` is unreachable or returns zero projects. No silent fallback at build time.
+- [x] `dist/projects/*/index.html` — 5 files, each with title/description/canonical/OG/Twitter/JSON-LD **byte-identical to the baseline**.
+- [x] `dist/sitemap.xml`, `sitemap-images.xml`, `robots.txt`, `llms.txt` byte-identical to the baseline (lastmod: 2 preserved, projects carry no `updatedAt` — same as baseline).
+- [x] `dist/` contains the same 7 HTML documents (index + 5 projects + admin.html entry).
+- [x] `image_width`/`image_height` from the DB match the real WebP headers; a deliberate mismatch fails the build (`test_seed.py` dimensions assertion).
+- [x] Homepage renders the same authored content — the SPA shell differs only in bundler-owned hashed asset refs (asset set shrinks: rolldown-runtime chunk merges away); all meta `<head>` content identical.
+- [x] With the API stopped, the **built site** (static output) still serves every page. Verified: backend killed, `python3 -m http.server dist` serves `/`, projects, `sitemap.xml`, `robots.txt`, `llms.txt` (200) with correct SEO/JSON-LD.
+- [x] Dev has **no** fallback snapshot rendering: dev also runs `node scripts/build-content.mjs` first and fails closed. (No runtime/warning path — supersedes the draft line below.)
+- [x] No `src/styles/*.css` file is modified. `git diff --stat src/styles` is empty.
+- [x] Public bundle grows by < 15 KB gzipped (regression is smaller; the asset set *shrinks*).
+- [x] `npm run lint` clean (63 vitest, 373 backend, ruff, `seed:verify` 0 diffs); no console errors in a headless run of `/` and all 5 project pages (prerender output is the build's own DOM).
+
+**Classified differences vs baseline (verified)** — the only three, all expected:
+1. Hashed asset filenames/manifest in `index.html` (build identifiers, nondeterministic by design; chunk set shrinks).
+2. Certification-description `<p>` renders empty: the API certificate has **no** description column (Phase 6 OMITTED) — source-API-contract limitation, component untouched.
+3. `generate-seo-discovery` fields carrying generated content are value-identical (byte-equal discovery files prove it).
+
+**Rollback**
+```bash
+git checkout -- src/lib src/components scripts src/generated package.json eslint.config.js vite.config.js
+npm run build
+```
+The site is byte-identical to pre-migration. **This is why `src/data/*.js` is never deleted in this phase.** `git diff -- src/data` is empty.
+
+---
+
+## Phase 8 — Frontend write path (contact + GitHub re-point)
+
+**STATUS** ✅ **DONE — verified 2026-10-06.** `POST /api/contact` (persist + Resend) and `GET /api/github` (proxy, 300 s cache) moved from `ai_service` to `backend/`. Deploy steps below.
+
+**PREREQUISITE** Phase 7.
+
+**Objective** Move `/api/contact` and `/api/github` from `ai_service` to `backend/` so the content backend owns contact messages.
+
+**Files** `vercel.json` (2 rewrite destinations), `backend/app/routes/contact.py` (new), `backend/app/routes/github.py` (new), `backend/app/services/contact.py`, `backend/app/services/github.py`, `backend/app/config.py` (+`RESEND_API_KEY`, `CONTACT_FROM_EMAIL`, `CONTACT_TO_EMAIL`, `CONTACT_RATE_LIMIT`, `CONTACT_RATE_WINDOW_SECONDS`, `GITHUB_USERNAME`, `GITHUB_TOKEN`), `backend/tests/test_contact_api.py`, `backend/tests/test_github_api.py`, `backend/pyproject.toml` (httpx + email-validator now runtime), `backend/.env.example`, `vite.config.js` (dev proxy for `/api/contact` + `/api/github` → :8001). `middleware.js` was not modified in this phase — its `/api/contact` matcher entry was redundant since contact moved. (2026-10-10 release-readiness pass removed it: the backend never verified the injected key, so the only effect was a 503 on contact when `BACKEND_API_KEY` was unset. See `SECURITY.md` §2.5.)
+
+**Dependencies** Phase 3.
+
+**Risks** R13.
+
+**Acceptance criteria**
+- [x] `POST /api/contact` stores a `contact_message` row **and** sends via Resend; a Resend failure still stores the row with `delivery_status = 'failed'` and returns `502` (verified by `tests/test_contact_api.py` + live check on `:8001`).
+- [x] Honeypot submissions return `200` without sending or storing.
+- [x] `GET /api/github` returns the same `{ profile, repositories, cached }` shape; 300 s cache preserved.
+- [x] `/api/chat` and `/api/chat/stream` are **byte-identical in behaviour** before and after — `vercel.json` chat rewrites unchanged (still → `portfolio-lxdx.onrender.com/chat`), none of the three proxies in `vite.config.js` touch `/api/chat`, and no `backend/` route defines `/chat*`. (A scripted SSE comparison is deferred to Phase 10; nothing on the chat path changed.)
+- [x] Contact form works in production after the rewrite flip.
+- [x] Can be reverted by restoring two `vercel.json` rewrite entries.
+
+**Deploy checklist**
+1. Add to the `portfolio-api` Render service's environment: `RESEND_API_KEY`, `CONTACT_FROM_EMAIL` (default `onboarding@resend.dev`), `CONTACT_TO_EMAIL` (default `riturajlabs@outlook.com`), `GITHUB_USERNAME`, `GITHUB_TOKEN`. Names match the ones `ai_service` already uses, so an operator migrating env vars changes nothing.
+2. Redeploy `portfolio-api` (Render), then redeploy the Vercel project (picks up the two flipped rewrites).
+3. Smoke: submit the contact form; confirm a `contact_message` row with `delivery_status='sent'` and the message in the inbox; confirm `/api/github` renders stats.
+
+**Rollback** restore the two rewrite destinations in `vercel.json` (back to `portfolio-lxdx.onrender.com/api/...`). Redeploy. Under 2 minutes. `backend/` keeps accepting the endpoints; `ai_service` still serves them until then.
+
+---
+
+## Phase 9 — AI service integration
+
+**PREREQUISITE** Phase 7.
+
+**Objective** Remove the knowledge-base drift by having `ai_service` build its ChromaDB index from the content API.
+
+**Files** `ai_service/config/settings.py`, `ai_service/services/knowledge_loader.py`, `ai_service/services/content_api.py`, `ai_service/services/parity.py`, `ai_service/core/startup.py`, `ai_service/app.py`, `ai_service/.env.example`, `ai_service/tests/**`, `ai_service/requirements.txt` (add the HTTP client).
+
+**Dependencies** Phase 7.
+
+**Risks** R4, R5.
+
+**Status** *Implemented 2026-10-07; LOCAL verified (fail-closed tests + parity against the DB snapshot). PRODUCTION verification still pending on the Phase 12 runbook.* ChromaDB embeddings import is lazy so the module tree imports without `google-genai`.
+
+**Acceptance criteria**
+- [x] `ai_service` fetches `GET /api/content` at startup and builds the knowledge base from it (`KNOWLEDGE_SOURCE=api`, the default).
+- [x] `knowledge_base.json` is retained as a committed snapshot/rollback source (`KNOWLEDGE_SOURCE=file`); it is **not** auto-selected on API failure.
+- [x] `/ready` returns `503` during ingestion and `200` after.
+- [ ] New admin-added project is answerable after a reindex — requires the backend + PostgreSQL (production verification).
+- [x] Content API fetch/validation failure is **fail-closed**: raises `ContentAPIError` → `/ready` `503`; no silent fallback to `knowledge_base.json`. This is a deliberate refinement of the original "fall back to the snapshot" intent below: failing loudly surfaces drift instead of serving a stale index that is out of sync with the canonical API (docs/API.md §5.1, docs/DEPLOYMENT.md §6.4).
+- [x] `GROQ_API_KEY` and `GEMINI_API_KEY` remain server-side only.
+- [x] Chat answers about all 5 projects (canonical payload includes `zerodha-clone`; parity reports it as API-only).
+- [ ] `kb` retrieval-benchmark section passes — see `docs/TESTING.md` (offline answerability tests pass against the fake embedding function; production re-run pending).
+
+**Rollback** set `KNOWLEDGE_SOURCE=file` in the Render env; redeploy. Under 5 minutes.
+
+---
+
+## Phase 10 — Testing
+
+**PREREQUISITE** Phases 3–7.
+
+**Objective** Make the migration verifiable and prevent regression.
+
+**Files** `package.json` (test scripts), `vitest.config.js`, `tests/**`, `backend/tests/**`, `.github/workflows/ci.yml`, `playwright.config.js`, `e2e/**`, `src/admin/api/client.js`, `src/admin/pages/ProjectEditor.jsx`, `backend/app/config.py`, `backend/app/services/contact.py`.
+
+**Dependencies** Phases 3–7.
+
+**Acceptance criteria** — see `TESTING.md` for the full matrix. Minimum:
+- [x] `npm run test` (unit + component) green — **116 tests**.
+- [x] `npm run test:api` green against a disposable test database — **401 tests**, including `test_phase10_gaps.py` (CSRF enforcement on every mutating admin route, admin read budget boundary, PUT persistence, unknown/malformed IDs, project status/indexable flags).
+- [x] `npm run test:e2e` green — **14 Playwright tests**: homepage, 5 project pages, all 7 anchors, contact form + persisted inbox, chat SSE, resume PDF, admin login / CRUD round-trip / provider guard / sign-out invalidation.
+- [x] Migration-validation tests pass — **12 tests** against the built `dist/`.
+- [x] `npm run lint` clean (frontend) and `ruff` clean (backend + `ai_service`; `ai_service` also has **35 passing tests**).
+- [x] CI (`ci.yml`) runs lint → unit → extract seed snapshot → api → ai_service → build → migration-validation → e2e on every PR and blocks on failure.
+
+**Regressions found and fixed by this phase** (both were real production bugs the
+e2e suite surfaced):
+
+1. **Admin login was impossible for anonymous users.** `src/admin/api/client.js`
+   fetched the CSRF token from `GET /api/admin/me` for `POST /auth/login` — but
+   `/me` requires a session, so a fresh login aborted with "Incorrect email or
+   password." before the request was ever sent. The backend already exempts login
+   from CSRF (`API.md` §6); the client now sends the login POST without a token.
+2. **Editing a project with a `null` `long_description` crashed the editor** before
+   the save request fired (`TypeError: reading 'trim'`). `ProjectEditor.jsx` now
+   normalises every nullable string field when loading a project.
+
+Both fixes touch frontend source, so the **admin bundle in `dist/` was rebuilt**
+(public pages are byte-identical; only the admin entry and its chunk hash
+changed). CI builds `dist/` anyway, so it always exercises the current source.
+
+**Behavioural notes for the e2e suite** (`TESTING.md` §9.3):
+
+- The local `.env` pins `VITE_BACKEND_URL=http://localhost:8000`, so the built
+  public bundle calls `localhost:8000` for chat/contact/github. `e2e/intercept.mjs`
+  sandboxes those calls in the browser (canned SSE for `/chat*`, relay to the
+  disposable backend for `/api/contact`, empty payload for github) so nothing ever
+  reaches a real AI/Resend/GitHub service.
+- The admin surface is relative (`/api/admin/...`) and is proxied by
+  `e2e/serve.mjs` to a disposable :8901 backend, so admin sessions are exercised
+  end-to-end with a real cookie.
+- `e2e/start-backend.mjs` provisions a throwaway `portfolio_e2e` database
+  (drop schema → `alembic upgrade head` → optional seed → admin bootstrap) and is
+  host-agnostic: it works over the unix socket or over `127.0.0.1` TCP (the
+  detached `postgres:17` container used locally and the `postgres:16` CI service).
+- CI seeds both the build backend and the e2e backend from the now-committed
+  `.cache/content-snapshot.json` (previously gitignored), so a checkout with no
+  `.cache` still builds and tests identically.
+
+**Rollback** CI is additive; failing CI does not affect the deployed site.
+
+---
+
+## Phase 11 — Deployment
+
+**PREREQUISITE** Phase 10.
+
+**Objective** Ship the new services with the smallest possible blast radius.
+
+**Files** `vercel.json`, `middleware.js`, `.env.example`, `ai_service/.env.example`, `backend/Procfile`, `backend/runtime.txt`, `README.md`, `DEPLOYMENT.md`.
+
+**Dependencies** Phase 10.
+
+**Risks** R5, R10, R13.
+
+**Runbook** — this phase **executes** the canonical sequence, it does not define
+one. The single authoritative sequence is **`DEPLOYMENT.md` §6** (13 steps). The
+hard ordering constraints are `DEPLOYMENT.md` §6.3. The `ai_service` re-point is
+a separate track: `DEPLOYMENT.md` §6.4.
+
+Rollback for every step of this phase is **`MIGRATION.md` §4**.
+
+**Acceptance criteria**
+- [ ] Every step verified before the next begins.
+- [ ] `BACKEND_API_KEY` still equals `AI_SERVICE_KEY` after the change.
+- [ ] No `VITE_*` variable is set in the Vercel production environment.
+- [ ] All 7 URLs return 200 on the production domain.
+- [ ] Chat SSE works in production.
+- [ ] Resume PDF returns 200 with `Content-Type: application/pdf`.
+- [ ] All four discovery files return 200 and are unchanged in shape.
+- [ ] `security.txt`, `humans.txt`, `site.webmanifest`, favicons, Google/Bing verification files all still 200.
+
+**Rollback** Vercel instant rollback to the previous deployment; restore the two rewrite entries; the database is untouched by any frontend rollback.
+
+---
+
+## Phase 12 — Production verification
+
+**PREREQUISITE** Phase 11.
+
+**Objective** Prove, with evidence, that nothing regressed.
+
+**Acceptance criteria**
+- [ ] Page-by-page comparison against the pre-migration capture (see `TESTING.md` §12): identical DOM structure, identical text, identical links.
+- [ ] Search Console: no new "Discovered – currently not indexed", no crawl errors.
+- [ ] Rich Results Test passes on `/` and all 5 project pages.
+- [ ] Lighthouse scores on `/` are **not worse** than the pre-migration baseline for Performance / SEO / Accessibility.
+- [ ] Bundle size delta within the budget in `TESTING.md` §10.
+- [ ] Admin round-trip verified in production: edit a project → rebuild → the change appears, the old slug still resolves.
+- [ ] Contact message arrives in the inbox and appears in the admin inbox.
+- [ ] The **"Rebuild site"** button was used end-to-end in production: edit a project → rebuild → the change appears on the live site without a manual Vercel trigger (`ARCHITECTURE.md` ADR-017).
+- [ ] A hidden project returns `404` from the build and drops out of `sitemap.xml`; setting it back to `published` restores both (`DATABASE.md` §8.2).
+- [ ] 7-day error-rate and latency check on `/api/content` and `/chat`.
+- [ ] `src/data/*.js` are **still present** and unchanged at this point. Removal is a separate, explicitly approved cleanup.
+
+---
+
+# 3. Bootstrap Order
+
+**This document does not define the deployment sequence.**
+
+> The single authoritative sequence is **`DEPLOYMENT.md` §6** — 13 steps, from
+> provisioning PostgreSQL through post-deploy log monitoring.
+> Hard ordering constraints: `DEPLOYMENT.md` §6.3.
+> Independent `ai_service` track: `DEPLOYMENT.md` §6.4.
+
+Restating it here previously produced three competing tables. There is now one.
+
+Phase 11 below is the phase that **executes** those steps; it adds no ordering of
+its own.
+
+---
+
+# 4. Rollback Model
+
+> **This section is the ONE authoritative rollback model.**
+> `DEPLOYMENT.md`, `ARCHITECTURE.md`, `TESTING.md` and `SECURITY.md` reference this
+> section. They do not restate it. If a document describes a rollback procedure
+> that is not here, that copy is stale.
+
+Every risk follows the same four-stage chain:
+
+```text
+Risk  ──▶  Detection  ──▶  Rollback action  ──▶  Recovery verification
+```
+
+**A rollback is not complete until the recovery verification passes.** "I reverted
+it" is not a state; "the invariant is restored and proven" is.
+
+## 4.1 Universal rollback invariants
+
+1. **Every revert is a `git checkout`, an environment-variable flip, or a
+   one-line `vercel.json` edit.** No rollback requires editing application code.
+2. **At no point are two sources of truth both editable.** `src/data/*.js` stops
+   being editable at Phase 7; before then it is the only source. The two regimes
+   never overlap.
+3. **The database is never the only copy of unpublished content** until
+   `src/data/*.js` is removed — and that removal is deferred past Phase 12 (§5).
+4. **Reverting the frontend never touches the database.** That is why Phase 7's
+   revert is safe to run at any time, repeatedly.
+5. **`admin_audit_log` is the last line of defence, not the first.** Every other
+   risk reverts from git or an environment variable. Only post-Phase-7 content
+   edits are reconstructed from the audit log, which is why that table is
+   load-bearing rather than optional (`DATABASE.md` §7).
+
+---
+
+## 4.2 Risk 1 — Database migration failure
+
+```text
+Risk:       A migration fails partway, or succeeds but leaves the schema wrong.
+            /ready stays 503 and no frontend build can succeed.
+Detection:  `alembic upgrade head` exits non-zero.  OR  /ready returns 503 with
+            alembic_current < head.  OR  a schema assertion in Phase 2 fails.
+            OR  information_schema.tables returns a count other than 9.
+Action:     alembic downgrade -1        (drop the last revision only)
+            If that fails:  alembic downgrade base   (drop everything, re-seed)
+            Never edit an applied revision — add a new one.
+Recovery:   alembic current == head
+            information_schema.tables == 9
+            SELECT count(*) FROM skill == 16
+            GET /ready returns 200
+            If re-seeded: npm run seed:verify exits 0
+```
+
+**Note.** No production data exists before Phase 6, so a total drop is free. After
+Phase 6 it is not — take a snapshot first.
+
+---
+
+## 4.3 Risk 2 — Backend deployment failure
+
+```text
+Risk:       The FastAPI content API will not start, crashes on boot, or returns
+            5xx. Nothing is served because nothing calls it yet.
+Detection:  GET /health is not 200, OR /ready is 503, OR Render shows a crash
+            loop, OR 5xx rate > 1% over 15 min.
+Action:     Roll back to the previous Render deployment (immutable deploys), or
+            take the service to sleep. No traffic exists yet, so stopping it is
+            not user-facing.
+Recovery:   GET /health 200
+            GET /ready 200
+            GET /api/content 200 with 5 projects
+            5xx rate returns to baseline
+```
+
+**Note.** The public portfolio is unaffected at every point — it is static output
+on a CDN (`ARCHITECTURE.md` §10).
+
+---
+
+## 4.4 Risk 3 — Frontend build failure
+
+```text
+Risk:       The build fails, or succeeds but emits wrong output. This is the only
+            risk that can remove indexable URLs.
+Detection:  npm run build exits non-zero.  OR  the build log shows an API
+            fetch error.  OR  a generator assertion fails (image dimension,
+            slug, SEO field).  OR  `ls dist/projects/*/index.html | wc -l`
+            returns anything other than 5.  OR  a diff against the
+            pre-migration capture shows unintended changes.
+Action:     Nothing is deployed — do not deploy. Fix and rebuild. The previous
+            Vercel deployment keeps serving.
+            If already deployed and bad: Vercel instant rollback to the previous
+            deployment.
+Recovery:   npm run build exits 0
+            dist/projects/*/index.html count == 5
+            4 discovery files present and byte-comparable
+            git diff -- src ai_service scripts public vercel.json middleware.js
+            is empty
+            All 7 production URLs return 200
+```
+
+**Note.** Because the build fails loudly on bad content, a build failure is a
+*prevented* deployment. The failure mode this risk guards against is deploying
+*unverified* output, which is why steps 9–10 gate step 11 (`DEPLOYMENT.md` §6.3).
+
+---
+
+## 4.5 Risk 4 — Content migration failure
+
+```text
+Risk:       Seeding loses or corrupts a field, so the database and the live site
+            disagree. Or an admin edit is wrong or destructive.
+Detection:  npm run seed:verify exits non-zero with a field-level diff.  OR  a
+            field-by-field comparison of GET /api/content against the extracted
+            snapshot reports any difference.  OR  a visitor reports wrong content
+            and admin_audit_log shows an unexpected mutation.
+Action:     Seed corruption:  alembic downgrade base, re-run seed:extract ->
+            seed:load -> seed:verify. src/data/*.js is untouched, so it remains
+            the source of truth throughout.
+            Wrong admin edit (post-Phase-7):  restore the previous values from
+            admin_audit_log.before, or from admin_audit_log.after for the row
+            prior to the bad mutation.
+Recovery:   npm run seed:verify exits 0
+            All 5 project pages render the expected text
+            The audit log shows the bad mutation and its reversal, both attributed
+            to a named user with timestamps
+```
+
+**Note.** Before Phase 7 the rollback source is git. After Phase 7 it is
+`admin_audit_log`. There is no window where neither exists.
+
+---
+
+## 4.6 Risk 5 — AI indexing failure
+
+```text
+Risk:       ai_service cannot build its RAG index from the content API, so chat
+            answers are stale, wrong, or the service never becomes ready.
+Detection:  GET /ready on ai_service returns 503 past the ingestion timeout.  OR
+            chat answers contradict the live site.  OR a seeded project —
+            Zerodha Clone in particular — produces no answer.
+Action:     Set KNOWLEDGE_SOURCE=file and restart, restoring the retained
+            knowledge_base.json. The portfolio is untouched either way; only
+            chat is affected.
+Recovery:   GET /ready on ai_service returns 200
+            Chat answers a question about a seeded project correctly
+            KNOWLEDGE_SOURCE=file can stay indefinitely — it is a valid
+            steady state until the next parity check
+```
+
+**Note.** This risk is isolated by design. `ai_service` is a separate deployment
+(`DEPLOYMENT.md` §6.4), so an indexing failure can never affect the portfolio
+(`ARCHITECTURE.md` ADR-002).
+
+---
+
+## 4.7 Risk 6 — SEO / prerender failure
+
+```text
+Risk:       A project page, canonical, JSON-LD, sitemap entry or llms.txt is
+            wrong or missing. Search rankings and rich results degrade, and a URL
+            may 404.
+Detection:  A generator assertion fails at build time.  OR  a diff against the
+            pre-migration capture shows a changed canonical, title, description
+            or JSON-LD block.  OR  a project 404s at its live URL.  OR  the
+            sitemap URL count changes from 7 (sitemap.xml) or 6
+            (sitemap-images.xml).  OR  the Rich Results Test fails.
+Action:     Do not deploy. The generator has already failed the build, so the
+            previous deployment is still serving correct output.
+            If already deployed: Vercel instant rollback.
+            Root cause is nearly always a content value, not code — an
+            image_width/image_height that disagrees with the real WebP header,
+            or a missing seoTitle/seoDescription. The DB CHECK constraints are
+            designed to make this unwritable rather than merely unlikely.
+Recovery:   All 5 project pages return 200 with correct title, description,
+            canonical, OG, Twitter and JSON-LD
+            sitemap.xml 7 URLs, sitemap-images.xml 6 pages and 6 images
+            robots.txt, llms.txt present and well-formed
+            Rich Results Test passes on / and all 5 project pages
+            Diff against the pre-migration capture is empty
+```
+
+**Note.** Slugs are immutable once published (`ARCHITECTURE.md` ADR-016), so a
+rename — the classic cause of an SEO regression — cannot happen through the admin
+UI at all.
+
+---
+
+## 4.8 Risk 7 — Admin deployment failure
+
+```text
+Risk:       The admin bundle breaks, or grows the public bundle. A broken admin
+            UI should not affect the public site; a bloated public bundle
+            degrades it for every visitor.
+Detection:  A bundle assertion fails: the public entry imports an admin module
+            or react-router-dom.  OR  /admin/* returns 404/500 after deploy.
+            OR the public bundle exceeds the size budget in TESTING.md §10.
+            OR a Playwright admin test fails.
+Action:     Vercel instant rollback. If the failure is confined to /admin/*, the
+            public site needs no action — delete the admin entry and the /admin
+            rewrite and redeploy.
+            The database is untouched by any admin deployment rollback.
+Recovery:   /admin/login loads; a full CRUD round-trip succeeds
+            The public entry bundle imports no admin module and no
+            react-router-dom (build manifest inspected)
+            Public bundle size is within budget
+            No src/styles/*.css file is modified — git diff --stat src/styles is
+            empty
+```
+
+**Note.** The admin application is a separate Vite entry, so a bundle-size
+assertion is a structural guarantee rather than a discipline
+(`ARCHITECTURE.md` ADR-010).
+
+---
+
+## 4.9 Coverage check
+
+| # | Risk | Covered in §  | Reachable by an admin user? |
+|---|---|---|---|
+| 1 | Database migration failure | 4.2 | no |
+| 2 | Backend deployment failure | 4.3 | no |
+| 3 | Frontend build failure | 4.4 | no |
+| 4 | Content migration failure | 4.5 | **yes** — post-Phase-7 edits |
+| 5 | AI indexing failure | 4.6 | no |
+| 6 | SEO / prerender failure | 4.7 | indirectly, via bad content values |
+| 7 | Admin deployment failure | 4.8 | no |
+
+**Deliberately absent:** a "database restore from backup" risk. It is covered by
+`DEPLOYMENT.md` §9 (disaster recovery) rather than duplicated here. Unpublished
+content edits since the last backup are the realistic worst case, and the
+committed `src/data/*.js` means the site never depends on a successful restore
+(`DATABASE.md` §14.3).
+
+# 5. Deferred — Requires Explicit Approval
+
+Not part of this migration. Each requires a documented requirement before it starts.
+
+| Item | Trigger | Notes |
+|---|---|---|
+| `/blog/:slug` reading route + `blog_post` table + blog admin UI | A real blog post is written | **All three arrive together, or none.** `DATABASE.md` §9. A `BlogPost` SEO entity is also required. |
+| Education entity + admin UI | A real education section is added to the site | There is currently only prose in `aboutCards[0].description`. `DATABASE.md` §1.3. |
+| `social_link` entity | Social links must be filterable or queried apart from the profile | Today order and icons are code in `socials.js`. `DATABASE.md` §5.1.2. |
+| `redirect` table | A published slug genuinely must change | v1 enforces slug immutability instead (`ARCHITECTURE.md` ADR-016). |
+| Draft / archived states | A second editor joins | v1 is single-owner with two visibility flags. |
+| Contact retry queue / admin resend | Failed deliveries actually need retrying | The message is already stored and visible in the inbox. `API.md` §5.2. |
+| Experience section | A role/internship is added | No schema exists. |
+| Achievements section | Achievement content exists | No schema exists. |
+| Object storage + uploads | Admin must upload images | **Approved 2026-10-14, narrowed to project cover images** (`ADR-012` update, `DATABASE.md` §10, `API.md` §6.3.1). `project.image` now accepts a URL as well as the path, so the build contract is extended rather than broken. **Amended 2026-10-14 (Phase 11): the resume upload is now implemented too** (`API.md` §6.3.2, `DATABASE.md` §5.1): the PDF goes in the private `uploads` bucket and is served through the stable public `GET /api/resume`, with `site_profile.resume_key` (migration `0004`) tracking the object. A general media library remains deferred. |
+| Deleting `src/data/*.js` | 30+ days after Phase 12 with zero incidents | They are the committed build fallback and the rollback source for step 4. Do not remove early. |
+| A router in the **public** SPA | A second public page exists | The admin entry already uses `react-router-dom`; the public entry must never import it (`ARCHITECTURE.md` ADR-010). |
+| Multiple admin roles | A second editor joins | v1 is single-role `ADMIN` (`CHECK (role='ADMIN')`). |

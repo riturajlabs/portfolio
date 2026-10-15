@@ -1,8 +1,7 @@
 import { FaArrowUp, FaHeart } from "react-icons/fa";
 import { motion } from "framer-motion";
 
-import profile from "../../data/profile";
-import socials from "../../data/socials";
+import { profile, socials } from "../../lib/publicContent";
 
 import "../../styles/footer.css";
 

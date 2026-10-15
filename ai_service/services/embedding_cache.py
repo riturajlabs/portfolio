@@ -34,7 +34,6 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
-from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +103,7 @@ class EmbeddingCache:
                 raise
 
     # ---- Public API -------------------------------------------------------
-    def get(self, queries: list[str]) -> List[List[float]] | None:
+    def get(self, queries: list[str]) -> list[list[float]] | None:
         """
         Returns the cached 2D embedding matrix (one row per query) on hit,
         None on miss / disabled / error.
@@ -148,7 +147,7 @@ class EmbeddingCache:
         # Wrap as one row per query (matches GeminiEmbeddingFunction contract).
         return [floats]
 
-    def put(self, queries: list[str], vectors: List[List[float]]) -> None:
+    def put(self, queries: list[str], vectors: list[list[float]]) -> None:
         """
         Persist a query → 2D vector mapping. No-op on disabled cache or
         on any DB error (we never want cache writes to fail the chat).
@@ -248,7 +247,7 @@ def get_embedding_cache() -> EmbeddingCache | None:
         if _singleton is None:
             try:
                 _singleton = EmbeddingCache()
-            except Exception as exc:  # pragma: no cover
+            except Exception as exc:  # noqa: BLE001  # pragma: no cover
                 logger.error(
                     "Could not open embedding cache (%s); continuing without it.",
                     exc,

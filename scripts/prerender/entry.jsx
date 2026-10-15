@@ -19,9 +19,6 @@ import "../../src/styles/button.css";
 import "../../src/styles/project-page.css";
 
 import { renderProjectDocument } from "./document.jsx";
-import projects from "../../src/data/projects";
-import profile from "../../src/data/profile";
-import seo from "../../src/config/seo";
 import {
     PROJECT_IMAGE_DIMENSIONS,
     PROJECTS_LIST_PATH,
@@ -31,6 +28,16 @@ import {
     projectPagePath,
     projectPageUrl,
 } from "../../src/lib/projectPages";
+
+// Phase 7: the prerenderer consumes the build-time content snapshot
+// (src/generated/content.js), not src/data/*.js. The snapshot is the
+// validated GET /api/content payload baked in by
+// scripts/build-content.mjs during every build.
+import {
+    profile,
+    projects,
+    seo,
+} from "../../src/generated/content";
 
 export { renderProjectDocument };
 export { indexableProjects };
@@ -48,10 +55,10 @@ export { projectPagePath };
 export { projectPageUrl };
 export { PROJECTS_LIST_PATH };
 
-// Profile and site config are the source of truth for the resume
-// path, contact details and social profiles quoted in llms.txt.
-// Importing profile here also pulls its bundled portrait asset into
-// the SSR output; that asset is unused and is never published to
-// dist/, so it has no production effect.
+// Profile and site SEO are the source of truth for the resume path,
+// contact details and social profiles quoted in llms.txt. Both come
+// from the build-time content snapshot; `seo.url`/`seo.verification`
+// were merged into that snapshot from src/config/seo.js by
+// scripts/build-content.mjs.
 export { profile };
 export { seo };

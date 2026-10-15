@@ -5,7 +5,7 @@ import {
 } from "react-icons/fa";
 
 
-import certificates from "../../data/certificates";
+import { certificates } from "../../lib/publicContent";
 
 import SectionTitle from "../common/SectionTitle";
 

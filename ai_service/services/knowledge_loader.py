@@ -5,14 +5,11 @@ import os
 import re
 import shutil
 from pathlib import Path
+from typing import Any
 
 import chromadb
 
 from config.settings import settings
-from services.embeddings import (
-    GeminiEmbeddingFunction,
-    get_embedding_function,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +22,10 @@ DEFAULT_SCORE_THRESHOLD = float(os.getenv("SCORE_THRESHOLD", "0.65"))
 
 _client = None
 _collection = None
-_ef: GeminiEmbeddingFunction | None = None
+# Any Chroma-compatible embedding function. The real one is the Gemini EF from
+# services/embeddings.py; tests inject a deterministic fake. Typed as `Any`
+# because the concrete class is imported lazily (see _build_embedding_function).
+_ef: Any | None = None
 
 
 def _stable_id(section: str, key: str, text: str) -> str:
@@ -79,6 +79,19 @@ def _chunk_text_overlap(
         if start + window >= len(text):
             break
     return chunks
+
+
+def _build_embedding_function():
+    """Return the process-wide embedding function.
+
+    Imported lazily so importing this module never requires the `google-genai`
+    SDK: the model is only needed once a Chroma collection is actually created
+    (service startup, ingestion, query). This keeps tooling and tests that only
+    touch chunking/parity free of the SDK dependency.
+    """
+    from services.embeddings import get_embedding_function
+
+    return get_embedding_function()
 
 
 def _chunk_section(section: str, data) -> list[dict]:
@@ -189,21 +202,34 @@ def _resolve_knowledge_path() -> Path:
     )
 
 
-def load_knowledge() -> list[dict]:
-    """Reads knowledge_base.json and produces RAG-ready text chunks."""
-    knowledge_path = _resolve_knowledge_path()
+def chunks_from_sections(sections: dict) -> list[dict]:
+    """Run the shared chunker + noise filter over a sectioned knowledge dict.
 
-    with open(knowledge_path, "r", encoding="utf-8") as f:
-        knowledge = json.load(f)
-
+    Used by both ingestion paths: legacy `knowledge_base.json` (its sections
+    dict) and the Phase 9 `/api/content` source (`content_api.sections_from_content`).
+    """
     chunks: list[dict] = []
-    for section, data in knowledge.items():
+    for section, data in sections.items():
         for chunk in _chunk_section(section, data):
             text = chunk["text"].strip()
             if len(text) < 20:
                 continue
             chunks.append(chunk)
+    return chunks
 
+
+def load_knowledge() -> list[dict]:
+    """Read knowledge_base.json and produce RAG-ready text chunks (legacy path).
+
+    Only used when `KNOWLEDGE_SOURCE=file` — the Phase 9 rollback mode. The
+    file itself is retained indefinitely as the rollback/reference copy.
+    """
+    knowledge_path = _resolve_knowledge_path()
+
+    with open(knowledge_path, "r", encoding="utf-8") as f:
+        knowledge = json.load(f)
+
+    chunks = chunks_from_sections(knowledge)
     logger.info("Prepared %d knowledge chunks from %s", len(chunks), knowledge_path)
     return chunks
 
@@ -254,7 +280,7 @@ def _get_collection():
                 "GEMINI_API_KEY not set — embedding calls will fail."
             )
 
-        _ef = get_embedding_function()
+        _ef = _build_embedding_function()
 
         _collection = _get_client().get_or_create_collection(
             name=settings.COLLECTION_NAME,
@@ -286,44 +312,82 @@ def _get_collection():
     return _collection
 
 
-def ensure_embeddings(collection, chunks: list[dict]) -> int:
-    """Embeds and upserts only the chunks not already present in ChromaDB."""
+def _add_chunks(collection, chunks: list[dict]) -> int:
+    """Add chunks in batches, respecting the embedding request token ceiling."""
     added = 0
-    # Batch size for a single `embed_content` call. The Gemini SDK handles
-    # internal chunking, so 64 keeps the request count low without hitting
-    # the per-request input token ceiling.
     batch_size = 64
-
     for start in range(0, len(chunks), batch_size):
         batch = chunks[start : start + batch_size]
-        ids = [c["id"] for c in batch]
-
-        existing = collection.get(ids=ids)
-        existing_ids = set(existing.get("ids", []))
-        missing = [c for c in batch if c["id"] not in existing_ids]
-
-        if not missing:
+        if not batch:
             continue
-
-        texts = [c["text"] for c in missing]
-
-        # Chroma will call our custom ef's __call__ once with `texts`.
-        collection.add(
-            ids=[c["id"] for c in missing],
-            documents=texts,
-            metadatas=[c["metadata"] for c in missing],
-        )
-        added += len(missing)
-
+        try:
+            collection.add(
+                ids=[c["id"] for c in batch],
+                documents=[c["text"] for c in batch],
+                metadatas=[c["metadata"] for c in batch],
+            )
+        except Exception as exc:  # pragma: no cover
+            # Half-applied batches are the reconcile step's concern: the next
+            # ingestion recomputes the desired set and repairs the drift.
+            logger.error("Chroma add batch failed (%d chunks): %s", len(batch), exc)
+            raise
+        added += len(batch)
     return added
 
 
-def load_knowledge_into_chromadb(force: bool = False) -> int:
-    """
-    Loads ./knowledge_base.json into the configured Chroma collection.
+def _delete_chunks(collection, ids: list[str]) -> int:
+    """Remove stale document ids in batches."""
+    removed = 0
+    batch_size = 64
+    for start in range(0, len(ids), batch_size):
+        batch_ids = ids[start : start + batch_size]
+        if not batch_ids:
+            continue
+        try:
+            collection.delete(ids=batch_ids)
+        except Exception as exc:  # pragma: no cover
+            logger.error("Chroma delete batch failed (%d ids): %s", len(batch_ids), exc)
+            raise
+        removed += len(batch_ids)
+    return removed
 
-    If `force=True` (or the on-disk DB predates the current embedding
-    model), the entire persistence directory is wiped before re-ingestion.
+
+def reconcile_collection(collection, chunks: list[dict]) -> tuple[int, int]:
+    """Converge the collection to exactly the desired document set.
+
+    Desired set is keyed by the stable chunk ID (`_stable_id` embeds the
+    section, key *and* text, so same logical item + same text ⇒ same ID):
+
+      * missing ids  → added (batched),
+      * ids no longer desired → deleted as stale (content removed from the API,
+        or a source edit that re-keyed the ID — an edited project yields a new
+        ID and its old ID here),
+      * already-present ids never touched → the collection only changes when
+        the content does.
+
+    This is what makes ingestion both **idempotent** (indexing the same payload
+    twice adds 0 / deletes 0) and **self-healing** (content removed from
+    PostgreSQL is no longer retrievable). Returns (added, removed).
+    """
+    desired = {c["id"]: c for c in chunks}
+    existing = collection.get()
+    existing_ids = set(existing.get("ids", []))
+
+    to_add = [desired[cid] for cid in desired if cid not in existing_ids]
+    to_delete = [cid for cid in existing_ids if cid not in desired]
+
+    added = _add_chunks(collection, to_add)
+    removed = 0
+    if to_delete:
+        removed = _delete_chunks(collection, to_delete)
+    return added, removed
+
+
+def load_chunks_into_chromadb(chunks: list[dict], force: bool = False) -> int:
+    """Converge the configured collection onto `chunks`.
+
+    `force=True` wipes the entire persistence directory first (used when the
+    embedding model/dimensionality changes, or via `FORCE_REINGEST`).
     """
     if force:
         # Drop the cached handles so we rebuild against a fresh directory.
@@ -332,18 +396,61 @@ def load_knowledge_into_chromadb(force: bool = False) -> int:
         _collection = None
         _wipe_chroma_db()
 
-    client = _get_client()
     collection = _get_collection()
 
-    chunks = load_knowledge()
-    added = ensure_embeddings(collection, chunks)
+    added, removed = reconcile_collection(collection, chunks)
     logger.info(
-        "ChromaDB collection '%s' now has %d documents (+%d added)",
+        "ChromaDB collection '%s' converged: %d documents (+%d added, -%d stale)",
         settings.COLLECTION_NAME,
         collection.count(),
         added,
+        removed,
     )
     return added
+
+
+def load_knowledge_into_chromadb(force: bool = False) -> int:
+    """Ingest the configured knowledge source into Chroma.
+
+    `KNOWLEDGE_SOURCE` decides what "the knowledge" is:
+      * `api`  (default) → GET /api/content, validated by
+        `services/content_api`; any fetch/validation failure raises here, so
+        ingestion fails closed and `/ready` stays 503. NO silent substitution.
+      * `file`            → legacy `knowledge_base.json` (rollback mode).
+    """
+    source = (settings.KNOWLEDGE_SOURCE or "api").strip().lower()
+
+    if source == "api":
+        from services.content_api import (
+            chunks_from_sections,
+            fetch_validated_content,
+            sections_from_content,
+        )
+
+        logger.info("Ingesting knowledge from content API: %s", settings.CONTENT_API_URL)
+        content = fetch_validated_content()
+        chunks = chunks_from_sections(sections_from_content(content))
+    elif source == "file":
+        chunks = load_knowledge()
+    else:
+        raise ValueError(
+            f"KNOWLEDGE_SOURCE must be 'api' or 'file', got {source!r}"
+        )
+
+    return load_chunks_into_chromadb(chunks, force=force)
+
+
+# The section names `content_api.sections_from_content` actually emits for the
+# canonical `/api/content` source. A classifier hit becomes a Chroma `where`
+# filter only when it names one of these; a source the collection never indexes
+# (the classifier still lists `blogs` and `experience`, which have no section)
+# falls back to the unfiltered scan instead of a filter guaranteed to match
+# nothing. Kept here rather than imported because `content_api` imports from
+# this module; `tests/test_ingestion.py` pins this set to the keys
+# `sections_from_content` produces for a canonical payload.
+KNOWLEDGE_SOURCES = frozenset(
+    {"profile", "about", "projects", "skills", "certifications", "seo"}
+)
 
 
 def _classify_source(query: str) -> str | None:
@@ -389,10 +496,22 @@ def query_knowledge(
     """Searches the portfolio_knowledge collection and returns relevant text chunks."""
     collection = _get_collection()
 
-    # Cheap intent classifier — when confident, restrict the search to the
-    # matching section. When ambiguous, fall back to a full-collection scan.
+    # Cheap intent classifier — when it names a section that is actually
+    # indexed, restrict the search to it. When it is ambiguous *or* names a
+    # source with no section (e.g. "blogs", "experience"), fall back to a
+    # full-collection scan: a `where` filter on a source the collection never
+    # stores is guaranteed to return zero documents.
     source_filter = _classify_source(query)
-    where = {"source": source_filter} if source_filter else None
+    if source_filter in KNOWLEDGE_SOURCES:
+        where = {"source": source_filter}
+    else:
+        if source_filter is not None:
+            logger.debug(
+                "Classifier source %r is not an indexed section; "
+                "retrieving without a source filter.",
+                source_filter,
+            )
+        where = None
 
     # Custom ef handles embedding; pass raw text.
     results = collection.query(

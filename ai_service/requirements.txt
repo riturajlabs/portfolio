@@ -8,3 +8,5 @@ email-validator
 python-dotenv
 slowapi
 httpx
+pytest
+ruff
