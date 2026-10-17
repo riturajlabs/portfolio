@@ -109,17 +109,24 @@ gate on the admin UI, a load-testing platform, mutation testing.
 "test":                    "vitest run --exclude tests/migration-validation.test.mjs",
 "test:watch":              "vitest --exclude tests/migration-validation.test.mjs",
 "test:migration-validation":"vitest run tests/migration-validation.test.mjs",
-"test:api":                "cd backend && TEST_DATABASE_URL=\"...\" python3 -m pytest -q",
+"test:api":                "TEST_DATABASE_URL=\"...\" node scripts/run-python.mjs backend -m pytest -q",
 "test:e2e":                "playwright test",
 "test:e2e:ui":             "playwright test --ui",
 "lint":                    "eslint .",
-"lint:ai_service":         "cd ai_service && ruff check .",
-"test:ai_service":         "cd ai_service && pytest -q",
+"lint:ai_service":         "node scripts/run-python.mjs ai_service -m ruff check .",
+"test:ai_service":         "node scripts/run-python.mjs ai_service -m pytest -q",
 // Seed pipeline — implemented in Phase 6 (all three exist in package.json):
 "seed:extract":            "node scripts/extract-content.mjs",
-"seed:load":               "cd backend && python -m db.seed",
+"seed:load":               "node scripts/run-python.mjs backend -m db.seed",
 "seed:verify":             "node scripts/compare-content.mjs",
 ```
+
+Python scripts run through `scripts/run-python.mjs`, which picks the
+interpreter instead of assuming a virtualenv: `$PYTHON` if set, otherwise the
+service-local `.venv` when present (local development), otherwise `python`
+(`python3` as a fallback) from `PATH` — the interpreter CI provisions with
+`actions/setup-python`. It also sets the working directory to the service
+directory, so `pytest`/`ruff` pick up that service's config.
 
 The `test:api` script defaults `TEST_DATABASE_URL` to
 `postgresql://$(whoami)@/portfolio_test?host=127.0.0.1` (TCP trust-peer); any
