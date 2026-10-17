@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import os
 import time
 
@@ -30,6 +31,72 @@ logger = logging.getLogger(__name__)
 gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 groq_client = Groq(api_key=settings.GROQ_API_KEY)
 
+
+def _env_bounded_int(name: str, default: int, minimum: int, maximum: int) -> int:
+    """Read a bounded integer env var without ever crashing import.
+
+    Malformed values fall back to `default`; out-of-range values are clamped
+    into ``[minimum, maximum]``. Either way a warning is logged, so an operator
+    sees the misconfiguration instead of silently getting a different value.
+    """
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        logger.warning(
+            "%s=%r is not an integer; using default %d.", name, raw, default
+        )
+        return default
+    if not minimum <= value <= maximum:
+        clamped = min(max(value, minimum), maximum)
+        logger.warning(
+            "%s=%d is out of range [%d, %d]; clamping to %d.",
+            name,
+            value,
+            minimum,
+            maximum,
+            clamped,
+        )
+        return clamped
+    return value
+
+
+def _env_bounded_float(
+    name: str, default: float, minimum: float, maximum: float
+) -> float:
+    """Read a bounded float env var without ever crashing import.
+
+    Mirrors `_env_bounded_int` for fractional tunables: malformed or
+    non-finite values fall back to `default`, out-of-range values are clamped
+    into ``[minimum, maximum]``, and every adjustment is logged.
+    """
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        logger.warning("%s=%r is not a number; using default %s.", name, raw, default)
+        return default
+    if not math.isfinite(value):
+        logger.warning("%s=%r is not finite; using default %s.", name, raw, default)
+        return default
+    if not minimum <= value <= maximum:
+        clamped = min(max(value, minimum), maximum)
+        logger.warning(
+            "%s=%s is out of range [%s, %s]; clamping to %s.",
+            name,
+            value,
+            minimum,
+            maximum,
+            clamped,
+        )
+        return clamped
+    return value
+
+
 # --- Tunables (env-overridable). -------------------------------------------
 # 512 is plenty for portfolio-style answers; previous 1024 meant we waited
 # for output that would never come.
@@ -39,6 +106,23 @@ QUERY_TIMEOUT_SECONDS = float(os.getenv("CHAT_QUERY_TIMEOUT", "10.0"))
 # Keepalive cadence for SSE — sent only while no tokens have arrived.
 SSE_KEEPALIVE_SECONDS = float(os.getenv("CHAT_SSE_KEEPALIVE", "15.0"))
 GEMINI_MODEL = os.getenv("CHAT_GEMINI_MODEL", "gemini-2.5-flash")
+# Bounded readiness wait: after a Render free-tier cold start the process is
+# up (and answers /health) a few seconds before ChromaDB finishes ingesting.
+# Rather than 503 immediately, wait a short, capped window for the store to
+# become ready. This never blocks the event loop (it awaits `asyncio.sleep`)
+# and never triggers ingestion — the startup/admin paths own that.
+READINESS_WAIT_SECONDS = _env_bounded_float(
+    "CHAT_READINESS_WAIT", default=8.0, minimum=0.0, maximum=20.0
+)
+# Poll cadence for the readiness wait.
+READINESS_POLL_SECONDS = 0.25
+
+
+# Sent on the not-ready 503 so clients can back off instead of hammering.
+# Bounded so a typo cannot crash import or advertise an absurd window.
+READINESS_RETRY_AFTER_SECONDS = _env_bounded_int(
+    "CHAT_READINESS_RETRY_AFTER", default=3, minimum=1, maximum=60
+)
 
 # ==========================================
 # 🛑 HALLUCINATION FIX: LOWERED TEMPERATURE TO 0.1
@@ -202,6 +286,36 @@ async def _query_with_timeout(
 # (validate, fetch context, resolve temperature) lives in one place.
 
 
+async def _wait_for_knowledge_ready(timeout: float) -> bool:
+    """Poll the readiness flag without blocking the event loop.
+
+    Returns True as soon as the store is ready, or False if `timeout`
+    elapses first. Purely observational — it never starts or duplicates
+    ingestion, so many concurrent chat requests cannot race the loader.
+    """
+    if is_knowledge_ready():
+        return True
+    if timeout <= 0:
+        return False
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        await asyncio.sleep(
+            min(READINESS_POLL_SECONDS, max(0.0, deadline - time.monotonic()))
+        )
+        if is_knowledge_ready():
+            return True
+    return False
+
+
+def _not_ready_exception() -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail="Vector store is still loading. Please retry in a few seconds.",
+        headers={"Retry-After": str(READINESS_RETRY_AFTER_SECONDS)},
+    )
+
+
 def _resolve_chat_params(chat_request: ChatRequest) -> dict:
     """
     Shared preprocessing for both /chat and /chat/stream. Validates
@@ -211,10 +325,7 @@ def _resolve_chat_params(chat_request: ChatRequest) -> dict:
     synchronous errors (vector store not ready, empty message).
     """
     if not is_knowledge_ready():
-        raise HTTPException(
-            status_code=503,
-            detail="Vector store is still loading. Please retry in a few seconds.",
-        )
+        raise _not_ready_exception()
 
     message = chat_request.message.strip()
     if not message:
@@ -332,6 +443,12 @@ async def _chat_stream_response(
       5. Successful non-fallback stream → write into the LLM cache so
          subsequent identical requests short-circuit.
     """
+    # Give a freshly cold-started instance a short, bounded window to finish
+    # ingesting before we answer 503. If the flag is already set this is a
+    # no-op (no await, no delay).
+    if not is_knowledge_ready():
+        await _wait_for_knowledge_ready(READINESS_WAIT_SECONDS)
+
     params = _resolve_chat_params(chat_request)
     message = params["message"]
     history = params["history"]
@@ -443,6 +560,28 @@ async def _chat_stream_response(
 
         # Order: primary first, then the other as fallback.
         order = (primary, "gemini" if primary == "groq" else "groq")
+
+        # ⚠️ KNOWN LIMITATION — deliberately NOT refactored in this patch
+        # (see docs/DEPLOYMENT.md §11 row 16 and §11a, "make provider
+        # streaming non-blocking").
+        #
+        # `_gemini_stream`/`_groq_stream` return *synchronous* iterators, and
+        # `for chunk in stream` below advances them on the event loop. While
+        # the provider is slow to produce the next chunk, the loop is blocked:
+        # a stalled provider cannot be preempted by any server-side timeout,
+        # and the SSE keepalive (`_maybe_keepalive`) cannot fire. Today the
+        # only bound is the frontend per-attempt deadline in `chatClient.js`.
+        #
+        # Follow-up plan (separate change — a half-done version would risk the
+        # streaming path):
+        #   1. Run each sync provider iterator in a worker thread, pushing
+        #      chunks into an `asyncio.Queue` via `loop.call_soon_threadsafe`.
+        #   2. In `_drive`, `await asyncio.wait_for(queue.get(), timeout=...)`
+        #      and treat a timeout as a provider failure (fall back / abort).
+        #   3. On client disconnect or timeout, signal the worker to stop and
+        #      drain the queue so the provider connection is released.
+        #   4. Prove it with a blocking fake-iterator test asserting the loop
+        #      stays responsive and the keepalive fires during the stall.
 
         async def _drive(provider: str):
             """

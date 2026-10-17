@@ -244,3 +244,152 @@ def test_cost_of_imported_chat_router_is_stub_safe():
     """Sanity: module-level singletons built with the stubbed SDK clients."""
     assert isinstance(chat.gemini_client, _Client)
     assert isinstance(chat.groq_client, _Groq)
+
+
+# ---------------------------------------------------------------------------
+# Cold-start readiness: bounded wait + Retry-After
+#
+# A Render free-tier instance answers /health seconds before ChromaDB finishes
+# ingesting. Instead of 503-ing the first chat, /chat/stream waits a short,
+# capped window; only then does it surface a 503 (with Retry-After) so the
+# client can back off. These pin both halves of that contract.
+# ---------------------------------------------------------------------------
+def test_not_ready_raises_503_with_retry_after(monkeypatch):
+    monkeypatch.setattr(chat, "is_knowledge_ready", lambda: False)
+
+    chat_request = chat.ChatRequest(message="hello", sessionId="s1", history=[])
+    with pytest.raises(chat.HTTPException) as excinfo:
+        chat._resolve_chat_params(chat_request)
+
+    assert excinfo.value.status_code == 503
+    assert excinfo.value.headers["Retry-After"] == str(
+        chat.READINESS_RETRY_AFTER_SECONDS
+    )
+
+
+def test_wait_for_knowledge_ready_is_noop_when_already_ready(monkeypatch):
+    monkeypatch.setattr(chat, "is_knowledge_ready", lambda: True)
+    assert asyncio.run(chat._wait_for_knowledge_ready(5.0)) is True
+
+
+def test_wait_for_knowledge_ready_returns_true_after_polling(monkeypatch):
+    calls = {"n": 0}
+
+    def fake_ready() -> bool:
+        calls["n"] += 1
+        return calls["n"] >= 3
+
+    monkeypatch.setattr(chat, "is_knowledge_ready", fake_ready)
+    monkeypatch.setattr(chat, "READINESS_POLL_SECONDS", 0.0)
+
+    assert asyncio.run(chat._wait_for_knowledge_ready(1.0)) is True
+    assert calls["n"] >= 2
+
+
+def test_wait_for_knowledge_ready_gives_up_within_timeout(monkeypatch):
+    monkeypatch.setattr(chat, "is_knowledge_ready", lambda: False)
+    monkeypatch.setattr(chat, "READINESS_POLL_SECONDS", 0.0)
+
+    assert asyncio.run(chat._wait_for_knowledge_ready(0.05)) is False
+
+
+def test_stream_waits_for_store_then_streams(monkeypatch):
+    _patch_protocol_environment(
+        monkeypatch, groq_texts=("Hello", " world"), gemini_texts=()
+    )
+
+    calls = {"n": 0}
+
+    def fake_ready() -> bool:
+        calls["n"] += 1
+        return calls["n"] > 1
+
+    # Override the always-ready stub so readiness flips only after a poll.
+    monkeypatch.setattr(chat, "is_knowledge_ready", fake_ready)
+    monkeypatch.setattr(chat, "READINESS_POLL_SECONDS", 0.0)
+
+    request = _FakeRequest()
+    chat_request = chat.ChatRequest(message="hello", sessionId="s1", history=[])
+    response = asyncio.run(
+        chat._chat_stream_response(request, chat_request, log_tag="test")
+    )
+
+    events = _collect_events(response)
+    assert [event for event, _ in events] == [
+        "meta",
+        "sources",
+        "token",
+        "token",
+        "done",
+    ]
+
+
+def test_env_bounded_int_falls_back_and_clamps(monkeypatch):
+    """A malformed or out-of-range Retry-After config must not crash import."""
+    name = "CHAT_READINESS_RETRY_AFTER"
+    bounds = {"default": 3, "minimum": 1, "maximum": 60}
+
+    monkeypatch.delenv(name, raising=False)
+    assert chat._env_bounded_int(name, **bounds) == 3
+
+    monkeypatch.setenv(name, "abc")
+    assert chat._env_bounded_int(name, **bounds) == 3
+
+    monkeypatch.setenv(name, "-5")
+    assert chat._env_bounded_int(name, **bounds) == 1
+
+    monkeypatch.setenv(name, "100000")
+    assert chat._env_bounded_int(name, **bounds) == 60
+
+    monkeypatch.setenv(name, "7")
+    assert chat._env_bounded_int(name, **bounds) == 7
+
+    # The value actually in force is always inside the documented bounds.
+    assert 1 <= chat.READINESS_RETRY_AFTER_SECONDS <= 60
+
+
+def test_env_bounded_float_falls_back_and_clamps(monkeypatch):
+    """A malformed or out-of-range readiness wait must not crash import."""
+    name = "CHAT_READINESS_WAIT"
+    bounds = {"default": 8.0, "minimum": 0.0, "maximum": 20.0}
+
+    monkeypatch.delenv(name, raising=False)
+    assert chat._env_bounded_float(name, **bounds) == 8.0
+
+    monkeypatch.setenv(name, "abc")
+    assert chat._env_bounded_float(name, **bounds) == 8.0
+
+    # `float("nan")`/`float("inf")` parse but are not usable tunables.
+    monkeypatch.setenv(name, "nan")
+    assert chat._env_bounded_float(name, **bounds) == 8.0
+
+    monkeypatch.setenv(name, "inf")
+    assert chat._env_bounded_float(name, **bounds) == 8.0
+
+    monkeypatch.setenv(name, "-3.5")
+    assert chat._env_bounded_float(name, **bounds) == 0.0
+
+    monkeypatch.setenv(name, "1e9")
+    assert chat._env_bounded_float(name, **bounds) == 20.0
+
+    monkeypatch.setenv(name, "12.5")
+    assert chat._env_bounded_float(name, **bounds) == 12.5
+
+    # The value actually in force is always inside the documented bounds.
+    assert 0.0 <= chat.READINESS_WAIT_SECONDS <= 20.0
+
+
+def test_stream_503_with_retry_after_when_store_never_ready(monkeypatch):
+    _patch_protocol_environment(monkeypatch, groq_texts=("Hello",), gemini_texts=())
+    monkeypatch.setattr(chat, "is_knowledge_ready", lambda: False)
+    monkeypatch.setattr(chat, "READINESS_WAIT_SECONDS", 0.0)
+
+    request = _FakeRequest()
+    chat_request = chat.ChatRequest(message="hello", sessionId="s1", history=[])
+    with pytest.raises(chat.HTTPException) as excinfo:
+        asyncio.run(chat._chat_stream_response(request, chat_request, log_tag="test"))
+
+    assert excinfo.value.status_code == 503
+    assert excinfo.value.headers["Retry-After"] == str(
+        chat.READINESS_RETRY_AFTER_SECONDS
+    )

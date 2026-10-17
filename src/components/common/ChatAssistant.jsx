@@ -16,6 +16,8 @@ import {
     FaBookOpen,
 } from "react-icons/fa";
 import remarkGfm from "remark-gfm";
+
+import { describeChatError, streamChat } from "../../lib/chatClient";
 // 🚀 Lazy-load markdown — react-markdown + micromark together are ~80 KB
 // (remark-gfm is small and treeshakes well, so it's fine to keep sync).
 // We only pay this cost the first time the user opens the chat AND an
@@ -33,8 +35,19 @@ const MAX_CACHE_SIZE = 50;
 // higher so the backend has full context to choose what to keep.
 const MAX_HISTORY_TURNS = 6;
 
-// Hard request timeout (ms) — Render free tier cold-starts can take 25 s.
-const REQUEST_TIMEOUT_MS = 25000;
+// Retry/timeout policy lives in `src/lib/chatClient.js` (bounded attempts,
+// exponential backoff, a hard per-send budget). The old single 25 s attempt
+// could not survive a Render free-tier cold start (~25-28 s of Python import
+// before the first byte), so a transient 503 / timeout used to surface as a
+// permanent "Offline". The client now retries transient failures within a
+// strict budget and reports a temporary "waking up" state in between.
+const RETRY_NOTICE_TEXT = "Waking up the AI service…";
+// Inline (not a stylesheet) so the frozen pre-migration CSS under
+// `src/styles/**` stays byte-identical — tests/tripwires.test.mjs enforces it.
+const ERROR_BUBBLE_STYLE = {
+    borderColor: "rgba(239, 68, 68, 0.45)",
+    background: "rgba(239, 68, 68, 0.08)",
+};
 
 // Session persistence keys.
 const CHAT_STORAGE_KEY = "portfolio-chat-session";
@@ -173,10 +186,14 @@ const CodeBlock = ({ inline, className, children, ...props }) => {
 // ==========================================
 // 🤖 MAIN CHAT ASSISTANT COMPONENT
 // ==========================================
-function ChatAssistant() {
+// `chatTransport` is an optional test seam: it can inject `fetchImpl`,
+// `sleep` and `config` into `streamChat` so retries can be exercised
+// deterministically. Production renders `<ChatAssistant />` with no props.
+function ChatAssistant({ chatTransport } = {}) {
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [retryNotice, setRetryNotice] = useState("");
     const [activeModelName, setActiveModelName] = useState("AI Auto-Failover");
     const [messages, setMessages] = useState(loadInitialMessages);
     const [copiedId, setCopiedId] = useState("");
@@ -198,6 +215,7 @@ function ChatAssistant() {
     const chatCache = useRef(new Map());
     const abortControllerRef = useRef(null);
     const stopRequestedRef = useRef(false);
+    const unmountedRef = useRef(false);
     const prevOpenRef = useRef(false);
     const copyTimeoutRef = useRef(null);
     // Mirror messages into a ref so handleSend sees the LATEST state,
@@ -302,8 +320,19 @@ function ChatAssistant() {
         };
     }, []);
 
-    // Clean up the copy-toast timeout on unmount.
-    useEffect(() => () => clearTimeout(copyTimeoutRef.current), []);
+    // Clean up the copy-toast timeout on unmount, and abort any in-flight
+    // chat request so a backoff/stream cannot resolve after unmount. The ref
+    // is reset during setup so React StrictMode's dev-only
+    // setup → cleanup → setup sequence cannot leave it permanently `true`
+    // (which would disable every state update for the rest of the session).
+    useEffect(() => {
+        unmountedRef.current = false;
+        return () => {
+            unmountedRef.current = true;
+            abortControllerRef.current?.abort();
+            clearTimeout(copyTimeoutRef.current);
+        };
+    }, []);
 
     const getStatusColor = () => {
         if (activeModelName.toLowerCase().includes('gemini')) return 'var(--status-gemini, #10b981)';
@@ -417,7 +446,120 @@ function ChatAssistant() {
         setIsOpen(!isOpen);
     };
 
-    // 🚀 Streaming fetch with AbortController timeout + non-streaming fallback
+    // 🚀 Run one chat request into a reserved AI bubble. Retry/timeout policy
+    // lives in `streamChat` (src/lib/chatClient.js); this only maps SSE events
+    // onto state. It updates the bubble in place and never appends messages,
+    // so automatic retries cannot duplicate a user or assistant turn.
+    const runChatRequest = useCallback(async ({ userText, history, aiMessageId, normalizedQuery }) => {
+        stopRequestedRef.current = false;
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        setIsLoading(true);
+        setRetryNotice("");
+
+        let finalText = "";
+        let currentSources = [];
+        let generatedBy = "AI Auto-Failover";
+
+        const patchAiMessage = (patch) => {
+            if (unmountedRef.current) return;
+            setMessages(prev =>
+                prev.map(m => (m.id === aiMessageId ? { ...m, ...patch } : m))
+            );
+        };
+
+        const onEvent = (payload) => {
+            if (payload.event === "sources" && Array.isArray(payload.data)) {
+                // 📚 RAG sources — attach to the message so the UI can render
+                // source chips under the answer.
+                currentSources = payload.data;
+                patchAiMessage({ sources: currentSources });
+            } else if (payload.event === "token" && payload.data) {
+                finalText += payload.data;
+                patchAiMessage({
+                    text: finalText,
+                    sources: currentSources.length ? currentSources : undefined,
+                });
+            } else if (payload.event === "done" && payload.data) {
+                generatedBy = payload.data;
+            }
+            // 'meta' event: reserved for future UI hooks.
+        };
+
+        const cacheFinalText = () => {
+            if (!finalText.trim()) return;
+            if (chatCache.current.size >= MAX_CACHE_SIZE) {
+                const firstKey = chatCache.current.keys().next().value;
+                chatCache.current.delete(firstKey);
+            }
+            chatCache.current.set(normalizedQuery, finalText);
+        };
+
+        // 🔑 No client-side API key header. In production the shared key is
+        // injected by Vercel's edge middleware (middleware.js) before the
+        // rewrite forwards to the Render backend. For local dev,
+        // VITE_BACKEND_URL points straight at FastAPI where ENV=development
+        // skips auth.
+        try {
+            await streamChat({
+                baseUrl: CHAT_BASE_URL,
+                body: { message: userText, history },
+                signal: controller.signal,
+                onEvent,
+                onRetry: () => {
+                    if (unmountedRef.current || stopRequestedRef.current) return;
+                    // Temporary state only — a single transient failure must
+                    // never leave the widget permanently "Offline".
+                    setRetryNotice(RETRY_NOTICE_TEXT);
+                },
+                fetchImpl: chatTransport?.fetchImpl,
+                sleep: chatTransport?.sleep,
+                config: chatTransport?.config,
+            });
+
+            if (unmountedRef.current) return;
+            setRetryNotice("");
+            cacheFinalText();
+            setActiveModelName(generatedBy);
+        } catch (error) {
+            if (unmountedRef.current) return;
+            setRetryNotice("");
+
+            // User cancelled (Stop) — keep whatever was streamed so far and
+            // do NOT show an error.
+            if (stopRequestedRef.current || error?.aborted) {
+                patchAiMessage({
+                    sources: currentSources.length ? currentSources : undefined,
+                });
+                return;
+            }
+
+            // Diagnostic detail stays in the console; the bubble gets a
+            // sanitized, actionable sentence.
+            console.warn("[Chat] request failed after retries:", error);
+
+            if (finalText.trim()) {
+                // Partial answer interrupted — keep it, flag it, don't lie.
+                patchAiMessage({
+                    text: finalText,
+                    sources: currentSources.length ? currentSources : undefined,
+                    isError: true,
+                    interrupted: true,
+                });
+            } else {
+                setActiveModelName("Offline");
+                patchAiMessage({ text: describeChatError(error), isError: true });
+            }
+        } finally {
+            if (!unmountedRef.current) {
+                abortControllerRef.current = null;
+                setIsLoading(false);
+            }
+        }
+    }, [chatTransport]);
+
+    // 🚀 Send a new message: append the user turn + an AI placeholder, then
+    // stream the answer into that placeholder.
     const handleSend = useCallback(async (textOverride) => {
         const userMessageText = typeof textOverride === 'string' ? textOverride : input;
         if (!userMessageText.trim() || isLoading) return;
@@ -429,8 +571,6 @@ function ChatAssistant() {
         // current question is sent in `message`, the prior conversation
         // is what goes in `history`.
         const history = buildHistory(messagesRef.current);
-
-        stopRequestedRef.current = false;
 
         setMessages(prev => [...prev, userMessage]);
         messagesRef.current = [...messagesRef.current, userMessage];
@@ -450,186 +590,54 @@ function ChatAssistant() {
             return;
         }
 
-        // Reserve a placeholder AI message we can update token-by-token
+        // Reserve a placeholder AI message we can update token-by-token.
         const aiMessageId = generateId();
         const aiPlaceholder = { id: aiMessageId, role: "ai", text: "" };
         setMessages(prev => [...prev, aiPlaceholder]);
         messagesRef.current = [...messagesRef.current, aiPlaceholder];
 
-        // AbortController with hard timeout
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-        const timeoutId = setTimeout(
-            () => controller.abort(),
-            REQUEST_TIMEOUT_MS
-        );
-
-        // 🔑 No client-side API key header. In production the shared key is
-        // injected by Vercel's edge middleware (middleware.js) before the
-        // rewrite forwards to the Render backend. For local dev, VITE_BACKEND_URL
-        // points straight at FastAPI where ENV=development skips auth.
-        const authHeaders = {};
-
-        // Common request body — used by both streaming and fallback paths.
-        const requestBody = {
-            message: userMessageText.trim(),
+        await runChatRequest({
+            userText: userMessageText.trim(),
             history,
-        };
+            aiMessageId,
+            normalizedQuery,
+        });
+    }, [input, isLoading, runChatRequest]);
 
-        let streamedOk = false;
-        let finalText = "";
-        let currentSources = [];
-        let generatedBy = "AI Auto-Failover";
+    // 🔁 Manual retry for a failed answer — reuses the same AI bubble and its
+    // originating user turn, so nothing is appended twice.
+    const handleRetry = useCallback((aiMessageId) => {
+        if (isLoading) return;
+        const current = messagesRef.current;
+        const aiIndex = current.findIndex((m) => m.id === aiMessageId);
+        if (aiIndex < 1) return;
 
-        // Patch the streaming AI message in state.
-        const patchAiMessage = (patch) => {
-            setMessages(prev =>
-                prev.map(m =>
-                    m.id === aiMessageId ? { ...m, ...patch } : m
-                )
-            );
-        };
-
-        // Shared SSE consumer — used by both /chat/stream and the /chat
-        // fallback path (since /chat now streams SSE too).
-        const consumeSse = async streamResponse => {
-            const reader = streamResponse.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-            let buffer = "";
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                let sepIdx;
-                while ((sepIdx = buffer.indexOf("\n\n")) !== -1) {
-                    const rawEvent = buffer.slice(0, sepIdx);
-                    buffer = buffer.slice(sepIdx + 2);
-                    const line = rawEvent
-                        .split("\n")
-                        .find(l => l.startsWith("data:"));
-                    if (!line) continue;
-                    try {
-                        const payload = JSON.parse(line.slice(5).trim());
-                        if (payload.event === "sources" && Array.isArray(payload.data)) {
-                            // 📚 RAG sources — attach to the message so the
-                            // UI can render source chips under the answer.
-                            currentSources = payload.data;
-                            patchAiMessage({ sources: currentSources });
-                        } else if (payload.event === "token" && payload.data) {
-                            finalText += payload.data;
-                            streamedOk = true;
-                            patchAiMessage({
-                                text: finalText,
-                                sources: currentSources.length ? currentSources : undefined,
-                            });
-                        } else if (payload.event === "done") {
-                            generatedBy = payload.data || generatedBy;
-                            patchAiMessage({
-                                sources: currentSources.length ? currentSources : undefined,
-                            });
-                        } else if (payload.event === "error") {
-                            throw new Error(payload.data || "Stream error");
-                        }
-                        // 'meta' event: reserved for future UI hooks.
-                    } catch {
-                        // ignore malformed line
-                    }
-                }
-            }
-        };
-
-        try {
-            // 🌊 PRIMARY: streaming SSE
-            const streamResponse = await fetch(`${CHAT_BASE_URL}/stream`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Accept: "text/event-stream",
-                    ...authHeaders,
-                },
-                body: JSON.stringify(requestBody),
-                signal: controller.signal,
-            });
-
-            if (!streamResponse.ok) {
-                throw new Error(`Stream HTTP ${streamResponse.status}`);
-            }
-
-            await consumeSse(streamResponse);
-        } catch (streamErr) {
-            // If the user pressed Stop, keep whatever was streamed so far —
-            // do NOT fall back or mark as an error.
-            if (stopRequestedRef.current) {
-                patchAiMessage({
-                    sources: currentSources.length ? currentSources : undefined,
-                });
-                return;
-            }
-
-            // If SSE failed and we haven't streamed anything yet, fall back.
-            if (!streamedOk) {
-                console.warn(
-                    "[Chat] SSE failed, falling back to /chat:",
-                    streamErr
-                );
-                try {
-                    // /chat now also streams SSE (same shape), so reuse the
-                    // SSE consumer instead of parsing JSON. This also avoids
-                    // thread-blocking the request on a stuck LLM call.
-                    const fallbackResponse = await fetch(`${CHAT_BASE_URL}`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Accept: "text/event-stream",
-                            ...authHeaders,
-                        },
-                        body: JSON.stringify(requestBody),
-                        signal: controller.signal,
-                    });
-
-                    if (!fallbackResponse.ok) {
-                        throw new Error(`HTTP ${fallbackResponse.status}`, {
-                            cause: streamErr,
-                        });
-                    }
-
-                    await consumeSse(fallbackResponse);
-                } catch (fallbackErr) {
-                    console.error("[Chat] Fallback also failed:", fallbackErr);
-
-                    if (stopRequestedRef.current) {
-                        patchAiMessage({
-                            text: finalText || undefined,
-                            sources: currentSources.length ? currentSources : undefined,
-                        });
-                    } else {
-                        setActiveModelName("Offline");
-                        patchAiMessage({
-                            text:
-                                controller.signal.aborted
-                                    ? "⏱️ The AI took too long to respond. Please try again."
-                                    : "The AI service is currently offline or experiencing network issues. Please try again.",
-                            isError: true,
-                        });
-                    }
-                }
-            }
-        } finally {
-            clearTimeout(timeoutId);
-            abortControllerRef.current = null;
-            setIsLoading(false);
-
-            // Cache the final text
-            if (finalText && finalText.trim()) {
-                if (chatCache.current.size >= MAX_CACHE_SIZE) {
-                    const firstKey = chatCache.current.keys().next().value;
-                    chatCache.current.delete(firstKey);
-                }
-                chatCache.current.set(normalizedQuery, finalText);
-                setActiveModelName(generatedBy);
+        let userIndex = -1;
+        for (let i = aiIndex - 1; i >= 0; i -= 1) {
+            if (current[i].role === "user" && current[i].text) {
+                userIndex = i;
+                break;
             }
         }
-    }, [input, isLoading]);
+        if (userIndex === -1) return;
+
+        const userText = current[userIndex].text;
+        const history = buildHistory(current.slice(0, userIndex));
+
+        // Reset the failed bubble in place before retrying.
+        setMessages(prev => prev.map(m =>
+            m.id === aiMessageId
+                ? { ...m, text: "", isError: false, interrupted: false, sources: undefined }
+                : m
+        ));
+
+        runChatRequest({
+            userText: userText.trim(),
+            history,
+            aiMessageId,
+            normalizedQuery: userText.trim().toLowerCase(),
+        });
+    }, [isLoading, runChatRequest]);
 
     const onSubmit = (e) => {
         e.preventDefault();
@@ -723,7 +731,8 @@ function ChatAssistant() {
                                     return (
                                         <motion.div 
                                             key={msg.id} 
-                                            className={`chat-bubble ${msg.role === "ai" ? "ai-msg" : "user-msg"}`}
+                                            className={`chat-bubble ${msg.role === "ai" ? "ai-msg" : "user-msg"}${msg.isError ? " error-msg" : ""}`}
+                                            style={msg.isError ? ERROR_BUBBLE_STYLE : undefined}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.3 }}
@@ -771,43 +780,60 @@ function ChatAssistant() {
                                             {/* 👍 PER-MESSAGE ACTIONS */}
                                             {msg.role === "ai" && msg.text && !isStreamingMsg && (
                                                 <div className="chat-msg-actions">
-                                                    <button
-                                                        type="button"
-                                                        className={`chat-action ${copiedId === msg.id ? "active" : ""}`}
-                                                        onClick={() => handleCopy(msg.id, msg.text)}
-                                                        aria-label="Copy response"
-                                                        title="Copy response"
-                                                    >
-                                                        {copiedId === msg.id ? <FaCheck /> : <FaCopy />}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className={`chat-action ${feedback[msg.id] === "up" ? "active" : ""}`}
-                                                        onClick={() => toggleFeedback(msg.id, "up")}
-                                                        aria-label="Good response"
-                                                        title="Helpful"
-                                                    >
-                                                        <FaThumbsUp />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className={`chat-action ${feedback[msg.id] === "down" ? "active" : ""}`}
-                                                        onClick={() => toggleFeedback(msg.id, "down")}
-                                                        aria-label="Bad response"
-                                                        title="Not helpful"
-                                                    >
-                                                        <FaThumbsDown />
-                                                    </button>
-                                                    {prevUserText && (
-                                                        <button
-                                                            type="button"
-                                                            className="chat-action"
-                                                            onClick={() => handleSend(prevUserText)}
-                                                            aria-label="Regenerate response"
-                                                            title="Regenerate"
-                                                        >
-                                                            <FaRedo />
-                                                        </button>
+                                                    {msg.isError ? (
+                                                        prevUserText && (
+                                                            <button
+                                                                type="button"
+                                                                className="chat-action"
+                                                                onClick={() => handleRetry(msg.id)}
+                                                                disabled={isLoading}
+                                                                aria-label="Try again"
+                                                                title="Try again"
+                                                            >
+                                                                <FaRedo />
+                                                            </button>
+                                                        )
+                                                    ) : (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                className={`chat-action ${copiedId === msg.id ? "active" : ""}`}
+                                                                onClick={() => handleCopy(msg.id, msg.text)}
+                                                                aria-label="Copy response"
+                                                                title="Copy response"
+                                                            >
+                                                                {copiedId === msg.id ? <FaCheck /> : <FaCopy />}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className={`chat-action ${feedback[msg.id] === "up" ? "active" : ""}`}
+                                                                onClick={() => toggleFeedback(msg.id, "up")}
+                                                                aria-label="Good response"
+                                                                title="Helpful"
+                                                            >
+                                                                <FaThumbsUp />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className={`chat-action ${feedback[msg.id] === "down" ? "active" : ""}`}
+                                                                onClick={() => toggleFeedback(msg.id, "down")}
+                                                                aria-label="Bad response"
+                                                                title="Not helpful"
+                                                            >
+                                                                <FaThumbsDown />
+                                                            </button>
+                                                            {prevUserText && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="chat-action"
+                                                                    onClick={() => handleSend(prevUserText)}
+                                                                    aria-label="Regenerate response"
+                                                                    title="Regenerate response"
+                                                                >
+                                                                    <FaRedo />
+                                                                </button>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
                                             )}
@@ -844,9 +870,11 @@ function ChatAssistant() {
                                 <div className="chat-stream-status">
                                     <span className="chat-searching-hint">
                                         <FaSpinner className="chat-spinner" aria-hidden="true" />
-                                        {isStreamingEmpty
-                                            ? "Searching my knowledge base…"
-                                            : "Generating response…"}
+                                        {retryNotice
+                                            ? retryNotice
+                                            : isStreamingEmpty
+                                                ? "Searching my knowledge base…"
+                                                : "Generating response…"}
                                     </span>
                                     <button
                                         type="button"

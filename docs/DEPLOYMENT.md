@@ -965,6 +965,31 @@ Honest accounting. These are real gaps, not oversights to be quietly ignored.
 | 13 | Free services have no Shell, no one-off jobs, and no `preDeployCommand` (paid-only) | First admin/content must be created over HTTPS; migrations run in the build | This runbook §6.5–§6.6 |
 | 14 | 750 free instance-hours/month per workspace | Adding more always-on free services can exhaust the quota and suspend them | Two free web services (backend + AI) fit; `ai_service` is separate (§6.4) |
 | 15 | Bootstrap endpoint is enabled only while `ADMIN_BOOTSTRAP_TOKEN` is set | Forgetting to remove it leaves a network-reachable admin-creation path | Remove it after bootstrap; the endpoint then `404`s and `409`s if an admin already exists (§6.6) |
+| 16 | Provider stream iterators block the event loop (`ai_service/routes/chat.py`) | A stalled Gemini/Groq response cannot be preempted server-side, and the SSE keepalive pauses until the first chunk | Follow-up plan in §11a below |
+
+---
+
+# 11a. Follow-up: make provider streaming non-blocking
+
+`ai_service/routes/chat.py` drives the Gemini/Groq *synchronous* stream
+iterators on the event loop (`for chunk in stream`). While the provider is slow
+to emit the next chunk, the loop is blocked, so the SSE keepalive
+(`_maybe_keepalive`) cannot fire and no server-side timeout can preempt the
+stall. Today the only bound is the frontend per-attempt deadline in
+`src/lib/chatClient.js`; the readiness wait (`READINESS_WAIT_SECONDS`) already
+uses non-blocking `asyncio.sleep`.
+
+Planned fix (a separate change — a half-done version would risk the streaming
+path, so it is deliberately out of scope for the reliability patch):
+
+1. Run each provider iterator in a worker thread, pushing chunks into an
+   `asyncio.Queue` via `loop.call_soon_threadsafe`.
+2. In `_drive`, `await asyncio.wait_for(queue.get(), timeout=...)`; treat a
+   timeout as a provider failure and fall back / abort.
+3. On client disconnect or timeout, signal the worker to stop and drain the
+   queue so the provider connection is released.
+4. Add a test with a blocking fake iterator proving the event loop stays
+   responsive and the keepalive still fires during a stall.
 
 ---
 
