@@ -27,9 +27,9 @@
 //   * there is NO fallback to `src/data/*.js`. The only way a static
 //     build ships is from a validated `GET /api/content` response.
 //
-// Secrets are a non-goal: this module reads only `CONTENT_API_URL`
-// and `CONTENT_API_TIMEOUT` (docs/DEPLOYMENT.md §3). Nothing here
-// ever knows `DATABASE_URL`, `ADMIN_TOKEN` or an API key.
+// Secrets are a non-goal: this module reads only `CONTENT_API_URL`,
+// `CONTENT_API_TIMEOUT` and `CONTENT_API_ATTEMPTS` (docs/DEPLOYMENT.md §3).
+// Nothing here ever knows `DATABASE_URL`, `ADMIN_TOKEN` or an API key.
 // =========================================================
 
 // The endpoint CONTENT_API_URL must point AT (verbatim, including the
@@ -39,6 +39,19 @@ export const DEFAULT_CONTENT_API_URL =
     "http://127.0.0.1:8001/api/content";
 
 export const DEFAULT_CONTENT_TIMEOUT_SECONDS = 10;
+
+// Bounded retries. The production backend is a Render free-tier service that
+// spins down when idle; the first request after a quiet period triggers a cold
+// start that can outlast a single fetch timeout (measured ~33 s in production —
+// the build aborted at 10 s while the instance only finished booting at 33 s).
+// A single attempt therefore fails intermittently, depending only on whether the
+// backend happened to be warm. Retrying with backoff lets a later attempt land
+// once the instance has finished booting, while the bounded attempt count keeps a
+// genuinely unreachable endpoint failing closed in a predictable time.
+export const DEFAULT_CONTENT_ATTEMPTS = 4;
+const MAX_CONTENT_ATTEMPTS = 10;
+const CONTENT_RETRY_BACKOFF_MS = 2000;
+const CONTENT_RETRY_MAX_BACKOFF_MS = 10000;
 
 const TERMINAL_SENTENCE =
     "The public build cannot continue because content is unavailable.";
@@ -76,6 +89,19 @@ export function contentTimeoutSeconds(env = process.env) {
         : DEFAULT_CONTENT_TIMEOUT_SECONDS;
 }
 
+/**
+ * Bounded number of fetch attempts (`CONTENT_API_ATTEMPTS`, docs/DEPLOYMENT.md
+ * §1.4). Present so the retry budget can be tuned per environment; values that
+ * are missing, non-integer or < 1 fall back to the default, and any value is
+ * capped at the hard maximum so a misconfiguration cannot loop forever.
+ */
+export function contentAttempts(env = process.env) {
+    const parsed = Number(env?.CONTENT_API_ATTEMPTS);
+    return Number.isInteger(parsed) && parsed >= 1
+        ? Math.min(parsed, MAX_CONTENT_ATTEMPTS)
+        : DEFAULT_CONTENT_ATTEMPTS;
+}
+
 
 
 // =========================================================
@@ -89,12 +115,16 @@ export function contentTimeoutSeconds(env = process.env) {
  * Structured fields let tests assert on the parts.
  */
 export class ContentBuildError extends Error {
-    constructor(message, { url, status = null, detail = null } = {}) {
+    constructor(message, { url, status = null, detail = null, retryable = false } = {}) {
         super(message);
         this.name = "ContentBuildError";
         this.url = url;
         this.status = status;
         this.detail = detail;
+        // Transient (timeout / network / HTTP 5xx) failures may be retried;
+        // deterministic ones (other 4xx, invalid JSON) may not. `ContentValidationError`
+        // is never retryable: a bad payload will not become good on a second read.
+        this.retryable = retryable;
     }
 }
 
@@ -171,22 +201,34 @@ export function formatValidationFailure(url, problems) {
 // =========================================================
 
 /**
- * GET the content endpoint with a bounded timeout and return the
- * validated payload.
+ * GET the content endpoint with a bounded timeout and bounded retries, and
+ * return the validated payload.
+ *
+ * The fetch is retried (default: `CONTENT_API_ATTEMPTS`, backoff doubling from
+ * 2 s up to 10 s) only for *transient* failures — an aborted/timed-out attempt,
+ * a rejected connection, or an HTTP status in `isRetryableStatus`. A 4xx, an
+ * invalid-JSON body, or a payload that fails validation is deterministic and
+ * fails the build immediately: retrying it would only delay an inevitable
+ * failure and could mask a contract drift. After the attempt budget is spent the
+ * last error is rethrown, so the build still fails closed — it never falls back
+ * to a stale snapshot or an empty listing.
  *
  * Throws:
  *   ContentBuildError     transport, HTTP status, or invalid JSON
  *   ContentValidationError the payload violates the API contract
  *
- * `fetchImpl` defaults to the global fetch and is injectable for
- * tests. The response body is the exact canonical JSON the backend
- * signed (`backend/app/routes/content.py`), so it is consumed as text
- * and parsed here rather than via `res.json()` — identical parsing,
- * but the text is also what a tests/compare tooling can hash.
+ * `fetchImpl` defaults to the global fetch and is injectable for tests.
+ * `retryBackoffMs` is the exponential base delay and is injectable so tests can
+ * run without real waiting. The response body is the exact canonical JSON the
+ * backend signed (`backend/app/routes/content.py`), so it is consumed as text
+ * and parsed here rather than via `res.json()` — identical parsing, but the text
+ * is also what tests/compare tooling can hash.
  */
 export async function fetchContent({
     url = resolveContentUrl(),
     timeoutSeconds = contentTimeoutSeconds(),
+    attempts = contentAttempts(),
+    retryBackoffMs: backoffBaseMs = CONTENT_RETRY_BACKOFF_MS,
     fetchImpl = globalThis.fetch,
 } = {}) {
     if (typeof fetchImpl !== "function") {
@@ -203,6 +245,38 @@ export async function fetchContent({
     }
 
     const timeoutMs = Math.max(1, Math.round(timeoutSeconds * 1000));
+    const maxAttempts = clampAttempts(attempts);
+
+    let lastError;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+            return await fetchContentOnce(url, timeoutMs, fetchImpl);
+        } catch (error) {
+            lastError = error;
+            const canRetry =
+                error instanceof ContentBuildError && error.retryable === true;
+            if (!canRetry || attempt === maxAttempts) {
+                throw error;
+            }
+            const delayMs = retryDelayMs(attempt, backoffBaseMs);
+            console.warn(
+                `[content] attempt ${attempt}/${maxAttempts} failed: ` +
+                `${summarizeError(error)}; retrying in ${delayMs}ms`
+            );
+            await sleep(delayMs);
+        }
+    }
+
+    // Unreachable: the loop either returns or throws, but keep the rethrow so a
+    // future edit cannot silently drop the error.
+    throw lastError;
+}
+
+/**
+ * A single bounded attempt. Throws a `ContentBuildError` tagged with
+ * `retryable` (or a `ContentValidationError`, which is never retryable).
+ */
+async function fetchContentOnce(url, timeoutMs, fetchImpl) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -217,9 +291,13 @@ export async function fetchContent({
         if (controller.signal.aborted) {
             throw new ContentBuildError(formatTimeoutFailure(url, timeoutMs), {
                 url,
+                retryable: true,
             });
         }
-        throw new ContentBuildError(formatNetworkFailure(url, cause), { url });
+        throw new ContentBuildError(formatNetworkFailure(url, cause), {
+            url,
+            retryable: true,
+        });
     } finally {
         clearTimeout(timer);
     }
@@ -228,7 +306,12 @@ export async function fetchContent({
         const detail = await readResponseDetail(response);
         throw new ContentBuildError(
             formatHttpFailure(url, response.status, detail),
-            { url, status: response.status, detail }
+            {
+                url,
+                status: response.status,
+                detail,
+                retryable: isRetryableStatus(response.status),
+            }
         );
     }
 
@@ -240,10 +323,49 @@ export async function fetchContent({
     } catch (cause) {
         throw new ContentBuildError(formatInvalidJsonFailure(url, cause.message), {
             url,
+            retryable: false,
         });
     }
 
     return validateContent(payload, url);
+}
+
+// HTTP statuses worth a second attempt: request/rate-limit (408, 425, 429) and
+// any server-side failure (5xx). Everything else is deterministic.
+function isRetryableStatus(status) {
+    return (
+        status === 408 ||
+        status === 425 ||
+        status === 429 ||
+        (status >= 500 && status <= 599)
+    );
+}
+
+function clampAttempts(value) {
+    const parsed = Math.trunc(Number(value));
+    if (!Number.isFinite(parsed) || parsed < 1) return 1;
+    return Math.min(parsed, MAX_CONTENT_ATTEMPTS);
+}
+
+function retryDelayMs(attempt, baseMs) {
+    const base = Math.max(0, Number(baseMs) || 0);
+    return Math.min(base * 2 ** (attempt - 1), CONTENT_RETRY_MAX_BACKOFF_MS);
+}
+
+function sleep(ms) {
+    if (!ms) return Promise.resolve();
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// A one-line, log-friendly digest of a multi-line build error: the failing
+// request line and the specific cause, without the terminal sentence.
+function summarizeError(error) {
+    return String(error?.message ?? error)
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(" ");
 }
 
 async function readResponseDetail(response) {

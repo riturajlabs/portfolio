@@ -445,7 +445,11 @@ variable, `CONTENT_API_URL`, pointing at the deployed backend's `/api/content`
 endpoint (e.g. `https://portfolio-api-j7xc.onrender.com/api/content`). `npm run build`
 fetches the content snapshot from it and **fails closed** if the endpoint is
 unreachable or returns zero projects — a static build cannot be produced without
-a reachable, seeded backend. It is not a secret and is never sent to the browser.
+a reachable, seeded backend. Transient failures (timeout, network, 5xx) are
+retried with backoff up to `CONTENT_API_ATTEMPTS` (default `4`) so a Render
+free-tier cold start cannot abort the build; deterministic failures (4xx,
+invalid JSON, contract violation) fail immediately. It is not a secret and is
+never sent to the browser.
 
 > **Never name a secret `VITE_*`.** Any `VITE_` variable is inlined into the
 > public bundle at build time and is visible to anyone who views source.
@@ -507,7 +511,7 @@ a reachable, seeded backend. It is not a secret and is never sent to the browser
 
 ```bash
 npm run lint     # ESLint
-npm test         # vitest — admin unit + component tests (116 passed)
+npm test         # vitest — content loader, admin unit + component tests (138 passed)
 npm run build    # content validation + bundle-isolation assert + full production build
 ```
 

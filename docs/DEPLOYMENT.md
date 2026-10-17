@@ -163,6 +163,7 @@ because `public/security.txt` is a static file, not a Vercel feature.
 |---|---|---|---|
 | `BACKEND_API_KEY` | Vercel (Production + Preview) | yes | Injected as `X-API-Key` by edge middleware for `/api/chat/*` |
 | `CONTENT_API_URL` | Vercel (**build-time only**) | no | **Required for the production build.** `https://portfolio-api-j7xc.onrender.com/api/content`; `scripts/build-content.mjs` fetches it and the build fails closed if it is unreachable or unseeded. Never read by the browser — the frontend runtime needs no variables |
+| `CONTENT_API_TIMEOUT`, `CONTENT_API_ATTEMPTS` | Vercel (**build-time only**) | no | Optional. Per-attempt timeout (default `10` s) and bounded attempt budget (default `4`) for the build fetch. The backend cold-starts after idling (Render free tier); the build retries transient timeout/network/5xx failures so a cold start does not fail the build |
 | `AI_SERVICE_KEY` | Render | yes | **Must equal** `BACKEND_API_KEY`; verifies `/api/chat/*` only |
 | `GITHUB_USERNAME` | Render — `portfolio-api` (backend) since Phase 8 | no | Proxy target |
 | `GITHUB_TOKEN` | Render — `portfolio-api` (backend) since Phase 8 | yes | Raises the GitHub API limit to 5000/h |
@@ -371,6 +372,7 @@ secret; the service trusts it only when the signature verifies. See `SECURITY.md
 | `BACKEND_API_KEY` | **Unchanged.** Protects `/api/chat/*`; no longer sent to `/api/contact` (backend never verified it) |
 | `AI_SERVICE_KEY` | Unchanged |
 | `CONTENT_API_URL` | **Required (build-time, not a secret).** Set to `https://portfolio-api-j7xc.onrender.com/api/content` on the Vercel project. The build fetches it and fails closed if the endpoint is unavailable; the variable is never read by the frontend runtime or shipped to the browser, so it is neither a runtime variable nor a secret. See §1.4 and §6.2 step 8. |
+| `CONTENT_API_TIMEOUT`, `CONTENT_API_ATTEMPTS` | Optional build-time tuning (not secrets). Defaults `10` s per attempt and `4` attempts. `src/lib/content.js` retries a transient timeout/network/5xx so a Render free-tier cold start (measured ~33 s) does not fail the build; a deterministic 4xx or invalid/contract-breaking payload still fails closed on the first response. |
 | `VITE_*` | **Must remain unset in production.** See `SECURITY.md` §3.1 |
 
 No Vercel variable holds a secret: the frontend runtime requires none, and

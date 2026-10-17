@@ -24,6 +24,8 @@ import {
     ContentBuildError,
     ContentValidationError,
     DEFAULT_CONTENT_API_URL,
+    DEFAULT_CONTENT_ATTEMPTS,
+    contentAttempts,
     contentTimeoutSeconds,
     fetchContent,
     resolveContentUrl,
@@ -102,6 +104,35 @@ describe("contentTimeoutSeconds", () => {
     });
 });
 
+describe("contentAttempts", () => {
+    it("defaults to the bounded attempt budget", () => {
+        expect(contentAttempts({})).toBe(DEFAULT_CONTENT_ATTEMPTS);
+    });
+
+    it("parses CONTENT_API_ATTEMPTS", () => {
+        expect(contentAttempts({ CONTENT_API_ATTEMPTS: "2" })).toBe(2);
+    });
+
+    it("ignores a non-integer or non-positive value", () => {
+        expect(contentAttempts({ CONTENT_API_ATTEMPTS: "banana" })).toBe(
+            DEFAULT_CONTENT_ATTEMPTS
+        );
+        expect(contentAttempts({ CONTENT_API_ATTEMPTS: "0" })).toBe(
+            DEFAULT_CONTENT_ATTEMPTS
+        );
+        expect(contentAttempts({ CONTENT_API_ATTEMPTS: "-3" })).toBe(
+            DEFAULT_CONTENT_ATTEMPTS
+        );
+        expect(contentAttempts({ CONTENT_API_ATTEMPTS: "2.5" })).toBe(
+            DEFAULT_CONTENT_ATTEMPTS
+        );
+    });
+
+    it("caps at the hard maximum so a misconfiguration cannot loop forever", () => {
+        expect(contentAttempts({ CONTENT_API_ATTEMPTS: "1000" })).toBe(10);
+    });
+});
+
 
 
 // =========================================================
@@ -134,7 +165,7 @@ describe("fetchContent", () => {
             { status: 503 }
         );
 
-        const error = await fetchContent({ url: URL, fetchImpl }).catch(
+        const error = await fetchContent({ url: URL, fetchImpl, attempts: 1 }).catch(
             (e) => e
         );
 
@@ -177,7 +208,7 @@ describe("fetchContent", () => {
             throw new Error("getaddrinfo ENOTFOUND content.example");
         });
 
-        const error = await fetchContent({ url: URL, fetchImpl }).catch(
+        const error = await fetchContent({ url: URL, fetchImpl, attempts: 1 }).catch(
             (e) => e
         );
 
@@ -201,6 +232,7 @@ describe("fetchContent", () => {
         const errorPromise = fetchContent({
             url: URL,
             timeoutSeconds: 0.5,
+            attempts: 1,
             fetchImpl,
         }).catch((e) => e);
 
@@ -235,6 +267,201 @@ describe("fetchContent", () => {
 
         expect(error).toBeInstanceOf(ContentValidationError);
         expect(error.message).toContain('missing required top-level key "profile"');
+    });
+});
+
+
+
+// =========================================================
+// BOUNDED RETRIES (cold-start resilience)
+// =========================================================
+// The production backend is a Render free-tier service: the first request after
+// an idle period triggers a cold start that can outlast a single fetch timeout.
+// These tests pin the rule set — transient failures are retried up to the bounded
+// budget; deterministic ones are not — so the build recovers from a cold start
+// without ever weakening the fail-closed contract.
+
+describe("fetchContent retries", () => {
+    const URL = "http://127.0.0.1:8001/api/content";
+
+    function textResponse(body, status) {
+        return {
+            ok: status >= 200 && status < 300,
+            status,
+            async text() {
+                return typeof body === "string" ? body : JSON.stringify(body);
+            },
+        };
+    }
+
+    it("retries a transient transport failure and succeeds on a later attempt", async () => {
+        const payload = payloadFixture();
+        const fetchImpl = vi
+            .fn()
+            .mockRejectedValueOnce(new Error("ECONNRESET"))
+            .mockResolvedValueOnce(textResponse(payload, 200));
+
+        const result = await fetchContent({
+            url: URL,
+            fetchImpl,
+            attempts: 3,
+            retryBackoffMs: 0,
+        });
+
+        expect(result).toEqual(payload);
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries a retryable HTTP status (503) and then succeeds", async () => {
+        const payload = payloadFixture();
+        const fetchImpl = vi
+            .fn()
+            .mockResolvedValueOnce(textResponse({ detail: "warming up" }, 503))
+            .mockResolvedValueOnce(textResponse(payload, 200));
+
+        const result = await fetchContent({
+            url: URL,
+            fetchImpl,
+            attempts: 3,
+            retryBackoffMs: 0,
+        });
+
+        expect(result).toEqual(payload);
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries a timeout and succeeds once the backend answers", async () => {
+        vi.useFakeTimers();
+        const payload = payloadFixture();
+        let calls = 0;
+        const fetchImpl = vi.fn((_, { signal }) => {
+            calls += 1;
+            if (calls === 1) {
+                // Never answers: only the AbortController can end this attempt.
+                return new Promise((_resolve, reject) => {
+                    signal.addEventListener("abort", () =>
+                        reject(new DOMException("aborted", "AbortError"))
+                    );
+                });
+            }
+            return Promise.resolve(textResponse(payload, 200));
+        });
+
+        const promise = fetchContent({
+            url: URL,
+            timeoutSeconds: 0.5,
+            attempts: 2,
+            retryBackoffMs: 0,
+            fetchImpl,
+        });
+
+        await vi.advanceTimersByTimeAsync(600);
+        const result = await promise;
+        vi.useRealTimers();
+
+        expect(result).toEqual(payload);
+        expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not retry a deterministic 404", async () => {
+        const fetchImpl = fetchOk({ detail: "Not found." }, { status: 404 });
+
+        const error = await fetchContent({
+            url: URL,
+            fetchImpl,
+            attempts: 3,
+            retryBackoffMs: 0,
+        }).catch((e) => e);
+
+        expect(error).toBeInstanceOf(ContentBuildError);
+        expect(error.status).toBe(404);
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not retry an invalid-JSON body", async () => {
+        const fetchImpl = fetchOk("<html>not json</html>", { status: 200 });
+
+        const error = await fetchContent({
+            url: URL,
+            fetchImpl,
+            attempts: 3,
+            retryBackoffMs: 0,
+        }).catch((e) => e);
+
+        expect(error).toBeInstanceOf(ContentBuildError);
+        expect(error.message).toContain("response was not valid JSON");
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not retry a payload that fails validation", async () => {
+        const payload = payloadFixture();
+        payload.projects = [];
+        const fetchImpl = fetchOk(payload, { status: 200 });
+
+        const error = await fetchContent({
+            url: URL,
+            fetchImpl,
+            attempts: 3,
+            retryBackoffMs: 0,
+        }).catch((e) => e);
+
+        expect(error).toBeInstanceOf(ContentValidationError);
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("fails closed after exhausting the bounded attempt budget", async () => {
+        const fetchImpl = fetchOk({ detail: "still down" }, { status: 503 });
+
+        const error = await fetchContent({
+            url: URL,
+            fetchImpl,
+            attempts: 3,
+            retryBackoffMs: 0,
+        }).catch((e) => e);
+
+        expect(error).toBeInstanceOf(ContentBuildError);
+        expect(error.status).toBe(503);
+        expect(fetchImpl).toHaveBeenCalledTimes(3);
+    });
+
+    it("clamps a non-positive attempt budget to a single attempt", async () => {
+        const fetchImpl = fetchOk({ detail: "down" }, { status: 503 });
+
+        const error = await fetchContent({
+            url: URL,
+            fetchImpl,
+            attempts: 0,
+            retryBackoffMs: 0,
+        }).catch((e) => e);
+
+        expect(error).toBeInstanceOf(ContentBuildError);
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("backs off exponentially and caps the delay", async () => {
+        vi.useFakeTimers();
+        const fetchImpl = fetchOk({ detail: "still down" }, { status: 503 });
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        const promise = fetchContent({
+            url: URL,
+            fetchImpl,
+            attempts: 5,
+            retryBackoffMs: 2000,
+        }).catch((e) => e);
+
+        await vi.advanceTimersByTimeAsync(120000);
+        const error = await promise;
+
+        expect(error).toBeInstanceOf(ContentBuildError);
+        expect(fetchImpl).toHaveBeenCalledTimes(5);
+        const delays = warn.mock.calls.map(([message]) =>
+            Number(String(message).match(/retrying in (\d+)ms/)?.[1])
+        );
+        expect(delays).toEqual([2000, 4000, 8000, 10000]);
+
+        warn.mockRestore();
+        vi.useRealTimers();
     });
 });
 
@@ -376,7 +603,7 @@ describe("no fallback to src/data", () => {
         expect(imports.concat(requires)).toEqual([]);
     });
 
-    it("reads only CONTENT_API_URL / CONTENT_API_TIMEOUT, never a secret", () => {
+    it("reads only non-secret CONTENT_API_* build inputs, never a secret", () => {
         const source = fs.readFileSync(
             path.join(rootDir, "src", "lib", "content.js"),
             "utf8"
@@ -387,5 +614,6 @@ describe("no fallback to src/data", () => {
         expect(source).not.toMatch(/VITE_[A-Z_]+/);
         expect(source).toContain("CONTENT_API_URL");
         expect(source).toContain("CONTENT_API_TIMEOUT");
+        expect(source).toContain("CONTENT_API_ATTEMPTS");
     });
 });

@@ -301,15 +301,19 @@ dimensions entry throws at build time.
 |---|---|
 | `resolveContentUrl` | Defaults to the local dev backend; honours `CONTENT_API_URL`; ignores blank |
 | `contentTimeoutSeconds` | Defaults to 10; parses the env; rejects non-numeric/non-positive |
+| `contentAttempts` | Defaults to 4; parses `CONTENT_API_ATTEMPTS`; rejects non-integer/non-positive; caps at 10 |
 | `fetchContent` success | Returns the validated payload; `GET` + `accept: application/json` + an abort signal |
 | `fetchContent` HTTP 503/404 | Fails closed with `Content API build fetch failed: / GET <url> / HTTP <status> / <detail>` + the terminal sentence |
 | `fetchContent` invalid JSON | Fails closed |
 | `fetchContent` network error | Fails closed, original cause surfaced |
 | `fetchContent` timeout | Fails closed via the bounded AbortController |
+| `fetchContent` retries | Retries a transient transport error, a 503, and a timeout, then succeeds; sends the next attempt after backoff |
+| `fetchContent` no retry | A 404, invalid JSON, or a validation failure is attempted exactly once |
+| `fetchContent` retry budget | Exhausts the bounded attempts and then fails closed (`attempts` observed); a non-positive budget clamps to one attempt |
 | `fetchContent` validation | 0 projects / missing profile → fails closed |
 | `validateContent` | Accepts the committed snapshot reshaped to wire format |
 | `validateContent` | Rejects unknown top-level key (`_migration` extra=forbid), missing key, 0 projects, non-positive dimension, bad status, malformed URL, duplicate slug, missing `profile.name`, bad `seo.robots`, bad `sameAs`, bad `generated_at` |
-| No-fallback guards | `content.js`, `projectPages.js`, `publicContent.js`, `generated/content.js`, `build-content.mjs`, `prerender/entry.jsx` never import `src/data`; `content.js` reads only `CONTENT_API_URL`/`CONTENT_API_TIMEOUT`, never `DATABASE_URL`/`ADMIN_TOKEN`/`VITE_*` |
+| No-fallback guards | `content.js`, `projectPages.js`, `publicContent.js`, `generated/content.js`, `build-content.mjs`, `prerender/entry.jsx` never import `src/data`; `content.js` reads only non-secret `CONTENT_API_URL`/`CONTENT_API_TIMEOUT`/`CONTENT_API_ATTEMPTS`, never `DATABASE_URL`/`ADMIN_TOKEN`/`VITE_*` |
 
 The "valid payload" fixture is the committed snapshot itself, so the suite also
 fails if anyone hand-edits `src/generated/content.js` into a shape the API

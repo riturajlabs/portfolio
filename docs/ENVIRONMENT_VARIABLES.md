@@ -31,6 +31,7 @@ and `ENV=development` allow local testing, while Render must use
 | `VITE_BACKEND_URL` | `src/components/common/ChatAssistant.jsx` | Local chat only | No | Verified local default in `.env.example`; leave unset on Vercel |
 | `CONTENT_API_URL` | `scripts/build-content.mjs`, `src/lib/content.js` build helpers | Production Vercel build | No | Local default is verified; production target is the checked-in backend URL `https://portfolio-api-j7xc.onrender.com/api/content`, but the Vercel setting itself is not readable from this repository |
 | `CONTENT_API_TIMEOUT` | Build helpers | No | No | Verified default: 10 seconds |
+| `CONTENT_API_ATTEMPTS` | Build helpers | No | No | Verified default: `4` bounded attempts (retries transient cold-start/timeout/5xx failures; capped at 10) |
 | `BACKEND_API_KEY` | Vercel `middleware.js` only | Production chat | Yes | Missing from local files; must equal AI service `AI_SERVICE_KEY` |
 
 No `VITE_*` variable may contain a secret. `BACKEND_API_KEY` is intentionally
@@ -126,6 +127,11 @@ non-secret content URL may be set for Preview if previews should build from the
 production content API; otherwise use a preview backend URL. Keep
 `VITE_BACKEND_URL` unset in Preview and Production unless deliberately testing a
 direct local-style chat connection. Never set a `VITE_*` secret.
+
+The production backend is a Render free-tier service that cold-starts after
+idling; the build already retries transient failures (default `CONTENT_API_ATTEMPTS=4`,
+`CONTENT_API_TIMEOUT=10` per attempt) so a cold start does not fail the build. Override
+those two non-secret values only to widen the budget further.
 
 ## Current local value audit
 
