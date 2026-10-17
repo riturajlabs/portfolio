@@ -9,7 +9,7 @@
  *
  * `CONTENT_API_URL` is the same variable `src/lib/content.js` and `ai_service`
  * read: the whole endpoint, `/api/content` included. A bare origin
- * (`https://portfolio-api.onrender.com`) is also accepted and normalised, so the
+ * (`https://portfolio-api-j7xc.onrender.com`) is also accepted and normalised, so the
  * value recorded in the deployment runbook works for the build and this check
  * alike.
  *

@@ -190,7 +190,7 @@ service. **TARGET** keeps this and does not add Redis (ADR-014).
 
 **Finding.** `/api/contact` is public: `middleware.js` no longer lists it in its
 matcher, so no `X-API-Key` is injected and none would be read. The endpoint is
-reachable directly at `https://portfolio-api.onrender.com/api/contact`, bypassing
+reachable directly at `https://portfolio-api-j7xc.onrender.com/api/contact`, bypassing
 Vercel and the edge entirely. Its only controls are the 5/min IP rate limit and
 the honeypot. (Before the 2026-10-10 cleanup the matcher did cover it and inject a
 header nothing verified; that coupling only made an unset `BACKEND_API_KEY`

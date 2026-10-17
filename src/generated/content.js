@@ -1,7 +1,7 @@
 // =========================================================
 // 📦 CONTENT SNAPSHOT — GENERATED FILE. DO NOT EDIT.
 // =========================================================
-// Produced by scripts/build-content.mjs from GET http://127.0.0.1:8901/api/content.
+// Produced by scripts/build-content.mjs from GET http://127.0.0.1:8001/api/content.
 //
 // This module is a build-time snapshot of the public content API
 // (GET /api/content). It is written fresh on every `npm run build`
@@ -20,7 +20,7 @@
 // =========================================================
 
 export const meta = {
-    "generated_at": "2026-10-14T16:03:47.914951Z",
+    "generated_at": "2026-10-17T02:29:06.648782Z",
     "version": 1
 };
 

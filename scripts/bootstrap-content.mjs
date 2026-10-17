@@ -14,7 +14,7 @@
  *   ADMIN_EMAIL=you@example.com \
  *   ADMIN_PASSWORD='...12+ chars...' \
  *   ADMIN_BOOTSTRAP_TOKEN='<the same ≥32-char secret set on Render>' \
- *   CONTENT_API_URL=https://portfolio-api.onrender.com/api/content \
+ *   CONTENT_API_URL=https://portfolio-api-j7xc.onrender.com/api/content \
  *   npm run admin:bootstrap
  *
  * Environment:
@@ -59,7 +59,7 @@ const endpoint = () => {
   if (explicit) return explicit.replace(/\/+$/, "");
   const base = (process.env.CONTENT_API_URL ?? "").trim();
   if (!base) {
-    usage("set CONTENT_API_URL (or BOOTSTRAP_URL) to your backend, e.g. https://portfolio-api.onrender.com");
+    usage("set CONTENT_API_URL (or BOOTSTRAP_URL) to your backend, e.g. https://portfolio-api-j7xc.onrender.com");
   }
   const origin = base.replace(/\/+$/, "").replace(/\/api\/content$/, "");
   return `${origin}/api/admin/bootstrap`;

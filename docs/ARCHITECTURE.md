@@ -64,7 +64,7 @@ Vercel
 │                                 (contact/github are public — SECURITY.md §2.5)
 └── vercel.json rewrites          /api/chat*, /health, /ready -> portfolio-lxdx.onrender.com
                                   /api/admin*, /api/contact, /api/github
-                                                             -> portfolio-api.onrender.com (TARGET)
+                                                             -> portfolio-api-j7xc.onrender.com (TARGET)
                                   (no /api/content or /api/projects rewrite)
 
 Browser

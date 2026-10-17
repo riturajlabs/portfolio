@@ -24,7 +24,7 @@ retrieval-augmented AI assistant.
 >
 > The admin UI is a **separate Vite entry** routed by `react-router-dom`,
 > served at `/admin`, with its API proxied same-origin to
-> `portfolio-api.onrender.com` in production and `localhost:8001` in dev. A
+> `portfolio-api-j7xc.onrender.com` in production and `localhost:8001` in dev. A
 > build-time guard (`scripts/assert-admin-bundle.mjs`) fails the build if any
 > admin or router code leaks into the public bundle. Frontend tests run under
 > vitest (`npm test`).
@@ -105,7 +105,7 @@ retrieval-augmented AI assistant.
 | Frontend | React 19 + Vite 8, static output | Vercel |
 | AI service | Python 3.11 + FastAPI + ChromaDB | Render (`portfolio-lxdx`) |
 | Backend | Python 3.11 + FastAPI + PostgreSQL | Render (`portfolio-api`) |
-| Database | PostgreSQL 16, content API (`portfolio-api.onrender.com/api/content`) | Render or any managed Postgres (Neon recommended — Render's free tier expires after 30 days) |
+| Database | PostgreSQL 16, content API (`portfolio-api-j7xc.onrender.com/api/content`) | Render or any managed Postgres (Neon recommended — Render's free tier expires after 30 days) |
 | Email | Resend (via backend) | — |
 | LLM | Groq, Gemini fallback | — |
 
@@ -422,7 +422,7 @@ uvicorn app:app --reload --port 8000
 
 The Vercel rewrite in `vercel.json` maps `/api/chat` → `/chat` (the service
 registers chat at the root) and `/api/github`, `/api/contact` 1:1 — the latter
-two to `portfolio-api.onrender.com` (the `backend/` service) since Phase 8. Do
+two to `portfolio-api-j7xc.onrender.com` (the `backend/` service) since Phase 8. Do
 not change one side without the other.
 
 **Knowledge source (Phase 9).** At startup the service fetches
@@ -442,7 +442,7 @@ browser never holds a secret.
 
 **Frontend build (Vercel):** the production build requires one non-secret
 variable, `CONTENT_API_URL`, pointing at the deployed backend's `/api/content`
-endpoint (e.g. `https://portfolio-api.onrender.com/api/content`). `npm run build`
+endpoint (e.g. `https://portfolio-api-j7xc.onrender.com/api/content`). `npm run build`
 fetches the content snapshot from it and **fails closed** if the endpoint is
 unreachable or returns zero projects — a static build cannot be produced without
 a reachable, seeded backend. It is not a secret and is never sent to the browser.
@@ -497,7 +497,7 @@ a reachable, seeded backend. It is not a secret and is never sent to the browser
 
 **Vercel:** `BACKEND_API_KEY` (Production + Preview, secret) plus
 `CONTENT_API_URL` (**build-time**, non-secret:
-`https://portfolio-api.onrender.com/api/content`). No `VITE_*` variable is set.
+`https://portfolio-api-j7xc.onrender.com/api/content`). No `VITE_*` variable is set.
 
 ---
 

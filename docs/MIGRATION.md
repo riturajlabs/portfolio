@@ -381,7 +381,7 @@ are recorded in `docs/CONTENT_MAPPING.md`. Source-to-wire coverage:
 PostgreSQL → GET /api/content → scripts/build-content.mjs → src/generated/content.js → bundler → static dist/
 ```
 
-- `scripts/build-content.mjs` fetches `CONTENT_API_URL` (deployment default `https://portfolio-api.onrender.com/api/content`; local default `http://127.0.0.1:8001/api/content`), validates the payload strictly, merges `seo.url`/`seo.verification` from `src/config/seo.js`, derives `PROJECT_IMAGE_DIMENSIONS`, and writes two artifacts:
+- `scripts/build-content.mjs` fetches `CONTENT_API_URL` (deployment default `https://portfolio-api-j7xc.onrender.com/api/content`; local default `http://127.0.0.1:8001/api/content`), validates the payload strictly, merges `seo.url`/`seo.verification` from `src/config/seo.js`, derives `PROJECT_IMAGE_DIMENSIONS`, and writes two artifacts:
   - `src/generated/content.js` — committed, byte-deterministic (no timestamps in the file; `meta.generated_at` texts land in `.cache/last-content-fetch.json`, which is gitignored), exports `meta, profile, about, projects, skills, certifications, seo, PROJECT_IMAGE_DIMENSIONS`.
   - `.cache/last-content-fetch.json` — build-time fetch metadata (gitignored).
 - `src/lib/content.js` is the shared loader/validator: fail-closed, `resolveContentUrl`/`contentTimeoutSeconds`, `fetchContent` (bounded AbortController timeout, `accept: application/json`, reads body text then `JSON.parse`), `validateContent` (strict: unknown top-level key rejected — `_migration` extra=forbid parity with Phase 6; required keys; non-empty projects; unique slugs; `status ∈ {published,hidden}`; positive integer image dimensions; URL checks; `seo.robots` object; `meta.generated_at` parseable).

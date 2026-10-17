@@ -82,13 +82,13 @@ property of the current setup and the migration must not weaken it.
 |---|---|---|
 | `/admin` | → `/admin.html` | Same-site SPA fallback, no backend hop |
 | `/admin/:path*` | → `/admin.html` | SPA fallback (client-side routes resolve at `/admin`) |
-| `/api/admin` | `https://portfolio-api.onrender.com/api/admin` | Same-origin admin API (map 1:1) |
+| `/api/admin` | `https://portfolio-api-j7xc.onrender.com/api/admin` | Same-origin admin API (map 1:1) |
 | `/api/admin/:path*` | `.../api/admin/:path*` | |
-| `/api/resume` | `https://portfolio-api.onrender.com/api/resume` | Public same-origin resume PDF; the backend streams it from the **private** `uploads` bucket. Exact path, no `:path*` |
+| `/api/resume` | `https://portfolio-api-j7xc.onrender.com/api/resume` | Public same-origin resume PDF; the backend streams it from the **private** `uploads` bucket. Exact path, no `:path*` |
 | `/api/chat` | `https://portfolio-lxdx.onrender.com/chat` | Service registers chat at **root** |
 | `/api/chat/:path*` | `.../chat/:path*` | |
-| `/api/contact` | `https://portfolio-api.onrender.com/api/contact` | **backend** since Phase 8; `backend/app/routes/contact.py` uses `prefix="/api"` |
-| `/api/github` | `https://portfolio-api.onrender.com/api/github` | **backend** since Phase 8; `backend/app/routes/github.py` uses `prefix="/api"` |
+| `/api/contact` | `https://portfolio-api-j7xc.onrender.com/api/contact` | **backend** since Phase 8; `backend/app/routes/contact.py` uses `prefix="/api"` |
+| `/api/github` | `https://portfolio-api-j7xc.onrender.com/api/github` | **backend** since Phase 8; `backend/app/routes/github.py` uses `prefix="/api"` |
 | `/health` | `https://portfolio-lxdx.onrender.com/health` | |
 | `/ready` | `https://portfolio-lxdx.onrender.com/ready` | |
 
@@ -109,17 +109,17 @@ guard, so it matches only `/api/resume`. Vercel evaluates rewrites in the order
 they are listed and the **first match wins**; `/api/resume` is disjoint from the
 `/api/admin`, `/api/chat` and `/api/contact` prefixes, so no other rule competes
 for it. The destination here matches `vercel.json` verbatim
-(`https://portfolio-api.onrender.com/api/resume`), and changing either side
+(`https://portfolio-api-j7xc.onrender.com/api/resume`), and changing either side
 without the other is a 404.
 
 **`/api/content` is deliberately *not* a rewrite.** The browser never calls it —
 the frontend bakes the content into the build (stage 0, `npm run content:build`)
 by fetching `CONTENT_API_URL` directly from the `portfolio-api` origin, and the
 AI service fetches the same URL at startup. Both are server-to-server calls to
-`https://portfolio-api.onrender.com/api/content`, not paths on the Vercel
+`https://portfolio-api-j7xc.onrender.com/api/content`, not paths on the Vercel
 domain. `/health` and `/ready` on the Vercel domain likewise rewrite to the AI
 service (they are that service's probes); the backend's own `/health` and
-`/ready` live at `https://portfolio-api.onrender.com`, which is the path Render's
+`/ready` live at `https://portfolio-api-j7xc.onrender.com`, which is the path Render's
 health check polls. There is no `/api/projects` route anywhere — it was dropped
 (`API.md` §5.1.1). The `/api/admin` exact-path rule (without `:path*`) is a
 same-origin passthrough that matches no backend route; the admin SPA only ever
@@ -162,7 +162,7 @@ because `public/security.txt` is a static file, not a Vercel feature.
 | Variable | Platform | Secret | Purpose |
 |---|---|---|---|
 | `BACKEND_API_KEY` | Vercel (Production + Preview) | yes | Injected as `X-API-Key` by edge middleware for `/api/chat/*` |
-| `CONTENT_API_URL` | Vercel (**build-time only**) | no | **Required for the production build.** `https://portfolio-api.onrender.com/api/content`; `scripts/build-content.mjs` fetches it and the build fails closed if it is unreachable or unseeded. Never read by the browser — the frontend runtime needs no variables |
+| `CONTENT_API_URL` | Vercel (**build-time only**) | no | **Required for the production build.** `https://portfolio-api-j7xc.onrender.com/api/content`; `scripts/build-content.mjs` fetches it and the build fails closed if it is unreachable or unseeded. Never read by the browser — the frontend runtime needs no variables |
 | `AI_SERVICE_KEY` | Render | yes | **Must equal** `BACKEND_API_KEY`; verifies `/api/chat/*` only |
 | `GITHUB_USERNAME` | Render — `portfolio-api` (backend) since Phase 8 | no | Proxy target |
 | `GITHUB_TOKEN` | Render — `portfolio-api` (backend) since Phase 8 | yes | Raises the GitHub API limit to 5000/h |
@@ -339,7 +339,7 @@ the convenience, and `CONTENT_RATE_LIMIT` can already be raised. `/health` and
 
 | Variable | Secret | Purpose |
 |---|---|---|
-| `CONTENT_API_URL` | no | `https://portfolio-api.onrender.com/api/content` |
+| `CONTENT_API_URL` | no | `https://portfolio-api-j7xc.onrender.com/api/content` |
 | `CONTENT_API_TIMEOUT` | no | Default `10` seconds |
 | `KNOWLEDGE_SOURCE` | no | `api` (default after Phase 9) \| `file` (rollback) |
 | `TRUSTED_CLIENT_IP_HEADER` | no | Header Vercel's edge stamps with the signed real client IP. **Set to `x-vercel-client-ip` on Render**; leave unset locally. Only that name is accepted (`SECURITY.md` §3.6b). Unset = every caller shares the Render load balancer's bucket and the chat limit collapses into one global window |
@@ -362,7 +362,7 @@ secret; the service trusts it only when the signature verifies. See `SECURITY.md
 |---|---|
 | `BACKEND_API_KEY` | **Unchanged.** Protects `/api/chat/*`; no longer sent to `/api/contact` (backend never verified it) |
 | `AI_SERVICE_KEY` | Unchanged |
-| `CONTENT_API_URL` | **Required (build-time, not a secret).** Set to `https://portfolio-api.onrender.com/api/content` on the Vercel project. The build fetches it and fails closed if the endpoint is unavailable; the variable is never read by the frontend runtime or shipped to the browser, so it is neither a runtime variable nor a secret. See §1.4 and §6.2 step 8. |
+| `CONTENT_API_URL` | **Required (build-time, not a secret).** Set to `https://portfolio-api-j7xc.onrender.com/api/content` on the Vercel project. The build fetches it and fails closed if the endpoint is unavailable; the variable is never read by the frontend runtime or shipped to the browser, so it is neither a runtime variable nor a secret. See §1.4 and §6.2 step 8. |
 | `VITE_*` | **Must remain unset in production.** See `SECURITY.md` §3.1 |
 
 No Vercel variable holds a secret: the frontend runtime requires none, and
@@ -521,10 +521,10 @@ content API.
 |---|---|---|---|---|
 | 1 | Provision PostgreSQL | Create a managed instance and copy its connection string (`?sslmode=require` for a render.com/external URL). Store it as `DATABASE_URL` on the `portfolio-api` service. Prefer a non-expiring free tier (Neon) — Render free Postgres **expires 30 days after creation** (§11) | `psql "$DATABASE_URL" -c 'select 1'` connects | none |
 | 2 | Deploy backend service | Set `ADMIN_BOOTSTRAP_TOKEN` (≥32 chars, one-time) plus the other `sync: false` secrets, then create/sync the Blueprint. The build runs `alembic upgrade head` against `DATABASE_URL` | Build log shows `alembic upgrade head` succeeding; the service starts | none |
-| 3 | Verify backend liveness | `GET https://portfolio-api.onrender.com/health` | **`200`** — process alive, no dependency check (allow ~1 min on the first cold start) | none |
-| 4 | Verify readiness endpoint | `GET https://portfolio-api.onrender.com/ready` | **`200`** — database reachable **and** migrations applied. `503` means stop. | none |
-| 5 | Bootstrap admin + content | On a machine with Node: `ADMIN_EMAIL=… ADMIN_PASSWORD=… ADMIN_BOOTSTRAP_TOKEN=… CONTENT_API_URL=https://portfolio-api.onrender.com npm run admin:bootstrap` (§6.6) | **Exits `0`** and reports the summary (5 projects, 16 skills, …); a repeat run exits `0` with "already bootstrapped (409)" | none |
-| 6 | Verify seed/content parity | Read-only, from a machine with Node: `CONTENT_API_URL=https://portfolio-api.onrender.com npm run seed:verify` | **Exits 0.** Field-by-field diff of the live API payload against the extracted snapshot. Any difference fails. | none |
+| 3 | Verify backend liveness | `GET https://portfolio-api-j7xc.onrender.com/health` | **`200`** — process alive, no dependency check (allow ~1 min on the first cold start) | none |
+| 4 | Verify readiness endpoint | `GET https://portfolio-api-j7xc.onrender.com/ready` | **`200`** — database reachable **and** migrations applied. `503` means stop. | none |
+| 5 | Bootstrap admin + content | On a machine with Node: `ADMIN_EMAIL=… ADMIN_PASSWORD=… ADMIN_BOOTSTRAP_TOKEN=… CONTENT_API_URL=https://portfolio-api-j7xc.onrender.com npm run admin:bootstrap` (§6.6) | **Exits `0`** and reports the summary (5 projects, 16 skills, …); a repeat run exits `0` with "already bootstrapped (409)" | none |
+| 6 | Verify seed/content parity | Read-only, from a machine with Node: `CONTENT_API_URL=https://portfolio-api-j7xc.onrender.com npm run seed:verify` | **Exits 0.** Field-by-field diff of the live API payload against the extracted snapshot. Any difference fails. | none |
 | 7 | Disable bootstrap | Remove `ADMIN_BOOTSTRAP_TOKEN` from the `portfolio-api` service and redeploy (§6.6) | `POST /api/admin/bootstrap` now returns **`404`**; `/health` and `/ready` still `200` | none |
 | 8 | Configure frontend environment variables | Set `CONTENT_API_URL` on the Vercel project (**build-time**). Confirm no `VITE_*` secret is set. | Variable present in the Vercel environment; build log shows the URL resolved | none |
 | 9 | Run frontend production build | `npm run build` | **Exits 0.** The build calls `GET /api/content` and **fails** if the API is unreachable or returns zero projects | none |
@@ -560,7 +560,7 @@ backend** and a machine with **Node** — it is not run from a Render Shell. Fro
 local machine, with the snapshot already generated:
 
 ```bash
-CONTENT_API_URL=https://portfolio-api.onrender.com npm run seed:verify
+CONTENT_API_URL=https://portfolio-api-j7xc.onrender.com npm run seed:verify
 ```
 
 This is a `GET` only: it holds no database credentials and writes nothing. A
@@ -658,13 +658,13 @@ Run migrations inside Render (as part of the build) — never point a local or t
 ### Services / platforms not managed by this Blueprint
 
 * `portfolio-lxdx` (AI service) — dashboard-managed; its `CONTENT_API_URL` must be
-  `https://portfolio-api.onrender.com/api/content` (§6.4).
+  `https://portfolio-api-j7xc.onrender.com/api/content` (§6.4).
 * The PostgreSQL instance — provision it separately and paste its connection string
   (with `?sslmode=require` for an external URL) into the prompted `DATABASE_URL`. If
   it is a Render Postgres that belongs to this Blueprint, replace that `sync: false`
   entry with `fromDatabase: { name: <db>, property: connectionString }`.
 * Vercel — the frontend and its variables (§3.3). `vercel.json` already rewrites to
-  `portfolio-api.onrender.com`, so the Render service must keep that name.
+  `portfolio-api-j7xc.onrender.com`, so the Render service must keep that name.
 
 Render does not read `runtime.txt`, so the committed `backend/runtime.txt` and
 `ai_service/runtime.txt` are inert; Python is pinned by `PYTHON_VERSION` /
@@ -720,7 +720,7 @@ default** and enabled only while `ADMIN_BOOTSTRAP_TOKEN` is set on the service.
    ADMIN_EMAIL=owner@example.com \
    ADMIN_PASSWORD='<12+ char secret>' \
    ADMIN_BOOTSTRAP_TOKEN='<the same ≥32-char token>' \
-   CONTENT_API_URL=https://portfolio-api.onrender.com \
+   CONTENT_API_URL=https://portfolio-api-j7xc.onrender.com \
    npm run admin:bootstrap
    ```
 
@@ -731,7 +731,7 @@ default** and enabled only while `ADMIN_BOOTSTRAP_TOKEN` is set on the service.
 5. **Verify parity** (read-only, step 6):
 
    ```bash
-   CONTENT_API_URL=https://portfolio-api.onrender.com npm run seed:verify
+   CONTENT_API_URL=https://portfolio-api-j7xc.onrender.com npm run seed:verify
    ```
 
 6. **Disable bootstrap.** Remove `ADMIN_BOOTSTRAP_TOKEN` from the Render service
@@ -739,7 +739,7 @@ default** and enabled only while `ADMIN_BOOTSTRAP_TOKEN` is set on the service.
 
    ```bash
    curl -s -o /dev/null -w '%{http_code}\n' \
-     -X POST https://portfolio-api.onrender.com/api/admin/bootstrap
+     -X POST https://portfolio-api-j7xc.onrender.com/api/admin/bootstrap
    # -> 404
    ```
 

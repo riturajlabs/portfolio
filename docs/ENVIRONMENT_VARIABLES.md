@@ -1,122 +1,156 @@
 # Environment variables
 
-Real values belong only in ignored `.env` files or a platform secret store.
-The committed example files contain names and safe placeholders only.
+This document is the source-of-truth map for local development and the three
+deployment surfaces. Values in the committed example files are safe defaults or
+empty placeholders only. Real secrets belong in ignored local files or the
+hosting provider's secret store.
 
-| Variable | Service | Required locally | Exposure |
-|---|---|---:|---|
-| `VITE_BACKEND_URL` | frontend | yes for chat | public URL only |
-| `BACKEND_API_KEY` | frontend (Vercel edge, `middleware.js`) | no (production only) | server-only; **must equal `AI_SERVICE_KEY`** |
-| `DATABASE_URL` | backend | yes | server-only |
-| `TEST_DATABASE_URL` | backend tests | yes for API tests | server-only, disposable DB |
-| `ADMIN_EMAIL` | backend admin CLI | required when provisioning | server-only |
-| `ADMIN_PASSWORD` | backend admin CLI | required when provisioning | server-only |
-| `ADMIN_BOOTSTRAP_TOKEN` | backend | optional (one-time production bootstrap only) | server-only, capability token |
-| `ENVIRONMENT` | backend | no | server-only |
-| `PYTHON_VERSION` | backend (Render) | no | server-side configuration |
-| `TRUSTED_PROXY_HEADER` | backend | no (set on Render) | server-side policy |
-| `ALLOWED_ORIGINS` | backend/AI | no | server-only policy |
-| `CONTENT_RATE_LIMIT` / `CONTENT_RATE_WINDOW_SECONDS` | backend | no | server-side configuration |
-| `AI_SERVICE_KEY` | AI | needed for protected production chat | server-only |
-| `ENV` | AI | no (defaults to `production`) | server-only; **must not be `development` in production** (disables chat auth) |
-| `TRUSTED_CLIENT_IP_HEADER` | AI | no (set on Render) | server-side policy |
-| `CLIENT_IP_SIGNING_SECRET` | AI | no (defaults to `AI_SERVICE_KEY`) | server-only |
-| `GROQ_API_KEY` | AI | needed for Groq chat | server-only |
-| `GEMINI_API_KEY` | AI | needed for Gemini fallback | server-only |
-| `GITHUB_USERNAME` | backend/AI | optional | server-side configuration |
-| `GITHUB_TOKEN` | backend | optional | server-only |
-| `DEPLOY_HOOK_URL` | backend | optional (enables rebuild) | server-only, capability token |
-| `DEPLOY_HOOK_TIMEOUT_SECONDS` | backend | no | server-side configuration |
-| `AI_SERVICE_URL` | backend | optional (enables AI re-ingest) | server-side configuration |
-| `AI_SERVICE_ADMIN_TOKEN` | backend/AI | optional (enables AI re-ingest) | server-only, capability token |
-| `AI_SERVICE_TIMEOUT_SECONDS` | backend | no | server-side configuration |
-| `ADMIN_TOKEN` | AI | optional (enables re-ingest/cache routes) | server-only, capability token |
-| `RESEND_API_KEY` | backend/AI legacy | optional in development | server-only |
-| `CONTACT_FROM_EMAIL` | backend | optional | server-side configuration |
-| `CONTACT_TO_EMAIL` | backend | optional | server-side configuration |
-| `AWS_ACCESS_KEY_ID` | backend | optional (enables image upload) | server-only, capability token |
-| `AWS_SECRET_ACCESS_KEY` | backend | optional (enables image upload) | server-only, capability token |
-| `AWS_ENDPOINT_URL_S3` | backend | optional (enables image upload) | server-side configuration; branch-scoped |
-| `AWS_REGION` | backend | optional (enables image upload) | server-side configuration |
-| `S3_BUCKET` | backend | no (defaults to `media`) | server-side configuration; bucket must be `public_read` |
-| `S3_IMAGE_MAX_BYTES` | backend | no (defaults to 5000000) | server-side configuration |
-| `S3_RESUME_BUCKET` | backend | no (defaults to `uploads`) | server-side configuration; bucket must be private |
-| `S3_RESUME_MAX_BYTES` | backend | no (defaults to 10000000) | server-side configuration |
-| `RESUME_RATE_LIMIT` | backend | no (defaults to 60) | server-side configuration |
-| `RESUME_RATE_WINDOW_SECONDS` | backend | no (defaults to 60) | server-side configuration |
-| `CHROMA_DB_PATH` | AI | no | server filesystem path |
-| `EMBEDDING_CACHE_PATH` | AI | no | server filesystem path |
-| `CONTENT_API_URL` | AI/build | no | server/build configuration |
-| `CONTENT_API_TIMEOUT` | AI/build | no | server/build configuration |
-| `KNOWLEDGE_SOURCE` | AI | no, defaults to `api` | server configuration |
+## Local development
 
-Never place database URLs, provider keys, admin tokens, session secrets, or
-passwords in a `VITE_*` variable. Missing provider credentials must produce a
-visible provider error or unavailable feature; they must not be replaced with
-fabricated success.
+| File | Consumed by | Required values |
+|---|---|---|
+| `.env` or `.env.local` | Vite/build scripts | `VITE_BACKEND_URL` for direct local chat; `CONTENT_API_URL` for a build |
+| `backend/.env` | `backend/app/config.py` | `DATABASE_URL`; optionally object storage, Resend, GitHub, publish and AI re-ingest settings |
+| `ai_service/.env` | `ai_service/config/settings.py` and direct `os.getenv` reads | Provider keys for real chat/ingestion; `AI_SERVICE_KEY` and `ADMIN_TOKEN` when testing protected routes |
 
-Three capability secrets are shared across platforms and must hold the same
-value on both sides (`docs/DEPLOYMENT.md` §3.5): Vercel `BACKEND_API_KEY` =
-AI service `AI_SERVICE_KEY` (the `X-API-Key` gate on `/api/chat/*`, and the key
-the edge signs `x-vercel-client-ip` with); backend `AI_SERVICE_ADMIN_TOKEN` =
-AI service `ADMIN_TOKEN` (`X-Admin-Token` on `POST /admin/reingest`). Setting
-one side alone fails closed — the backend reports `configured: false` and the AI
-service answers `401` or hides the route (`404`).
+The backend loads `backend/.env` through Pydantic settings. The AI service calls
+`load_dotenv()` and therefore loads `.env` relative to its working directory.
+Vite and Node build scripts read the root environment. A root `.env` is not a
+substitute for either service-specific file.
 
-`ADMIN_EMAIL` and `ADMIN_PASSWORD` are read only by the explicit
-`npm run admin:setup` and `npm run admin:reset` server-side commands. They are
-not read by the frontend and changing them does not silently alter an existing
-database account.
+Local defaults intentionally differ from production: `ENVIRONMENT=development`
+and `ENV=development` allow local testing, while Render must use
+`ENVIRONMENT=production` and `ENV=production`.
 
-`ADMIN_BOOTSTRAP_TOKEN` is a **one-time** capability token. While it is a
-non-empty string of at least 32 characters it enables `POST /api/admin/bootstrap`
-(`backend/app/routes/admin_bootstrap.py`), which creates the first administrator
-and loads the initial CMS content in a single atomic transaction — the only
-supported way to initialize production on a free Render web service, which has
-no Shell and no one-off jobs. It is read only by the backend, never by the
-frontend, and it is supplied to the client half (`npm run admin:bootstrap`) from
-your workstation's environment. **Remove it from the backend service and redeploy
-immediately after a successful bootstrap**; empty disables the endpoint (404) and
-a completed bootstrap already answers 409. See `docs/DEPLOYMENT.md` §6.6.
+## Variable ownership matrix
 
-`DEPLOY_HOOK_URL` is a capability token: anyone holding the URL can start a
-production build. It is read only by the backend, which calls it on behalf of the
-`POST /api/admin/publish` route (`ADR-017`); the browser never receives it.
-Leaving it unset disables the rebuild feature without breaking anything — the
-endpoint then reports `configured: false`.
+### Frontend and build-time variables
 
-`AI_SERVICE_ADMIN_TOKEN` (backend) and `ADMIN_TOKEN` (AI service) are one shared
-capability token: the backend sends it as `X-Admin-Token` to the AI service's
-`POST /admin/reingest`, which is what makes a publish refresh chat's knowledge
-instead of leaving it stale until restart. It is deliberately distinct from
-`AI_SERVICE_KEY` so a leaked chat key cannot purge caches or force re-ingestion.
-Leaving it (or `AI_SERVICE_URL`) unset disables that step without breaking the
-rest of publish; the endpoint reports it `not_configured`.
+| Variable | Consumer | Required | Secret | Classification |
+|---|---|---:|---:|---|
+| `VITE_BACKEND_URL` | `src/components/common/ChatAssistant.jsx` | Local chat only | No | Verified local default in `.env.example`; leave unset on Vercel |
+| `CONTENT_API_URL` | `scripts/build-content.mjs`, `src/lib/content.js` build helpers | Production Vercel build | No | Local default is verified; production target is the checked-in backend URL `https://portfolio-api-j7xc.onrender.com/api/content`, but the Vercel setting itself is not readable from this repository |
+| `CONTENT_API_TIMEOUT` | Build helpers | No | No | Verified default: 10 seconds |
+| `BACKEND_API_KEY` | Vercel `middleware.js` only | Production chat | Yes | Missing from local files; must equal AI service `AI_SERVICE_KEY` |
 
-`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3` and
-`AWS_REGION` are what `neon deploy` writes for the project's Object Storage
-service, and the backend reads the same names unchanged
-(`backend/app/services/storage.py`). They authorize `POST /api/admin/uploads`,
-which stores an admin-chosen project cover image in the bucket named by
-`S3_BUCKET` (default `media`) and returns its absolute URL. All four names are
-read only by the backend. Leave
-`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_ENDPOINT_URL_S3` blank to disable
-uploads cleanly — the image route answers `503` and the editor still accepts the
-committed `/images/projects/*.webp` path; the resume route answers `503` and the
-site keeps serving the committed PDF. The endpoint is **branch-scoped**
-(its host embeds the branch id), so it changes if the branch is recreated.
+No `VITE_*` variable may contain a secret. `BACKEND_API_KEY` is intentionally
+server-side middleware configuration, not a Vite variable.
 
-The same credentials also serve `POST /api/admin/profile/resume`, which stores
-the resume in `S3_RESUME_BUCKET` (default `uploads`) — the **private** bucket
-`neon init` creates, distinct from the `public_read` `media` bucket. A resume is
-a document, not a web asset: it gets no anonymous URL and is read only through
-`GET /api/resume` (§6.3.2 of `docs/API.md`). The image bucket must be
-`public_read` (its returned URL is baked into the static build as an `<img src>`,
-so a private bucket or a presigned URL cannot work), while the resume bucket must
-stay private (`neon.ts`). `S3_RESUME_MAX_BYTES` (default 10 MB) caps the upload,
-and `RESUME_RATE_LIMIT`/`RESUME_RATE_WINDOW_SECONDS` (default 60/60 s) bound the
-public read per IP.
+### Backend API (`backend/`)
 
-The local templates are [.env.example](../.env.example),
-[backend/.env.example](../backend/.env.example), and
-[ai_service/.env.example](../ai_service/.env.example).
+| Variable | Required | Secret | Default / condition |
+|---|---:|---:|---|
+| `DATABASE_URL` | Yes | Yes | No default; PostgreSQL URL is validated and normalized |
+| `ENVIRONMENT` | No | No | `development`; Render `production` |
+| `LOG_LEVEL` | No | No | `INFO` |
+| `TRUSTED_PROXY_HEADER` | No | No | Empty locally; Render `cf-connecting-ip` |
+| `ALLOWED_ORIGINS` | No | No | Exact Vercel and local origins |
+| `CONTENT_RATE_LIMIT`, `CONTENT_RATE_WINDOW_SECONDS` | No | No | `300`, `60` |
+| `ADMIN_SESSION_IDLE_SECONDS`, `ADMIN_SESSION_ABSOLUTE_SECONDS` | No | No | `43200`, `604800` |
+| `ADMIN_LOGIN_IP_LIMIT`, `ADMIN_LOGIN_IP_WINDOW_SECONDS` | No | No | `10`, `900` |
+| `ADMIN_LOGIN_EMAIL_FAILURE_LIMIT`, `ADMIN_LOGIN_EMAIL_WINDOW_SECONDS` | No | No | `5`, `900` |
+| `ADMIN_READ_RATE_LIMIT`, `ADMIN_READ_RATE_WINDOW_SECONDS` | No | No | `600`, `60` |
+| `CONTACT_RATE_LIMIT`, `CONTACT_RATE_WINDOW_SECONDS` | No | No | `5`, `60` |
+| `RESEND_API_KEY` | Production contact delivery | Yes | Empty disables delivery with an explicit error |
+| `RESEND_API_URL` | No | No | `https://api.resend.com/emails` |
+| `CONTACT_FROM_EMAIL`, `CONTACT_TO_EMAIL` | Contact delivery | No | Sandbox sender and project inbox |
+| `GITHUB_USERNAME`, `GITHUB_TOKEN` | GitHub proxy | Token optional | `GITHUB_USERNAME` is empty in code; Render sets `riturajlabs` |
+| `DEPLOY_HOOK_URL` | Optional publish rebuild | Yes | Empty disables the rebuild step |
+| `DEPLOY_HOOK_TIMEOUT_SECONDS` | No | No | `10` |
+| `AI_SERVICE_URL` | Optional publish re-ingestion | No | Empty disables the step |
+| `AI_SERVICE_ADMIN_TOKEN` | Optional publish re-ingestion | Yes | Must equal AI `ADMIN_TOKEN` |
+| `AI_SERVICE_TIMEOUT_SECONDS` | No | No | `30` |
+| `ADMIN_BOOTSTRAP_TOKEN` | One-time production bootstrap | Yes | Empty disables; configured value must be at least 32 characters |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Object storage | Yes when storage is enabled | Yes | Neon Object Storage credentials |
+| `AWS_ENDPOINT_URL_S3`, `AWS_REGION` | Object storage | Endpoint required when enabled | Endpoint is non-secret; region is non-secret | Endpoint is branch-scoped |
+| `S3_BUCKET`, `S3_IMAGE_MAX_BYTES` | Project images | No | No | `media`, `5000000`; bucket must be `public_read` |
+| `S3_RESUME_BUCKET`, `S3_RESUME_MAX_BYTES` | Resume | No | No | `uploads`, `10000000`; bucket must remain private |
+| `RESUME_RATE_LIMIT`, `RESUME_RATE_WINDOW_SECONDS` | Resume download | No | No | `60`, `60` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Explicit local admin CLI only | Password yes | Empty | Never needed by the running API |
+| `TEST_DATABASE_URL` | Backend tests | Yes for isolated tests | Yes | Disposable test database only |
+
+### AI service (`ai_service/`)
+
+| Variable | Required | Secret | Default / condition |
+|---|---:|---:|---|
+| `ENV` | No | No | `development` locally; Render must set `production` |
+| `PORT` | Render-provided | No | `8000` locally |
+| `AI_SERVICE_KEY` | Protected production chat | Yes | Must equal Vercel `BACKEND_API_KEY` |
+| `TRUSTED_CLIENT_IP_HEADER` | Render rate-limit bucketing | No | Empty locally; Render `x-vercel-client-ip` |
+| `CLIENT_IP_SIGNING_SECRET` | No | Yes | Defaults to `AI_SERVICE_KEY`; if set separately, it must equal Vercel `BACKEND_API_KEY` |
+| `GROQ_API_KEY`, `GEMINI_API_KEY` | Real chat/embeddings | Yes | Provider credentials; both are used by the current routing and ingestion paths |
+| `GROQ_MODEL`, `CHAT_GEMINI_MODEL` | No | No | `llama-3.3-70b-versatile`, `gemini-2.5-flash` |
+| `CHAT_TOP_K`, `CHAT_SCORE_THRESHOLD`, `SCORE_THRESHOLD` | No | No | `5`, `0.7`, `0.65` |
+| `SHORT_QUERY_TOKEN_THRESHOLD`, `PRIMARY_PROVIDER` | No | No | `100`, `auto` |
+| `CHAT_MAX_TOKENS`, `CHAT_QUERY_TIMEOUT`, `CHAT_SSE_KEEPALIVE`, `CHAT_TEMPERATURE` | No | No | `512`, `10`, `15`, `0.1` |
+| `CHAT_RATE_LIMIT`, `CHAT_RATE_WINDOW` | No | No | `10`, `60` |
+| `LLM_CACHE_ENABLED`, `LLM_CACHE_TTL_SECONDS`, `LLM_CACHE_MAX_ENTRIES` | No | No | `1`, `120`, `256` |
+| `EMBEDDING_CACHE_DISABLED`, `EMBEDDING_CACHE_MAX_ROWS`, `EMBEDDING_CACHE_PATH` | No | No | `0`, `1000`, `./embedding_cache.sqlite` |
+| `CHROMA_DB_PATH`, `KNOWLEDGE_FILE`, `COLLECTION_NAME` | No | No | Local filesystem and collection defaults |
+| `CONTENT_API_URL`, `CONTENT_API_TIMEOUT`, `KNOWLEDGE_SOURCE` | Production ingestion | No | Local API URL, `10`, `api`; Render must point to the backend content endpoint |
+| `ADMIN_TOKEN` | Optional `/admin/*` routes | Yes | Must equal backend `AI_SERVICE_ADMIN_TOKEN` |
+| `GITHUB_USERNAME`, `GITHUB_TOKEN` | Legacy direct GitHub route | Token optional | Server-side only |
+| `RESEND_API_KEY`, `CONTACT_FROM_EMAIL`, `CONTACT_TO_EMAIL` | Legacy direct contact route | Key yes | Supported by the currently mounted AI contact route; production traffic is rewritten to the backend |
+| `ALLOWED_ORIGINS` | CORS | No | Exact Vercel and local origins |
+| `FORCE_REINGEST` | One-time startup control | No | Unset normally; `1` only for deliberate re-ingestion |
+
+## Deployment matrix
+
+### Render `portfolio-api`
+
+`render.yaml` manages the non-secret values `PYTHON_VERSION`, `ENVIRONMENT`,
+`LOG_LEVEL`, `TRUSTED_PROXY_HEADER`, `ALLOWED_ORIGINS`, `AI_SERVICE_URL`,
+timeouts, `GITHUB_USERNAME`, contact addresses and both bucket names. It prompts
+for the secret values marked `sync: false`: `DATABASE_URL`,
+`ADMIN_BOOTSTRAP_TOKEN`, `DEPLOY_HOOK_URL`, `AI_SERVICE_ADMIN_TOKEN`,
+`RESEND_API_KEY`, `GITHUB_TOKEN`, and the four `AWS_*` storage credentials.
+
+The Blueprint does not currently declare every optional backend setting. Add
+those manually only when overriding the defaults in `backend/.env.example`.
+Do not put the AI provider keys in this service.
+
+### Render AI service (`portfolio-lxdx`)
+
+Configure the service manually with `ENV=production`, `CONTENT_API_URL` set to
+`https://portfolio-api-j7xc.onrender.com/api/content`, `AI_SERVICE_KEY` matching
+Vercel `BACKEND_API_KEY`, `ADMIN_TOKEN` matching backend
+`AI_SERVICE_ADMIN_TOKEN`, `TRUSTED_CLIENT_IP_HEADER=x-vercel-client-ip`, and
+the provider keys. Add the optional tuning variables only when an override is
+intended. The current repository cannot verify the deployed dashboard values.
+
+### Vercel frontend
+
+Set `CONTENT_API_URL=https://portfolio-api-j7xc.onrender.com/api/content` and
+`BACKEND_API_KEY` in the Production environment, then rebuild. The same
+non-secret content URL may be set for Preview if previews should build from the
+production content API; otherwise use a preview backend URL. Keep
+`VITE_BACKEND_URL` unset in Preview and Production unless deliberately testing a
+direct local-style chat connection. Never set a `VITE_*` secret.
+
+## Current local value audit
+
+The ignored local files `.env`, `.env.local`, `backend/.env`, and
+`ai_service/.env` are present. Their values were checked only for presence and
+format; no secret values are reproduced here. The root files contain local
+Neon/Vercel tooling values, `backend/.env` contains a local database and
+development settings, and `ai_service/.env` contains local provider/service
+configuration. Existing local values were preserved.
+
+## Validation and remaining blockers
+
+Useful checks after changing a local file:
+
+```sh
+npx yaml-lint render.yaml
+npm run lint
+npm test
+npm run lint:ai_service
+npm run test:ai_service
+npm run test:api
+```
+
+The production build requires a reachable, seeded `CONTENT_API_URL`; it should
+be run only with that intended non-secret URL configured. Deployment remains
+blocked until the operator verifies the Render database URL, provider keys,
+storage credentials/bucket state, Resend key, both shared authentication
+secrets, and the Vercel Production variables in their respective dashboards.

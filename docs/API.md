@@ -60,7 +60,7 @@ behaviour.
   `https://portfolio-lxdx.onrender.com/chat`. The browser never sees `/chat`.
 * `backend/app/routes/github.py` and `backend/app/routes/contact.py` both use
   `prefix="/api"`, so their Render paths are `/api/github` and `/api/contact`,
-  matching `vercel.json` 1:1 (both rewrites point at `portfolio-api.onrender.com`
+  matching `vercel.json` 1:1 (both rewrites point at `portfolio-api-j7xc.onrender.com`
   since Phase 8).
 * The rewrites are **explicit per path**, not a catch-all `/api/*` rule. Adding
   a new endpoint requires adding a rewrite entry — a real operational step

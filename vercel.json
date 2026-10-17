@@ -10,15 +10,15 @@
     },
     {
       "source": "/api/admin",
-      "destination": "https://portfolio-api.onrender.com/api/admin"
+      "destination": "https://portfolio-api-j7xc.onrender.com/api/admin"
     },
     {
       "source": "/api/admin/:path*",
-      "destination": "https://portfolio-api.onrender.com/api/admin/:path*"
+      "destination": "https://portfolio-api-j7xc.onrender.com/api/admin/:path*"
     },
     {
       "source": "/api/resume",
-      "destination": "https://portfolio-api.onrender.com/api/resume"
+      "destination": "https://portfolio-api-j7xc.onrender.com/api/resume"
     },
     {
       "source": "/api/chat",
@@ -30,11 +30,11 @@
     },
     {
       "source": "/api/contact",
-      "destination": "https://portfolio-api.onrender.com/api/contact"
+      "destination": "https://portfolio-api-j7xc.onrender.com/api/contact"
     },
     {
       "source": "/api/github",
-      "destination": "https://portfolio-api.onrender.com/api/github"
+      "destination": "https://portfolio-api-j7xc.onrender.com/api/github"
     },
     {
       "source": "/health",

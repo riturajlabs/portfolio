@@ -46,7 +46,7 @@ class Settings:
 
     # --- Content API (Phase 9): canonical knowledge source ---
     # Where GET /api/content lives. Production MUST set this to the deployed
-    # backend URL (https://portfolio-api.onrender.com/api/content); the local
+    # backend URL (https://portfolio-api-j7xc.onrender.com/api/content); the local
     # default points at the dev backend so `uvicorn` keeps working out of the
     # box. The backend contract is mirrored + validated in
     # services/content_api.py; fetch failures fail closed (no silent fallback).
