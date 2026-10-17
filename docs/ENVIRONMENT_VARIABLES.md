@@ -53,7 +53,7 @@ server-side middleware configuration, not a Vite variable.
 | `CONTACT_RATE_LIMIT`, `CONTACT_RATE_WINDOW_SECONDS` | No | No | `5`, `60` |
 | `RESEND_API_KEY` | Production contact delivery | Yes | Empty disables delivery with an explicit error |
 | `RESEND_API_URL` | No | No | `https://api.resend.com/emails` |
-| `CONTACT_FROM_EMAIL`, `CONTACT_TO_EMAIL` | Contact delivery | No | Sandbox sender and project inbox |
+| `CONTACT_FROM_EMAIL`, `CONTACT_TO_EMAIL` | Contact delivery | No | Sandbox sender and project inbox. With the `onboarding@resend.dev` sandbox sender, the recipient must be the Resend account owner (see `DEPLOYMENT.md` §1.4) |
 | `GITHUB_USERNAME`, `GITHUB_TOKEN` | GitHub proxy | Token optional | `GITHUB_USERNAME` is empty in code; Render sets `riturajlabs` |
 | `DEPLOY_HOOK_URL` | Optional publish rebuild | Yes | Empty disables the rebuild step |
 | `DEPLOY_HOOK_TIMEOUT_SECONDS` | No | No | `10` |

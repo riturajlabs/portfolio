@@ -182,6 +182,14 @@ because `public/security.txt` is a static file, not a Vercel feature.
 | `ALLOWED_ORIGINS` | Render | no | CORS allow-list |
 | `GROQ_MODEL`, `CHAT_*`, `LLM_CACHE_*`, `EMBEDDING_CACHE_*`, `CHAT_TOP_K`, `CHAT_SCORE_THRESHOLD` | Render | no | Tunables — see `ai_service/config/settings.py` |
 
+**Contact delivery (`RESEND_API_KEY`, `CONTACT_FROM_EMAIL`)** — Resend's sandbox
+sender `onboarding@resend.dev` may only deliver to the address that owns the
+Resend account. While that sender is configured, `CONTACT_TO_EMAIL` **must** be
+the account owner's own address; any other recipient is rejected with
+`403 validation_error` and `POST /api/contact` answers `502`. To deliver to a
+different inbox, verify a domain at resend.com/domains and set
+`CONTACT_FROM_EMAIL` to an address on that domain.
+
 **No `VITE_*` variable should be set in production.** Every one of them is
 inlined into the public bundle at build time — see `SECURITY.md` §3.1.
 

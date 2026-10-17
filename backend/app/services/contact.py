@@ -18,6 +18,7 @@ does not change.
 from __future__ import annotations
 
 import logging
+import re
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,6 +40,36 @@ _HEADER_UNSAFE = str.maketrans({"\r": " ", "\n": " ", "\x00": " "})
 def _single_line(value: str) -> str:
     """Collapse CR/LF/NUL to spaces so a value cannot inject a header line."""
     return value.translate(_HEADER_UNSAFE)
+
+
+# Resend error bodies quote the account's own address (e.g. "You can only send
+# testing emails to your own email address (someone@example.com)"). That is
+# personal contact data and must never reach the logs, so every address in a
+# provider message is masked before it is recorded.
+_EMAIL_IN_TEXT = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+
+
+def _provider_error_summary(response: httpx.Response) -> str:
+    """A small, PII-free summary of a Resend error response.
+
+    Only the structured fields Resend documents (`name`, `statusCode`) and a
+    length-capped, email-masked `message` are kept. An unparseable body is
+    reported by shape, never dumped: it could be HTML or echo request contents.
+    """
+    try:
+        body = response.json()
+    except ValueError:
+        return "unparseable error body"
+
+    if not isinstance(body, dict):
+        return "unparseable error body"
+
+    name = str(body.get("name", "error"))[:60]
+    status_code = body.get("statusCode", response.status_code)
+    message = _EMAIL_IN_TEXT.sub("<email>", str(body.get("message", "")))[:200]
+    if message:
+        return f"name={name} status={status_code} message={message}"
+    return f"name={name} status={status_code}"
 
 
 def derive_subject(name: str) -> str:
@@ -84,12 +115,22 @@ async def mark_delivery(db: AsyncSession, record: ContactMessage, delivery_statu
     await db.commit()
 
 
-async def send_via_resend(*, name: str, email: str, message: str) -> str:
+async def send_via_resend(
+    *,
+    name: str,
+    email: str,
+    message: str,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> str:
     """Deliver `name`/`email`/`message` through Resend's HTTPS API and return the message id.
 
     Asynchronous (`httpx.AsyncClient`): this runs inside the async request path,
     and the synchronous client would block the event loop for the duration of the
     outbound call — stalling every other request on the same worker.
+
+    `transport` exists only so the outbound call can be exercised against an
+    `httpx.MockTransport` in tests; the route never passes it and production uses
+    the default network transport.
 
     Raises:
         RuntimeError: Resend is not configured (`RESEND_API_KEY` unset).
@@ -125,13 +166,17 @@ async def send_via_resend(*, name: str, email: str, message: str) -> str:
 
     # 10 s: Resend is normally sub-second, and the route stores the row first, so
     # a long hang would otherwise occupy a server worker for nothing.
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=10.0, transport=transport) as client:
         response = await client.post(
             settings.RESEND_API_URL, json=payload, headers=headers
         )
 
     if response.status_code >= 400:
-        logger.error("Resend API error %s: %s", response.status_code, response.text[:500])
+        logger.error(
+            "Resend API error %s: %s",
+            response.status_code,
+            _provider_error_summary(response),
+        )
         raise httpx.HTTPStatusError(
             f"Resend returned {response.status_code}",
             request=response.request,
