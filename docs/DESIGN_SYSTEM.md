@@ -364,6 +364,14 @@ single-page IA. Raise *craft*: a real elevation scale, a consistent spacing
 rhythm, confident typography, accessible motion, consistent image treatment. No
 new framework, no Tailwind, no CSS-in-JS, no preprocessor.
 
+**Both themes are first-class (blueprint v2.0).** The upgraded public UI is
+deliberately designed and tested in dark **and** light (`[data-theme="light"]`
+overrides live only in `variables.css`; no per-theme component duplication;
+pre-paint script + `prefers-color-scheme` per `PORTFOLIO_UPGRADE.md` §5.2). The
+visual register is "futuristic tech": fine borders, restrained cyan/electric-
+blue/violet accents, selective glow in dark mode, shadow-free separation in
+light mode. Full rules: `PORTFOLIO_UPGRADE.md` §5.
+
 **Token additions (additive, in `variables.css`; existing token names kept):**
 
 | Family | Rule |
