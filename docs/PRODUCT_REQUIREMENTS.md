@@ -145,7 +145,7 @@ data, not design.
 | **N1** | All 6 HTML documents still exist | Build assertion |
 | **N2** | Title, description, canonical, OG, Twitter and JSON-LD are identical per URL | Baseline diff |
 | **N3** | `sitemap.xml`, `sitemap-images.xml`, `robots.txt`, `llms.txt` are identical | Baseline diff |
-| **N4** | Zero changes to `src/styles/**` | `git diff --stat src/styles` empty |
+| **N4** | Zero changes to `src/data/**` (legacy migration input). `src/styles/**` is **unfrozen** for the public UI by ADR-018 (`2026-10-17`) | `git diff --stat src/data` empty |
 | **N5** | Zero changes to `src/data/**` through Phase 7 | `git diff -- src/data` empty |
 | **N6** | Public bundle grows < 15 KB gzipped | Bundle budget |
 | **N7** | Lighthouse SEO score stays 100 | Lighthouse |
@@ -291,7 +291,7 @@ section before it starts.
 
 | Non-goal | Why |
 |---|---|
-| **Redesigning the public UI** | No requirement asks for it. The design works and is documented in `DESIGN_SYSTEM.md`. |
+| ~~**Redesigning the public UI**~~ | **Superseded 2026-10-17 by ADR-018.** The owner approved a public design upgrade; the requirement section this rule demands is `docs/PORTFOLIO_UPGRADE.md`. Admin isolation, API contracts, DB schema, auth/security, contact delivery, AI behaviour and SEO requirements are unaffected. |
 | **Adding a client-side router to the public SPA** | One route. `react-router-dom` is scoped to the admin entry only (ADR-010). |
 | **Draft / archived content states** | Not required. Two independent flags (`status`, `indexable`) cover it (ADR-016). |
 | **Contact retry queue / resend button** | The message is already stored and visible in the inbox (`API.md` §5.2). |

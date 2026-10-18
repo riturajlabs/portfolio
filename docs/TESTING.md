@@ -653,8 +653,8 @@ executable checks. Phases 1–6 must not change the site at all.
 | 7 | `seo.json` vs baseline | Identical for all 6 URLs |
 | 8 | JSON-LD per project page | Parses; same `@type`, `name`, `url` |
 | 9 | Rendered homepage DOM vs baseline | Same section structure and text |
-| 10 | `git diff --stat src/styles` | **Empty** |
-| 11 | `git diff -- src/data` | **Empty** through Phase 7 |
+| 10 | `git diff --stat src/data` | **Empty** (legacy migration input) |
+| 11 | `git diff --stat src/styles` | **No longer checked** — unfrozen for the public UI by ADR-018 (`2026-10-17`); see `PORTFOLIO_UPGRADE.md` |
 | 12 | Public bundle gzipped | ≤ baseline + 15 KB |
 | 13 | `npm run lint` | Clean |
 | 14 | Build with the API stopped | **Fails**, exit 1, with the fail-closed message (verified) |
@@ -666,8 +666,11 @@ executable checks. Phases 1–6 must not change the site at all.
 | 19 | `/api/chat` before and after Phase 8/9 | Identical SSE behaviour |
 | 20 | `seed:verify` | Zero differences |
 
-**Checks 10 and 11 are the tripwires.** A non-empty diff on `src/styles` or
-`src/data` means the migration changed something it promised not to change.
+**Check 10 is the remaining tripwire.** A non-empty diff on `src/data` means the
+migration changed something it promised not to change. Check 11 (`src/styles`)
+was retired in Phase U1: the owner approved a public design upgrade, so the public
+CSS is intentionally editable again (ADR-018). The run logs below predate that
+change and describe the migration-era guard.
 
 **Phase 6 run (2026-10-06):** checks 1, 10, 11, 13 and 20 pass — `dist/projects/`
 holds exactly 5 HTML files, `git diff --stat src/styles src/data` is empty,
@@ -867,8 +870,7 @@ CI and preview serve different purposes.
 
 - [ ] No `VITE_*` variable matching `/SECRET|TOKEN|KEY|PASSWORD/i`
 - [ ] No secret string in the diff
-- [ ] `git diff --stat src/styles` empty
-- [ ] `git diff -- src/data` empty (through Phase 7)
+- [ ] `git diff --stat src/data` empty (legacy input; `src/styles` unfrozen by ADR-018)
 - [ ] Public bundle within budget
 
 ---
@@ -898,7 +900,7 @@ Coverage is a floor for the modules where a silent regression is expensive.
 | 1 | No tests at all today | Regressions found manually | Phase 10 |
 | 2 | No CI | A broken build can reach `main` | Phase 10 |
 | 3 | No coverage reporting | Unknown blind spots | Phase 10 |
-| 4 | No visual regression testing | A styling change is invisible to tests | Not required — check 10 catches `src/styles` diffs |
+| 4 | No visual regression testing | A public styling change is invisible to tests | In scope since ADR-018 — guarded by per-phase browser review + the Lighthouse baseline in `docs/upgrade-baselines/`, not a test |
 | 5 | No load testing | Unknown capacity | §11.3 (one command) |
 | 6 | No accessibility audit automation | A11y regressions found manually | `@axe-core/playwright` in Phase 10 |
 | 7 | No multi-browser E2E | Chromium-only blind spot | Acceptable; the site uses no browser-specific APIs |

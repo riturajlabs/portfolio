@@ -1,16 +1,20 @@
-// Phase 10 (docs/MIGRATION.md Phase 10, docs/TESTING.md §10 checks 10–11):
-// the migration tripwires, automated. Two claims have held since Phase 0 and
-// must keep holding through Phase 11:
+// Phase 10 (docs/MIGRATION.md Phase 10, docs/TESTING.md §10 check 10):
+// the migration tripwire, automated. One claim has held since Phase 0 and
+// must keep holding:
 //
 //   * `src/data/**` never changes — it is the legacy migration input, not a
 //     runtime authority, and an edit there means someone re-introduced it.
-//   * `src/styles/**` never changes — the public CSS is byte-identical to the
-//     pre-migration site, so a non-empty diff is a visual change no test
-//     reviewed.
+//
+// The `src/styles/**` freeze that used to live here was lifted by ADR-018
+// (2026-10-17, docs/ARCHITECTURE.md): the approved public design upgrade
+// (docs/PORTFOLIO_UPGRADE.md) intentionally edits `src/styles/**`. The public
+// UI is no longer byte-identical by design; `src/data/**` remains frozen.
+// Public-product changes are now guarded by per-phase review + the Lighthouse
+// baseline in docs/upgrade-baselines/, not by a styles tripwire.
 //
 // `git diff` only sees tracked modifications, so untracked additions are
-// checked separately — a new file under those trees would be just as
-// violating as an edit to an existing one.
+// checked separately — a new file under that tree would be just as violating
+// as an edit to an existing one.
 //
 // These run in CI on a clean checkout (where the working tree is trivially
 // clean); the PR-level diff check lives in .github/workflows/ci.yml, which
@@ -48,22 +52,6 @@ describe("migration tripwires", () => {
             "src/data",
         ]);
         expect(added, `src/data gained untracked files:\n${added}`).toBe("");
-    });
-
-    it("src/styles has no tracked modifications", () => {
-        const changed = git(["diff", "--name-only", "--", "src/styles"]);
-        expect(changed, `src/styles was modified:\n${changed}`).toBe("");
-    });
-
-    it("src/styles has no untracked additions", () => {
-        const added = git([
-            "ls-files",
-            "--others",
-            "--exclude-standard",
-            "--",
-            "src/styles",
-        ]);
-        expect(added, `src/styles gained untracked files:\n${added}`).toBe("");
     });
 });
 
