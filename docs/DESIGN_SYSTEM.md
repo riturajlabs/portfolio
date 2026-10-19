@@ -392,6 +392,34 @@ in a real browser; keyboard-operable nav, modal and chat.
 **Change process:** §7 still applies. Each upgrade phase is a separate commit;
 Lighthouse is compared against `docs/upgrade-baselines/U1-before.md`.
 
+## 8.1 U3 baseline — tokens & theme foundation (landed)
+
+U3 makes the §8 token contract real in `variables.css` and fixes the theme
+init path. Existing token names are unchanged; the families below are additive
+and have a `[data-theme="light"]` counterpart.
+
+| Family | Tokens | Notes |
+|---|---|---|
+| Elevation | `--elev-1/2/3` | Canonical shadows; `--shadow`→`--elev-2`, `--shadow-xl`→`--elev-3` |
+| Brand glow | `--glow-brand`, `--glow-brand-hover`, `--glow-brand-active`, `--glow-brand-soft` | `--shadow-primary`→`--glow-brand` |
+| Surfaces | `--surface-2`, `--surface-3` | Layered panels over `--surface`/`--card` |
+| Link/focus | `--on-primary`, `--link`, `--link-hover`, `--focus-ring`, `--accent-cyan` | `--on-primary` replaces literals on brand fills |
+| Overlays | `--overlay`, `--hover-overlay`, `--primary-soft`, `--control-bg/-border/-fg` | Modal scrims, hover/ghost fills, form controls |
+| Section glow | `--glow-primary/-secondary/-cyan` | Decorative section blobs; dimmer in light |
+| Spacing | `--space-1…8` (4→64 px) | New components use these, not ad-hoc `rem` |
+| Type | `--fs-xs/sm/body/lead/section/display` | Eyebrow→display; fluid section/display steps |
+| Motion | `--dur-fast/base/slow` | `--transition*` now reference these |
+
+**Theme contract (both themes first-class).** The source of truth is
+`data-theme` on `<html>` plus `color-scheme`. A pre-paint inline script in
+`index.html` sets the initial theme from `localStorage.theme` (strictly
+`"light"|"dark"`) → `prefers-color-scheme` → dark, before first paint, so there
+is no flash. `src/lib/theme.js` is the single resolver shared by that script and
+`ThemeContext.jsx`; the provider only writes on an explicit choice, keeps the OS
+preference live until then, and memoizes its context value. The toggle exposes
+`aria-pressed` and an action-revealing name. `@axe-core/playwright` scans `/` in
+**both** themes (`e2e/a11y.spec.js`).
+
 ---
 
 # END OF DESIGN SYSTEM

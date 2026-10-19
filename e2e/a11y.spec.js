@@ -8,11 +8,15 @@
 // reduced-motion tree is static, so the scan is deterministic and it also
 // exercises the FE-2 behaviour end to end.
 //
+// U3 adds a second scan with an explicit light-theme choice: the same
+// allowlisted rules apply, so a new violation introduced only in light
+// mode still fails the build.
+//
 // FAIL-CLOSED ON REGRESSIONS, ALLOWLISTED FOR KNOWN DEBT:
 // critical/serious violations fail the build unless their rule id is in
 // `KNOWN_DEFERRED` below. Each entry names the tracked finding and the
 // later phase that owns the fix, so this gate catches *new* breakage now
-// without blocking U2 on work the blueprint deliberately deferred.
+// without blocking on work the blueprint deliberately deferred.
 // Moderate/minor violations are advisory only (reported, never fatal).
 
 import AxeBuilder from "@axe-core/playwright";
@@ -21,24 +25,30 @@ import { expect, test } from "@playwright/test";
 import { attachBrowserSandbox } from "./intercept.mjs";
 import { watchPageErrors } from "./state.mjs";
 
-// Pre-existing critical/serious rules out of U2's scope. Never silently
+// Pre-existing critical/serious rules out of scope. Never silently
 // widened: adding an id here needs the same finding/phase annotation.
 const KNOWN_DEFERRED = {
-  // Dark-mode brand colours (`--accent` blue / muted slate on `#0f172a`)
-  // fall below AA. FE-10/FE-15/FE-16 — the semantic-token and contrast
-  // work is U3, re-verified per section in U4–U6.
-  "color-contrast": "FE-10/FE-15/FE-16 (theme tokens, U3/U4–U6)",
+  // Brand colours (`--accent` blue / muted slate) still fall below AA.
+  // FE-10/FE-15/FE-16 — remaining contrast work is re-verified per
+  // section in U4–U6.
+  "color-contrast": "FE-10/FE-15/FE-16 (remaining contrast, U4–U6)",
   // react-icons `si` glyphs ship `role="img"` with no accessible name;
   // the skill icons are decorative (the skill name is adjacent text).
   // FE-9 area — Skills markup is U4.
   "svg-img-alt": "FE-9 (Skills section, U4)",
 };
 
-test.use({ reducedMotion: "reduce" });
+const SERIOUS = ["critical", "serious"];
 
-test("homepage has no critical or serious axe violations outside known deferred debt", async ({
-  page,
-}) => {
+function isSerious(violation) {
+  return SERIOUS.includes(violation.impact);
+}
+
+function isDeferred(violation) {
+  return Object.prototype.hasOwnProperty.call(KNOWN_DEFERRED, violation.id);
+}
+
+async function scanHomepage(page) {
   const errors = watchPageErrors(page);
   await attachBrowserSandbox(page);
   await page.goto("/");
@@ -48,30 +58,23 @@ test("homepage has no critical or serious axe violations outside known deferred 
   await page.waitForTimeout(300);
 
   const results = await new AxeBuilder({ page }).analyze();
+  return { violations: results.violations, errors };
+}
 
-  const blocking = results.violations.filter(
-    (v) =>
-      ["critical", "serious"].includes(v.impact) &&
-      !Object.prototype.hasOwnProperty.call(KNOWN_DEFERRED, v.id)
-  );
-  const advisory = results.violations.filter(
-    (v) => !["critical", "serious"].includes(v.impact)
-  );
-  const deferred = results.violations.filter(
-    (v) =>
-      ["critical", "serious"].includes(v.impact) &&
-      Object.prototype.hasOwnProperty.call(KNOWN_DEFERRED, v.id)
-  );
+function expectNoNewDebt({ violations, errors }, label) {
+  const advisory = violations.filter((v) => !isSerious(v));
+  const deferred = violations.filter((v) => isSerious(v) && isDeferred(v));
+  const blocking = violations.filter((v) => isSerious(v) && !isDeferred(v));
 
   if (advisory.length > 0) {
     console.warn(
-      "[a11y] advisory (moderate/minor):",
+      `[a11y ${label}] advisory (moderate/minor):`,
       advisory.map((v) => `${v.id} (${v.impact}): ${v.nodes.length} node(s)`)
     );
   }
   if (deferred.length > 0) {
     console.warn(
-      "[a11y] known deferred serious/critical:",
+      `[a11y ${label}] known deferred serious/critical:`,
       deferred.map((v) => `${v.id} — ${KNOWN_DEFERRED[v.id]}`)
     );
   }
@@ -83,8 +86,33 @@ test("homepage has no critical or serious axe violations outside known deferred 
       nodes: v.nodes.length,
       help: v.help,
     })),
-    "critical/serious axe violations on / that are not known, deferred debt"
+    `critical/serious axe violations on ${label} that are not known, deferred debt`
   ).toEqual([]);
 
   expect(errors).toEqual([]);
+}
+
+test.use({ reducedMotion: "reduce" });
+
+test("homepage has no critical or serious axe violations outside known deferred debt", async ({
+  page,
+}) => {
+  expectNoNewDebt(await scanHomepage(page), "dark theme");
+});
+
+test("homepage honours an explicit light-theme choice and stays accessible", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem("theme", "light");
+    } catch {
+      // storage unavailable: the scan still runs on the default theme
+    }
+  });
+
+  const { violations, errors } = await scanHomepage(page);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+  expectNoNewDebt({ violations, errors }, "light theme");
 });

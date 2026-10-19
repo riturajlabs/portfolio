@@ -4,6 +4,33 @@
 <head>
 
   <!-- ========================================================= -->
+  <!-- Theme bootstrap — runs before first paint so the correct
+       token block is active immediately (no flash of the wrong
+       theme). The ladder mirrors src/lib/theme.js exactly:
+       localStorage.theme wins, else prefers-color-scheme, else
+       dark. Keep the two in sync. -->
+  <!-- ========================================================= -->
+
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("theme");
+        var theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.style.colorScheme = theme;
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+
+  <!-- ========================================================= -->
   <!-- Basic -->
   <!-- ========================================================= -->
 
@@ -168,7 +195,13 @@
 
   <meta
     name="theme-color"
-    content="#2563EB">
+    content="#0F172A"
+    media="(prefers-color-scheme: dark)">
+
+  <meta
+    name="theme-color"
+    content="#F8FAFC"
+    media="(prefers-color-scheme: light)">
 
   <meta
     name="color-scheme"

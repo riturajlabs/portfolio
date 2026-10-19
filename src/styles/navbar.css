@@ -107,8 +107,10 @@
 }
 
 .theme-toggle {
-    width: 42px;
-    height: 42px;
+    /* 44px keeps the icon-only control on the minimum comfortable tap
+       target (docs/DESIGN_SYSTEM.md §8). */
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     border: 1px solid var(--border);
     background: var(--card);
@@ -117,15 +119,15 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s ease, background .35s ease, color .35s ease, border-color .35s ease;
+    transition: transform var(--dur-base) cubic-bezier(.4,0,.2,1), box-shadow var(--dur-base) ease, background .35s ease, color .35s ease, border-color .35s ease;
 }
 
 .theme-toggle:hover {
-    background: var(--brand-gradient, linear-gradient(90deg, #2563eb, #7c3aed));
-    color: white;
+    background: var(--brand-gradient);
+    color: var(--on-primary);
     border-color: transparent;
     transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+    box-shadow: var(--glow-brand-soft);
 }
 
 .theme-toggle:active {

@@ -60,6 +60,28 @@ function withoutAssetBlock(text) {
     return text.replace(ASSET_BLOCK, "");
 }
 
+// U3 (docs/PORTFOLIO_UPGRADE.md §7 U3) makes two deliberate, authorable
+// changes to the SPA shell that are not migrations of migrated content:
+//   1. a pre-paint theme-bootstrap <script> (chooses data-theme from
+//      localStorage → prefers-color-scheme → dark before first paint), and
+//   2. the single static `theme-color` meta is replaced by a
+//      `prefers-color-scheme` dark/light pair.
+// Both are sanctioned by the U3 plan and neither touches an SEO/content
+// contract, so the shell body comparison ignores exactly these two
+// anchored regions. It is deliberately *not* a blanket ignore: any other
+// change to the shell body (title, canonical, OG/Twitter, JSON-LD) still
+// reports DIFFERS. If the bootstrap script text changes, the anchor below
+// stops matching and the shell is compared byte-for-byte again.
+const THEME_BOOTSTRAP_BLOCK =
+    /[ \t]*<!-- Theme bootstrap[\s\S]*?<\/script>\n\n[ \t]*<!-- =+ -->\n/;
+const THEME_COLOR_META = /[ \t]*<meta\s+name="theme-color"[\s\S]*?>\n\n/g;
+
+function withoutThemeDelta(text) {
+    return text
+        .replace(THEME_BOOTSTRAP_BLOCK, "")
+        .replace(THEME_COLOR_META, "");
+}
+
 function assetManifest(text) {
     const manifest = [];
     for (const match of text.matchAll(/\/assets\/[^"']+/g)) {
@@ -119,8 +141,12 @@ for (const entry of entries) {
     // the manifest itself is compared as a set so a chunk graph change
     // is reported (and inspected) rather than silently swallowed.
     if (entry.isShell) {
-        const baselineBody = withoutAssetBlock(normalize(baselineText));
-        const distBody = withoutAssetBlock(normalize(distText));
+        const baselineBody = withoutThemeDelta(
+            withoutAssetBlock(normalize(baselineText))
+        );
+        const distBody = withoutThemeDelta(
+            withoutAssetBlock(normalize(distText))
+        );
 
         const baselineAssets = assetManifest(baselineText);
         const distAssets = assetManifest(distText);
