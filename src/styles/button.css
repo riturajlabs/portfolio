@@ -98,7 +98,7 @@
 
 .btn-outline {
     background: transparent;
-    color: var(--primary);
+    color: var(--link);
     border-color: var(--primary);
 }
 

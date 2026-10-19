@@ -47,7 +47,7 @@
 }
 
 .logo:hover .logo-name {
-    color: var(--primary, #2563eb); 
+    color: var(--link, #1D4ED8);
 }
 
 /* ===================================================
@@ -72,7 +72,7 @@
 }
 
 .nav-links a:hover {
-    color: var(--primary, #2563eb);
+    color: var(--link-hover, #1E40AF);
 }
 
 /* Enhanced Hover Underline */
@@ -161,8 +161,8 @@
 }
 
 .menu-btn {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     border: none;
     border-radius: 10px;
     background: transparent;
@@ -219,7 +219,7 @@
     text-decoration: none;
     font-size: 1.1rem;
     font-weight: 600;
-    padding: 0.7rem 0;
+    padding: 0.75rem 0;
     /* 🚀 FIX: Native touch behavior */
     touch-action: manipulation; 
 }
@@ -228,7 +228,7 @@
 
 .mobile-menu-content a:hover,
 .mobile-menu-content a.active-link {
-    color: var(--primary, #2563eb);
+    color: var(--link-hover, #1E40AF);
 }
 
 .mobile-resume {
@@ -272,17 +272,17 @@
    ACTIVE NAVIGATION OVERRIDES
 ========================================== */
 .active-link {
-    color: var(--primary, #2563eb) !important;
+    color: var(--link, #1D4ED8) !important;
 }
 
 /* Ye sirf desktop/mouse wale devices par hover chalayega */
 @media (hover: hover) {
     .mobile-menu-content a:hover {
-        color: var(--primary, #2563eb);
+        color: var(--link-hover, #1E40AF);
     }
 }
 
 /* Active link ka color mobile aur desktop dono par chalega */
 .mobile-menu-content a.active-link {
-    color: var(--primary, #2563eb) !important;
+    color: var(--link, #1D4ED8) !important;
 }

@@ -45,8 +45,8 @@ function Skills() {
                                 }}
                             >
                                 <div className="skill-heading">
-                                    <div className="skill-category-icon">
-                                        <CategoryIcon />
+                                    <div className="skill-category-icon" aria-hidden="true">
+                                        <CategoryIcon aria-hidden="true" />
                                     </div>
 
                                     <h3>{category.title}</h3>
@@ -61,8 +61,8 @@ function Skills() {
                                                 key={skill.id || skill.name}
                                                 className="skill-item"
                                             >
-                                                <span className="skill-icon">
-                                                    <SkillIcon />
+                                                <span className="skill-icon" aria-hidden="true">
+                                                    <SkillIcon aria-hidden="true" />
                                                 </span>
 
                                                 <span>{skill.name}</span>

@@ -4,20 +4,28 @@
 // AxeBuilder scans the rendered `/` after the same browser sandbox the
 // other public specs use (chat/github calls intercepted, so the scan
 // never reaches the internet). The page is scanned under an emulated
-// `prefers-reduced-motion: reduce`, which U2 makes the app honour — the
-// reduced-motion tree is static, so the scan is deterministic and it also
-// exercises the FE-2 behaviour end to end.
+// `prefers-reduced-motion: reduce`, which U2 makes the app honour for
+// CSS motion (and it also exercises the FE-2 behaviour end to end);
+// Framer's opacity reveals still run, so `scanHomepage` waits for the
+// tree to settle before analysing.
 //
 // U3 adds a second scan with an explicit light-theme choice: the same
-// allowlisted rules apply, so a new violation introduced only in light
+// rules apply, so a new violation introduced only in light
 // mode still fails the build.
 //
-// FAIL-CLOSED ON REGRESSIONS, ALLOWLISTED FOR KNOWN DEBT:
-// critical/serious violations fail the build unless their rule id is in
-// `KNOWN_DEFERRED` below. Each entry names the tracked finding and the
-// later phase that owns the fix, so this gate catches *new* breakage now
-// without blocking on work the blueprint deliberately deferred.
-// Moderate/minor violations are advisory only (reported, never fatal).
+// U4 fixes the first scan, which was silently scanning light: Playwright
+// emulates `prefers-color-scheme: light` by default, and with no stored
+// choice the app's theme ladder (stored → system → dark) resolved light,
+// so "dark theme" and "light theme" scanned the same palette. The dark
+// scan now emulates `prefers-color-scheme: dark` and asserts
+// `data-theme="dark"`, mirroring the light test's assertion — both
+// themes are genuinely gated.
+//
+// FAIL-CLOSED ON REGRESSIONS: critical/serious violations fail the
+// build; only advisory (moderate/minor) violations are reported and
+// never fatal. `KNOWN_DEFERRED` is the one sanctioned exception list
+// and is currently empty — each entry needs a tracked finding and the
+// phase that owns the fix, so this gate catches *new* breakage now.
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
@@ -27,16 +35,11 @@ import { watchPageErrors } from "./state.mjs";
 
 // Pre-existing critical/serious rules out of scope. Never silently
 // widened: adding an id here needs the same finding/phase annotation.
-const KNOWN_DEFERRED = {
-  // Brand colours (`--accent` blue / muted slate) still fall below AA.
-  // FE-10/FE-15/FE-16 — remaining contrast work is re-verified per
-  // section in U4–U6.
-  "color-contrast": "FE-10/FE-15/FE-16 (remaining contrast, U4–U6)",
-  // react-icons `si` glyphs ship `role="img"` with no accessible name;
-  // the skill icons are decorative (the skill name is adjacent text).
-  // FE-9 area — Skills markup is U4.
-  "svg-img-alt": "FE-9 (Skills section, U4)",
-};
+// U4 removed the last entry (`color-contrast`): after the navbar/hero
+// repaints at source, a full-page probe under this gate's reduced-motion
+// condition reports zero contrast nodes in both themes (desktop and
+// mobile), so any contrast regression now fails this gate outright.
+const KNOWN_DEFERRED = {};
 
 const SERIOUS = ["critical", "serious"];
 
@@ -53,9 +56,15 @@ async function scanHomepage(page) {
   await attachBrowserSandbox(page);
   await page.goto("/");
   await expect(page.locator("#home")).toBeAttached();
-  // Section reveals settle immediately under reduced motion; this wait only
-  // covers the lazy chat widget mounting.
-  await page.waitForTimeout(300);
+  // Scan the settled tree, not a mid-animation frame. The hero stagger
+  // (delayChildren 0.5s + 0.2s/child + 0.5s duration) and the chat fab
+  // label fade (delay 1s + 0.5s) finish by ~2s; axe reading a frame in
+  // between composites partially-faded text against its background and
+  // reports phantom `color-contrast` nodes (`.hero-stat > span`,
+  // `.chat-fab-label`) that vary run to run. A full-page probe at this
+  // settled state is clean in both themes, so anything axe reports here
+  // is real.
+  await page.waitForTimeout(3000);
 
   const results = await new AxeBuilder({ page }).analyze();
   return { violations: results.violations, errors };
@@ -84,6 +93,7 @@ function expectNoNewDebt({ violations, errors }, label) {
       id: v.id,
       impact: v.impact,
       nodes: v.nodes.length,
+      targets: v.nodes.map((n) => n.target),
       help: v.help,
     })),
     `critical/serious axe violations on ${label} that are not known, deferred debt`
@@ -97,7 +107,12 @@ test.use({ reducedMotion: "reduce" });
 test("homepage has no critical or serious axe violations outside known deferred debt", async ({
   page,
 }) => {
-  expectNoNewDebt(await scanHomepage(page), "dark theme");
+  await page.emulateMedia({ colorScheme: "dark" });
+
+  const { violations, errors } = await scanHomepage(page);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  expectNoNewDebt({ violations, errors }, "dark theme");
 });
 
 test("homepage honours an explicit light-theme choice and stays accessible", async ({

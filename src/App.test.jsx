@@ -26,6 +26,7 @@ const NAV_ANCHORS = [
     "about",
     "skills",
     "projects",
+    "github",
     "certifications",
     "blog",
     "contact",
