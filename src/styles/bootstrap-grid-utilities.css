@@ -5,7 +5,8 @@
  * tiny subset this project actually uses:
  *   - Reboot (CSS reset)
  *   - .container (5 places)
- *   - .col-8 / .col-10 / .col-12 (3 placeholders in Loader.jsx)
+ *   - .col-8 / .col-10 / .col-12 (Skeleton widths in Loader.jsx)
+ *   - .placeholder-glow / .placeholder / .py-5 / .mb-3 (Loader skeleton)
  *   - .d-none / .d-lg-flex / .d-lg-inline-flex / .d-lg-none (Navbar)
  *
  * Everything else (buttons, navbar, forms, modals, etc.) is hand-rolled
@@ -128,4 +129,32 @@ button {
     .d-xxl-none    { display: none !important; }
     .d-xxl-flex    { display: flex !important; }
     .d-xxl-inline-flex { display: inline-flex !important; }
+}
+/* Minimal utilities for Loader/Skeleton */
+.py-5 {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+}
+
+.mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+.placeholder-glow {
+    animation: placeholder-glow 2s ease-in-out infinite;
+}
+
+.placeholder {
+    display: inline-block;
+    min-height: 1em;
+    vertical-align: middle;
+    background-color: currentcolor;
+    opacity: 0.2;
+    border-radius: 0.25rem;
+}
+
+@keyframes placeholder-glow {
+    50% {
+        opacity: 0.1;
+    }
 }

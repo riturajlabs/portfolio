@@ -101,11 +101,11 @@ function Certifications() {
 
 
 
-                                <p>
-
-                                    {certificate.description}
-
-                                </p>
+                                {certificate.description && (
+                                    <p>
+                                        {certificate.description}
+                                    </p>
+                                )}
 
 
 

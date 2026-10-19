@@ -107,12 +107,12 @@ function Blog() {
                                 <div className="blog-meta">
 
                                     <span>
-                                        {blog.date}
+                                        {blog.date || blog.status || blog.readTime || ""}
                                     </span>
 
 
                                     <span>
-                                        {blog.readTime}
+                                        {blog.readTime || ""}
                                     </span>
 
                                 </div>

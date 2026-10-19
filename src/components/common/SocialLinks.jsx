@@ -4,8 +4,10 @@ import { socials } from "../../lib/publicContent";
 function SocialLinks({
     className = "",
     showLabel = true,
+    showLabels,
     iconSize = 20,
 }) {
+    showLabel = showLabels !== undefined ? showLabels : showLabel;
     return (
         <div className={`hero-social ${className}`.trim()}>
             {socials.map((social) => {
@@ -35,6 +37,7 @@ function SocialLinks({
 SocialLinks.propTypes = {
     className: PropTypes.string,
     showLabel: PropTypes.bool,
+    showLabels: PropTypes.bool,
     iconSize: PropTypes.number,
 };
 

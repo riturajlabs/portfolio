@@ -8,6 +8,8 @@ import useGithub from "../../hooks/useGithub";
 
 import "../../styles/github.css";
 
+const FALLBACK_AVATAR = "https://github.com/riturajlabs.png";
+
 
 function GithubStats() {
 
@@ -148,11 +150,11 @@ function GithubStats() {
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="github-profile-link"
-                                            aria-label={`${profile.name || profile.login} on GitHub`}
+                                            aria-label={`${profile?.name || profile?.login || "riturajlabs"} on GitHub`}
                                         >
                                             <img
-                                                src={profile.avatar_url}
-                                                alt={profile.name || profile.login}
+                                                src={profile?.avatar_url || FALLBACK_AVATAR}
+                                                alt={profile?.name || profile?.login || "GitHub profile"}
                                                 className="github-avatar"
                                                 loading="lazy"
                                             />
@@ -160,11 +162,11 @@ function GithubStats() {
                                             <div className="github-profile-info">
 
                                                 <h3>
-                                                    {profile.name || profile.login}
+                                                    {profile?.name || profile?.login || "riturajlabs"}
                                                 </h3>
 
                                                 <span>
-                                                    @{profile.login}
+                                                    @{profile?.login || "riturajlabs"}
                                                 </span>
 
                                             </div>

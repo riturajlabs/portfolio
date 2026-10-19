@@ -73,7 +73,7 @@ function Hero() {
                         </h2>
 
                         <div className="hero-location">
-                            <FaMapMarkerAlt color="red" c/>
+                            <FaMapMarkerAlt aria-hidden="true" />
                             <span>
                                 {profile.location}
                             </span>
@@ -126,7 +126,7 @@ function Hero() {
                         {/* ================= SOCIAL ================= */}
                         <SocialLinks
                             className="hero-social"
-                            showLabels
+                            showLabel
                         />
                     </motion.div>
 
