@@ -43,19 +43,12 @@ if (!fs.existsSync(baselineDir)) {
     );
 }
 
-// Vite/Rolldown asset hashes are base64url, so they can carry `_`
-// (observed: `entry-ku271_YJ.css`) — a pure-alnum class let such a
-// hash slip through un-normalised and reported a false DIFFERS. Only
-// `_` is added: hyphens stay excluded so the match keeps its
-// final-segment semantics (a multi-hyphen name like
-// `preload-helper-lbgt0pgl.js` still normalises just the hash part).
-// A hash that ever contains `-` would fail closed as DIFFERS for
-// inspection rather than silently widening the token.
-const HASHED_ASSET = /-([A-Za-z0-9_]{8,})\.(js|css)\b/g;
+// Asset-hash normalisation lives in `scripts/asset-hash.mjs` so its regex has
+// its own regression tests (`scripts/asset-hash.test.mjs`) without importing
+// this side-effect-heavy script. See that module for the rule and rationale.
+import { HASHED_ASSET, normalize } from "./asset-hash.mjs";
 
-function normalize(text) {
-    return text.replace(HASHED_ASSET, "-HASH.$2");
-}
+export { HASHED_ASSET, normalize };
 
 // The bundler-owned asset block of the SPA shell: <script> entries and
 // <link rel="modulepreload"> manifests. These lines are emitted by

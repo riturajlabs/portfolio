@@ -42,12 +42,6 @@ const MAX_HISTORY_TURNS = 6;
 // permanent "Offline". The client now retries transient failures within a
 // strict budget and reports a temporary "waking up" state in between.
 const RETRY_NOTICE_TEXT = "Waking up the AI service…";
-// Inline (not a stylesheet) so the frozen pre-migration CSS under
-// `src/styles/**` stays byte-identical — tests/tripwires.test.mjs enforces it.
-const ERROR_BUBBLE_STYLE = {
-    borderColor: "rgba(239, 68, 68, 0.45)",
-    background: "rgba(239, 68, 68, 0.08)",
-};
 
 // Session persistence keys.
 const CHAT_STORAGE_KEY = "portfolio-chat-session";
@@ -648,6 +642,21 @@ function ChatAssistant({ chatTransport } = {}) {
     const isStreamingEmpty =
         isLoading && lastMsg?.role === "ai" && !lastMsg.text;
 
+    // 🗣️ Concise live-region text (U7): announce state *transitions* only —
+    // never the streaming tokens. Re-announcing the whole transcript on every
+    // patch is excessive; a short sentence is what a screen-reader user needs.
+    const liveStatus = retryNotice
+        ? RETRY_NOTICE_TEXT
+        : isLoading
+            ? isStreamingEmpty
+                ? "Searching the knowledge base…"
+                : "Generating a response…"
+            : lastMsg?.role === "ai" && lastMsg?.text
+                ? lastMsg.isError
+                    ? "The assistant could not answer. A retry is available."
+                    : "Assistant response ready."
+                : "";
+
     return (
         <>
             {/* BACKDROP BLUR OVERLAY */}
@@ -719,7 +728,11 @@ function ChatAssistant({ chatTransport } = {}) {
                             </div>
 
                             {/* BODY */}
-                            <div className="chat-body" aria-live="polite" ref={chatBodyRef} onScroll={handleScroll}>
+                            {/* U7: the transcript container is NOT a live region
+                                (a streaming answer would re-announce every
+                                token). A concise status region below carries
+                                polite, transition-level announcements. */}
+                            <div className="chat-body" ref={chatBodyRef} onScroll={handleScroll}>
                                 {messages.map((msg, idx) => {
                                     const isStreamingMsg =
                                         isLoading &&
@@ -732,7 +745,6 @@ function ChatAssistant({ chatTransport } = {}) {
                                         <motion.div 
                                             key={msg.id} 
                                             className={`chat-bubble ${msg.role === "ai" ? "ai-msg" : "user-msg"}${msg.isError ? " error-msg" : ""}`}
-                                            style={msg.isError ? ERROR_BUBBLE_STYLE : undefined}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.3 }}
@@ -863,6 +875,18 @@ function ChatAssistant({ chatTransport } = {}) {
 
                                 {isLoading && <TypingIndicator />}
                                 <div ref={messagesEndRef} />
+                            </div>
+
+                            {/* 🗣️ Concise, non-excessive live region (U7).
+                                Always mounted so assistive tech registers it;
+                                announces transitions, not streamed tokens. */}
+                            <div
+                                className="chat-a11y-status"
+                                role="status"
+                                aria-live="polite"
+                                aria-atomic="true"
+                            >
+                                {liveStatus}
                             </div>
 
                             {/* 🔍 STREAMING STATUS / STOP */}

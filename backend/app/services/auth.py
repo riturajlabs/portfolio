@@ -174,6 +174,10 @@ async def record_login_failure(
 
     The counters are recorded here but never consulted to allow or refuse an
     attempt; see the module docstring.
+
+    `email` is part of the caller's contract but is deliberately **never**
+    persisted (BE-3): the audit row records only the `outcome` and `reason`, so
+    no cleartext attempted address is written to the database.
     """
     if user is not None and reason == REASON_WRONG_PASSWORD:
         user.failed_attempts = (user.failed_attempts or 0) + 1
@@ -188,7 +192,11 @@ async def record_login_failure(
             action=ACTION_LOGIN,
             entity=ENTITY_ADMIN_USER,
             entity_id=str(user.id) if user is not None else None,
-            after={"outcome": "failure", "reason": reason, "email": email},
+            # BE-3 (U7): never persist the attempted address. `outcome`/`reason`
+            # carry the diagnostic, and correlation is via `actor_user_id` (when
+            # the address resolved to a row) plus the `ip_hash` on the warning
+            # log below — so no cleartext PII lands in the audit trail.
+            after={"outcome": "failure", "reason": reason},
         )
     )
     await db.commit()

@@ -17,6 +17,8 @@ Notable behaviours under test:
 
 from __future__ import annotations
 
+import logging
+
 import httpx
 import pytest
 from sqlalchemy import text
@@ -67,15 +69,16 @@ async def _read_messages(engine) -> list[dict]:
 
 
 async def test_valid_submission_succeeds_and_stores(
-    client, engine, monkeypatch
+    client, engine, monkeypatch, caplog
 ) -> None:
     monkeypatch.setattr(contact_service, "send_via_resend", _deliver_ok)
 
-    response = await client.post(
-        "/api/contact",
-        json=VALID_PAYLOAD,
-        headers={"User-Agent": "picobrowser/1.0"},
-    )
+    with caplog.at_level(logging.INFO, logger="app.contact"):
+        response = await client.post(
+            "/api/contact",
+            json=VALID_PAYLOAD,
+            headers={"User-Agent": "picobrowser/1.0"},
+        )
 
     assert response.status_code == 200
     assert response.json() == {"success": True, "message": SUCCESS_MESSAGE}
@@ -90,6 +93,15 @@ async def test_valid_submission_succeeds_and_stores(
     assert row["delivery_status"] == "sent"
     assert row["user_agent"] == "picobrowser/1.0"
     assert row["created_at"] is not None
+
+    # BE-3 (U7): the delivery log correlates by message id, not the sender's
+    # name/email — personal data must not leak into application logs.
+    assert "contact_delivered" in caplog.text
+    assert "Ada Lovelace" not in caplog.text
+    assert "ada@example.com" not in caplog.text
+    for record in caplog.records:
+        assert "Ada Lovelace" not in str(getattr(record, "message_id", ""))
+        assert "ada@example.com" not in str(getattr(record, "message_id", ""))
 
 
 async def test_subject_is_used_when_provided(client, engine, monkeypatch) -> None:

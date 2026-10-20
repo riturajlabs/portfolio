@@ -61,6 +61,22 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 #   - Override via ALLOWED_ORIGINS env var (comma-separated list, no spaces).
 #   - To explicitly allow any origin (NOT recommended in production),
 #     set ALLOWED_ORIGINS="*".
+#
+# LEAST-PRIVILEGE (U7 / AI-1). The verified browser→AI-service surface is
+# narrow:
+#   * In production the browser never calls this service cross-origin — chat
+#     goes same-origin to `/api/chat/*` and Vercel's edge middleware rewrites
+#     it to the Render origin. `/contact`, `/github` and `/admin/*` are
+#     server-to-server calls from the backend (`AI_SERVICE_URL`) that send no
+#     `Origin` header, so CORS does not apply to them.
+#   * The only cross-origin browser flow is local dev
+#     (`VITE_BACKEND_URL=http://localhost:8000` → this service). That flow is
+#     exclusively `POST` to `/chat` and `/chat/stream`, sending
+#     `Content-Type: application/json` and `Accept: text/event-stream`.
+# Therefore: methods are POST-only, request headers are Content-Type-only, and
+# credentials stay off (the chat client sends no cookies; the shared
+# `X-API-Key` is injected by the edge, never by the browser). SSE is a response
+# stream over the same POST — no extra method or header is required.
 # ==========================================
 _DEFAULT_ORIGINS = (
     "https://riturajlabs.vercel.app,"
@@ -77,19 +93,23 @@ if _allowed_origins_env.strip() == "*":
         "Set ALLOWED_ORIGINS to your frontend domain(s)."
     )
     allow_origins = ["*"]
-    allow_credentials = False  # browsers reject credentials + wildcard
 else:
     allow_origins = [
         o.strip() for o in _allowed_origins_env.split(",") if o.strip()
     ]
-    allow_credentials = True  # allow cookies/auth headers from trusted origins
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_credentials=allow_credentials,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # The chat client never sends cookies or auth headers from the browser, so
+    # credentialed CORS is unnecessary and stays off (it is also incompatible
+    # with a wildcard origin).
+    allow_credentials=False,
+    # Only the chat endpoints are ever called cross-origin, and only via POST.
+    allow_methods=["POST"],
+    # The browser sets exactly this request header; `Accept` is a CORS-safelisted
+    # header and needs no allow-list entry.
+    allow_headers=["Content-Type"],
 )
 
 app.include_router(router)
