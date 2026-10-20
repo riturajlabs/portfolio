@@ -2,9 +2,6 @@ import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 import {
-    FaEnvelope,
-    FaGithub,
-    FaLinkedin,
     FaPaperPlane,
     FaCheckCircle,
     FaCopy,
@@ -13,6 +10,7 @@ import {
 
 import SectionTitle from "../common/SectionTitle";
 import { sendEmail } from "../../services/emailService";
+import { socials } from "../../lib/publicContent";
 
 import "../../styles/contacts.css";
 
@@ -155,30 +153,45 @@ function Contact() {
         }
     };
 
-    const contactLinks = useMemo(
-        () => [
-            {
-                icon: <FaEnvelope />,
+    // FE-11 (U6-R4): destinations come from the CMS-backed
+    // `profile.social` via the `socials` adapter, not hardcoded
+    // literals. The adapter is the single source of truth (GitHub,
+    // LinkedIn, Email); we re-order to the established UI order
+    // (Email, LinkedIn, GitHub) and derive the display value from the
+    // URL so nothing is duplicated or fabricated. Fields that are
+    // missing are simply skipped.
+    const contactLinks = useMemo(() => {
+        const byName = Object.fromEntries(
+            socials.map((social) => [social.name, social])
+        );
+
+        const links = [];
+
+        const email = byName.Email;
+        if (email) {
+            const address = email.url.replace(/^mailto:/, "");
+            links.push({
+                icon: <email.icon />,
                 title: "Email",
-                value: "riturajlabs@outlook.com",
-                link: "mailto:riturajlabs@outlook.com",
-                copy: "riturajlabs@outlook.com",
-            },
-            {
-                icon: <FaLinkedin />,
-                title: "LinkedIn",
-                value: "linkedin.com/in/riturajlabs",
-                link: "https://linkedin.com/in/riturajlabs",
-            },
-            {
-                icon: <FaGithub />,
-                title: "GitHub",
-                value: "github.com/riturajlabs",
-                link: "https://github.com/riturajlabs",
-            },
-        ],
-        []
-    );
+                value: address,
+                link: email.url,
+                copy: address,
+            });
+        }
+
+        for (const name of ["LinkedIn", "GitHub"]) {
+            const social = byName[name];
+            if (!social || !social.url) continue;
+            links.push({
+                icon: <social.icon />,
+                title: name,
+                value: social.url.replace(/^https?:\/\//, ""),
+                link: social.url,
+            });
+        }
+
+        return links;
+    }, []);
 
     // Stable handlers — using `useCallback` here is optional (Field is
     // now a stable component), but it keeps referential equality tidy

@@ -195,6 +195,18 @@
 
 
 
+/* U6-R2: when the record has no description (the adapter omits it
+   deliberately — there is no description column), keep the credential
+   button bottom-aligned and avoid a dangling gap where the paragraph
+   would have been. */
+.certificate-card-no-description a {
+
+    margin-top:auto;
+
+}
+
+
+
 /* ===================================================
    CREDENTIAL BUTTON
 =================================================== */
@@ -216,6 +228,9 @@
     width:max-content;
 
     padding:.65rem 1rem;
+
+    /* FE-13 (U6-R5): ≥44px tap target. */
+    min-height:44px;
 
     border-radius:var(--radius-sm);
 

@@ -199,6 +199,24 @@
 
 
 
+/* U6-R3: deliberate, field-aware metadata. A lone label (status or
+   readTime) aligns left instead of being pushed apart. */
+.blog-meta > span:only-child {
+
+    margin-right:auto;
+
+}
+
+.blog-status {
+
+    font-weight:600;
+
+    color:var(--link);
+
+}
+
+
+
 /* ===================================================
    READ BUTTON
 =================================================== */
@@ -219,6 +237,10 @@
 
 
     padding:.7rem 1.1rem;
+
+
+    /* FE-13 (U6-R5): ≥44px tap target. */
+    min-height:44px;
 
 
     border-radius:var(--radius-sm);
@@ -346,6 +368,10 @@
     width:max-content;
 
     padding:.7rem 1.2rem;
+
+    /* FE-13 (U6-R5): ≥44px tap target (disabled, but sized for
+       consistency with the enabled Read button). */
+    min-height:44px;
 
     border-radius:var(--radius-sm);
 
