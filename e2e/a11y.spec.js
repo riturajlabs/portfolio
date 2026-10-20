@@ -21,6 +21,17 @@
 // `data-theme="dark"`, mirroring the light test's assertion — both
 // themes are genuinely gated.
 //
+// U5 extends coverage in two ways. (1) The homepage scan now scrolls
+// through the whole page before settling: Framer's `whileInView`
+// reveals keep below-the-fold sections at opacity 0 until they enter
+// the viewport, and axe ignores opacity-0 subtrees, so the projects
+// grid, github, certifications, blog and contact sections were never
+// actually scanned before. (2) The five prerendered project pages get
+// their own axe scans plus a horizontal-overflow sweep at the four
+// §8 viewports — those pages ship no JavaScript and render only the
+// dark token block (no data-theme mechanism exists for them), so they
+// are scanned under emulated dark without a theme assertion.
+//
 // FAIL-CLOSED ON REGRESSIONS: critical/serious violations fail the
 // build; only advisory (moderate/minor) violations are reported and
 // never fatal. `KNOWN_DEFERRED` is the one sanctioned exception list
@@ -43,6 +54,16 @@ const KNOWN_DEFERRED = {};
 
 const SERIOUS = ["critical", "serious"];
 
+const PROJECT_SLUGS = [
+  "webchat-ai",
+  "orbit-ai",
+  "stayora",
+  "zerodha-clone",
+  "scientific-calculator",
+];
+
+const VIEWPORTS = [390, 768, 1024, 1440];
+
 function isSerious(violation) {
   return SERIOUS.includes(violation.impact);
 }
@@ -56,6 +77,21 @@ async function scanHomepage(page) {
   await attachBrowserSandbox(page);
   await page.goto("/");
   await expect(page.locator("#home")).toBeAttached();
+  // U5: walk the page so every `whileInView` reveal has fired before
+  // the scan. Sections below the first viewport sit at opacity 0
+  // until scrolled into view, and axe ignores opacity-0 subtrees —
+  // without this walk the projects grid and the lower sections were
+  // never actually scanned. Scroll back to the top afterwards so the
+  // scan starts from the settled first viewport.
+  await page.evaluate(async () => {
+    const step = 600;
+    const end = document.body.scrollHeight;
+    for (let y = 0; y <= end; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+    window.scrollTo(0, 0);
+  });
   // Scan the settled tree, not a mid-animation frame. The hero stagger
   // (delayChildren 0.5s + 0.2s/child + 0.5s duration) and the chat fab
   // label fade (delay 1s + 0.5s) finish by ~2s; axe reading a frame in
@@ -65,6 +101,19 @@ async function scanHomepage(page) {
   // settled state is clean in both themes, so anything axe reports here
   // is real.
   await page.waitForTimeout(3000);
+
+  const results = await new AxeBuilder({ page }).analyze();
+  return { violations: results.violations, errors };
+}
+
+// Static prerendered page: no sandbox calls of its own, no theme
+// mechanism — scan the settled document as served.
+async function scanProjectPage(page, slug) {
+  const errors = watchPageErrors(page);
+  await attachBrowserSandbox(page);
+  await page.goto(`/projects/${slug}/`);
+  await expect(page.locator(".project-page")).toBeAttached();
+  await page.waitForTimeout(500);
 
   const results = await new AxeBuilder({ page }).analyze();
   return { violations: results.violations, errors };
@@ -131,3 +180,40 @@ test("homepage honours an explicit light-theme choice and stays accessible", asy
 
   expectNoNewDebt({ violations, errors }, "light theme");
 });
+
+for (const slug of PROJECT_SLUGS) {
+  test(`project page /projects/${slug}/ has no critical or serious axe violations`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+
+    const { violations, errors } = await scanProjectPage(page, slug);
+
+    expectNoNewDebt({ violations, errors }, `project page ${slug}`);
+  });
+}
+
+for (const width of VIEWPORTS) {
+  test(`project pages have no horizontal overflow at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.emulateMedia({ colorScheme: "dark" });
+
+    for (const slug of PROJECT_SLUGS) {
+      await page.goto(`/projects/${slug}/`);
+      await expect(page.locator(".project-page")).toBeAttached();
+
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth
+      );
+
+      expect(
+        overflow,
+        `/projects/${slug}/ overflows horizontally by ${overflow}px at ${width}px`
+      ).toBeLessThanOrEqual(0);
+    }
+  });
+}

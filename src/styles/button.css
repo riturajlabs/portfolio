@@ -81,9 +81,12 @@
     box-shadow: var(--elev-1);
 }
 
+/* U5 contrast: --primary on the card/surface fails AA in the dark
+   theme (2.8:1). --link-hover is the theme's sanctioned "brand colour
+   on a background" for interactive text (see .nav-links). */
 .btn-secondary:hover {
     border-color: var(--primary);
-    color: var(--primary);
+    color: var(--link-hover);
     box-shadow: var(--glow-brand-soft);
 }
 
@@ -122,8 +125,10 @@
     color: var(--text);
 }
 
+/* U5 contrast: --primary text over --primary-soft measured 2.6:1 dark
+   and ~4.5:1 light in-browser; --link-hover clears 4.5:1 in both. */
 .btn-ghost:hover {
-    color: var(--primary);
+    color: var(--link-hover);
     background: var(--primary-soft);
 }
 

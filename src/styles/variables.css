@@ -77,6 +77,11 @@
 
     --success-text:#22C55E;
 
+    /* --secondary as TEXT on soft-tinted chips (U5): a lighter purple
+       so the chip label clears 4.5:1 over rgba(124,58,237,.12-.15)
+       in the dark theme, mirroring the --success-text split. */
+    --secondary-text:#A78BFA;
+
     --warning:#F59E0B;
 
     --danger:#EF4444;
@@ -379,6 +384,9 @@
 
 
     --success-text:#166534;
+
+    /* See the dark block: same role, deepened for light surfaces. */
+    --secondary-text:#6D28D9;
 
 
     /* ==========================

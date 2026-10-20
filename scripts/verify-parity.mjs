@@ -43,7 +43,15 @@ if (!fs.existsSync(baselineDir)) {
     );
 }
 
-const HASHED_ASSET = /-([A-Za-z0-9]{8,})\.(js|css)\b/g;
+// Vite/Rolldown asset hashes are base64url, so they can carry `_`
+// (observed: `entry-ku271_YJ.css`) — a pure-alnum class let such a
+// hash slip through un-normalised and reported a false DIFFERS. Only
+// `_` is added: hyphens stay excluded so the match keeps its
+// final-segment semantics (a multi-hyphen name like
+// `preload-helper-lbgt0pgl.js` still normalises just the hash part).
+// A hash that ever contains `-` would fail closed as DIFFERS for
+// inspection rather than silently widening the token.
+const HASHED_ASSET = /-([A-Za-z0-9_]{8,})\.(js|css)\b/g;
 
 function normalize(text) {
     return text.replace(HASHED_ASSET, "-HASH.$2");
@@ -82,6 +90,36 @@ function withoutThemeDelta(text) {
         .replace(THEME_COLOR_META, "");
 }
 
+// U5 (docs/PORTFOLIO_UPGRADE.md §7 U5): the five project pages gain
+// an authorable sticky section nav — a plain, no-JS anchor bar — plus
+// the four exact `id` attributes its anchors target. This is the
+// plan-sanctioned markup addition for the phase; it touches no
+// SEO/content contract (title, canonical, OG/Twitter, JSON-LD and the
+// visible copy stay byte-identical, and those are still compared).
+// Following the U3 mechanism above, the comparator strips exactly
+// these anchored shapes from BOTH sides and compares the rest
+// byte-for-byte. It is fail-closed by construction: the anchors are
+// exact literals keyed on the nav's unique class, so if the markup
+// ever drifts the anchors stop matching and the pages report DIFFERS
+// again rather than silently widening the exception.
+const U5_SECTION_NAV =
+    /<nav class="project-page-section-nav"[^>]*>[\s\S]*?<\/nav>/;
+
+const U5_SECTION_IDS = [
+    ' id="project-about"',
+    ' id="project-tech"',
+    ' id="project-highlights"',
+    ' id="project-related"',
+];
+
+function withoutProjectPageU5Delta(text) {
+    let out = text.replace(U5_SECTION_NAV, "");
+    for (const id of U5_SECTION_IDS) {
+        out = out.split(id).join("");
+    }
+    return out;
+}
+
 function assetManifest(text) {
     const manifest = [];
     for (const match of text.matchAll(/\/assets\/[^"']+/g)) {
@@ -103,6 +141,7 @@ for (const slug of ["webchat-ai", "orbit-ai", "stayora", "zerodha-clone", "scien
         baseline: `project-${slug}.html`,
         dist: path.join("projects", slug, "index.html"),
         label: `projects/${slug}/index.html`,
+        isProject: true,
     });
 }
 
@@ -134,6 +173,21 @@ for (const entry of entries) {
     if (baselineNorm === distNorm) {
         results.push({ ...entry, status: "ASSETS-VARY", note: "content identical; hashed asset names differ" });
         continue;
+    }
+
+    // Project pages carry the U5 sticky-nav delta described above;
+    // strip the anchored shapes and re-compare before giving up.
+    if (entry.isProject) {
+        const baselineU5 = withoutProjectPageU5Delta(baselineNorm);
+        const distU5 = withoutProjectPageU5Delta(distNorm);
+        if (baselineU5 === distU5) {
+            results.push({
+                ...entry,
+                status: "ASSETS-VARY",
+                note: "authorable content identical; U5 sticky-nav delta + hashed asset names differ",
+            });
+            continue;
+        }
     }
 
     // The SPA shell additionally carries a purely bundler-owned asset

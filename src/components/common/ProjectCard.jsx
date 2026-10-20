@@ -11,12 +11,16 @@ import {
 
 import Button from "./Button";
 
-import { projectPagePath } from "../../lib/projectPages";
+import {
+    projectImageDimensions,
+    projectPagePath,
+} from "../../lib/projectPages";
 
 function ProjectCard({ project }) {
     const [open, setOpen] = useState(false);
     const detailsBtnRef = useRef(null);
     const closeBtnRef = useRef(null);
+    const modalRef = useRef(null);
 
     const technologies =
         project.techStack || project.technologies || [];
@@ -29,6 +33,8 @@ function ProjectCard({ project }) {
         project.github && project.github !== "#";
 
     const imageAlt = project.imageAlt || project.title;
+
+    const { width, height } = projectImageDimensions(project);
 
     // Modal lifecycle: lock body scroll, close on Escape,
     // focus the close button, restore focus to the trigger on close.
@@ -53,6 +59,39 @@ function ProjectCard({ project }) {
         };
     }, [open]);
 
+    // Focus trap: keep Tab navigation inside the dialog. Same
+    // shape as the chat window's trap (ChatAssistant): wrap
+    // first/last focusable, skip disabled and hidden nodes.
+    useEffect(() => {
+        if (!open) return;
+        const modal = modalRef.current;
+        if (!modal) return;
+
+        const handleTab = (e) => {
+            if (e.key !== "Tab") return;
+            const focusables = Array.from(
+                modal.querySelectorAll(
+                    'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select, [tabindex]:not([tabindex="-1"])'
+                )
+            ).filter((el) => el.offsetParent !== null);
+            if (focusables.length === 0) return;
+
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+
+        modal.addEventListener("keydown", handleTab);
+        return () => modal.removeEventListener("keydown", handleTab);
+    }, [open]);
+
     return (
         <>
             <motion.article
@@ -74,6 +113,8 @@ function ProjectCard({ project }) {
                         <img
                             src={project.image}
                             alt={imageAlt}
+                            width={width}
+                            height={height}
                             loading="lazy"
                             decoding="async"
                         />
@@ -181,6 +222,7 @@ function ProjectCard({ project }) {
                         aria-label={`${project.title} details`}
                     >
                         <motion.div
+                            ref={modalRef}
                             className="project-modal"
                             onClick={(e) => e.stopPropagation()}
                             initial={{ opacity: 0, scale: 0.95, y: 24 }}
@@ -202,6 +244,8 @@ function ProjectCard({ project }) {
                                     <img
                                         src={project.image}
                                         alt={imageAlt}
+                                        width={width}
+                                        height={height}
                                     />
                                 </div>
                             )}
