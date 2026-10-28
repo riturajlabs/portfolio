@@ -183,8 +183,8 @@ const CodeBlock = ({ inline, className, children, ...props }) => {
 // `chatTransport` is an optional test seam: it can inject `fetchImpl`,
 // `sleep` and `config` into `streamChat` so retries can be exercised
 // deterministically. Production renders `<ChatAssistant />` with no props.
-function ChatAssistant({ chatTransport } = {}) {
-    const [isOpen, setIsOpen] = useState(false);
+function ChatAssistant({ chatTransport, externalOpen = false, hideExternalTrigger = false } = {}) {
+    const [isOpen, setIsOpen] = useState(externalOpen);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [retryNotice, setRetryNotice] = useState("");
@@ -439,6 +439,20 @@ function ChatAssistant({ chatTransport } = {}) {
         }
         setIsOpen(!isOpen);
     };
+
+    useEffect(() => {
+        if (!externalOpen) return;
+        if (isOpen) return;
+        queueMicrotask(() => {
+            setHasOpened(true);
+            try {
+                localStorage.setItem(CHAT_OPENED_KEY, "true");
+            } catch {
+                // ignore
+            }
+            setIsOpen(true);
+        });
+    }, [externalOpen, isOpen]);
 
     // 🚀 Run one chat request into a reserved AI bubble. Retry/timeout policy
     // lives in `streamChat` (src/lib/chatClient.js); this only maps SSE events
@@ -937,38 +951,40 @@ function ChatAssistant({ chatTransport } = {}) {
                 </AnimatePresence>
 
                 {/* FLOATING BUTTON WITH LABEL */}
-                <div className="chat-fab-wrapper">
-                    <AnimatePresence>
+                {!hideExternalTrigger && (
+                    <div className="chat-fab-wrapper">
+                        <AnimatePresence>
+                            {!isOpen && !hasOpened && (
+                                <motion.div
+                                    className="chat-fab-label"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 5 }}
+                                    transition={{ delay: 1, duration: 0.5 }}
+                                >
+                                    Ask AI ✨
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <motion.button
+                            ref={fabRef}
+                            className={`chat-fab ${!isOpen ? "chat-fab-pulse" : ""}`}
+                            onClick={handleToggleOpen}
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.92 }}
+                            aria-label={isOpen ? "Close AI Chat" : "Open AI Chat"}
+                            aria-haspopup="dialog"
+                            aria-expanded={isOpen}
+                        >
+                            {isOpen ? <FaTimes /> : <FaCommentDots />}
+                        </motion.button>
+
                         {!isOpen && !hasOpened && (
-                            <motion.div
-                                className="chat-fab-label"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 5 }}
-                                transition={{ delay: 1, duration: 0.5 }}
-                            >
-                                Ask AI ✨
-                            </motion.div>
+                            <span className="chat-fab-notification" aria-hidden="true" />
                         )}
-                    </AnimatePresence>
-
-                    <motion.button
-                        ref={fabRef}
-                        className={`chat-fab ${!isOpen ? "chat-fab-pulse" : ""}`}
-                        onClick={handleToggleOpen}
-                        whileHover={{ scale: 1.08 }}
-                        whileTap={{ scale: 0.92 }}
-                        aria-label={isOpen ? "Close AI Chat" : "Open AI Chat"}
-                        aria-haspopup="dialog"
-                        aria-expanded={isOpen}
-                    >
-                        {isOpen ? <FaTimes /> : <FaCommentDots />}
-                    </motion.button>
-
-                    {!isOpen && !hasOpened && (
-                        <span className="chat-fab-notification" aria-hidden="true" />
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </>
     );
