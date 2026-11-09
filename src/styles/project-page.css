@@ -28,7 +28,7 @@ body {
     color: var(--text);
     font-family: "Inter", system-ui, -apple-system, "Segoe UI",
         Roboto, sans-serif;
-    line-height: 1.6;
+    line-height: var(--lh-base);
     -webkit-font-smoothing: antialiased;
 }
 
@@ -79,7 +79,7 @@ body {
    ==================================================
    U5: the header becomes a "band" — the same raised card
    language the homepage cards use (surface + fine border +
-   radius-lg + the restrained brand tint), so the page opens
+   radius-card + the restrained brand tint), so the page opens
    on a deliberate focal block instead of loose text. */
 .project-page-header {
     margin-bottom: 2rem;
@@ -90,11 +90,13 @@ body {
         radial-gradient(circle at top right, var(--hover-overlay), transparent 55%),
         var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-card);
 }
 
 .project-page-back {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     margin-bottom: 1.5rem;
 
     color: var(--muted);
@@ -119,21 +121,21 @@ body {
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--tracking-wide);
 }
 
 .project-page-title {
     margin-bottom: 1rem;
 
     color: var(--text);
-    font-size: 2.6rem;
-    line-height: 1.15;
+    font-size: clamp(2rem, 1.5rem + 2vw, 2.6rem);
+    line-height: var(--lh-tight);
 }
 
 .project-page-summary {
     color: var(--text-secondary);
     font-size: 1.08rem;
-    line-height: 1.75;
+    line-height: var(--lh-relaxed);
     max-width: 65ch;
 }
 
@@ -229,7 +231,7 @@ body {
 
 .project-page-section p {
     color: var(--text-secondary);
-    line-height: 1.8;
+    line-height: var(--lh-relaxed);
 }
 
 /* ==================================================
@@ -265,7 +267,7 @@ body {
     padding-left: 1.6rem;
 
     color: var(--text-secondary);
-    line-height: 1.75;
+    line-height: var(--lh-relaxed);
 }
 
 .project-page-highlights li::before {
@@ -301,6 +303,9 @@ body {
 }
 
 .project-page-footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     color: var(--muted);
     font-size: 0.9rem;
     font-weight: 600;
@@ -343,7 +348,7 @@ body {
     color: var(--muted);
     font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
 }
 
@@ -358,14 +363,6 @@ body {
 
     .project-page-header {
         padding: 1.4rem 1.4rem;
-    }
-
-    .project-page-title {
-        font-size: 2rem;
-    }
-
-    .project-page-summary {
-        font-size: 1rem;
     }
 
     .project-page-actions .btn {

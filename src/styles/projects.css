@@ -33,7 +33,7 @@
         var(--card);
 
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-card);
 
     /* U5: cards sit on the elevation scale like every other raised
        surface (DESIGN_SYSTEM elevation); hover climbs to elev-2 with
@@ -191,7 +191,7 @@
 }
 
 .project-description {
-    color: var(--muted);
+    color: var(--text-secondary);
     line-height: 1.7;
     font-size: 0.95rem;
     margin-bottom: 1.8rem;
@@ -354,7 +354,7 @@
 }
 
 .project-modal-body > p {
-    color: var(--muted);
+    color: var(--text-secondary);
     line-height: 1.7;
     font-size: 0.95rem;
     margin-bottom: 1.4rem;

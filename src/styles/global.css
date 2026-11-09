@@ -1,7 +1,6 @@
 /* ==================================================
-   GOOGLE FONT
+   COMPONENT IMPORTS
 ================================================== */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 @import "./button.css";
 
 /* ==================================================
@@ -55,19 +54,24 @@ p, h1, h2, h3, h4, h5, h6, span {
 ================================================== */
 html {
     scroll-behavior: smooth;
+    /* Keep the root at the browser's 16px default. Responsive sizing is
+       handled by fluid tokens so components do not compound a reduced
+       root with their own mobile font-size overrides. */
     font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 body {
     font-family: "Inter", sans-serif;
     background: var(--bg);
     color: var(--text);
-    line-height: 1.6;
+    line-height: var(--lh-base);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background 0.35s ease, color 0.35s ease;
-    font-size: 1rem;
+    font-size: var(--fs-body);
     
     /* 🚀 FIX: Prevent ANY text selection on mobile by default */
     -webkit-user-select: none;
@@ -89,8 +93,9 @@ body {
 ================================================== */
 h1, h2, h3, h4, h5, h6 {
     color: var(--text);
-    font-weight: 700;
-    line-height: 1.2;
+    font-weight: var(--fw-bold);
+    line-height: var(--lh-tight);
+    margin-bottom: 0.5rem;
 }
 
 h1 { font-size: 2.5rem; }
@@ -101,8 +106,10 @@ h5 { font-size: 1.25rem; }
 h6 { font-size: 1rem; }
 
 p {
-    color: var(--muted);
-    font-size: 1rem;
+    color: var(--text-secondary);
+    font-size: var(--fs-body);
+    line-height: var(--lh-base);
+    margin-bottom: 1rem;
 }
 
 /* ==================================================
@@ -123,8 +130,11 @@ ul, ol {
 ================================================== */
 button {
     font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
     cursor: pointer;
     border: none;
+    border-radius: 0;
     outline: none;
     background: none;
 }
@@ -135,6 +145,10 @@ img {
     height: auto;
     user-select: none;
     -webkit-user-drag: none;
+}
+
+svg {
+    vertical-align: middle;
 }
 
 /* ==================================================
@@ -239,12 +253,10 @@ section,
    RESPONSIVE
 ================================================== */
 @media(max-width: 991px) {
-    html { font-size: 93.75%; }
     section { padding: 80px 0; }
 }
 
 @media(max-width: 576px) {
-    html { font-size: 87.5%; }
     .container { padding: 0 18px; }
     section { padding: 70px 0; }
     

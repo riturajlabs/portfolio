@@ -43,12 +43,12 @@
     padding:2rem;
 
     background:
-        radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 55%),
+        radial-gradient(circle at top right, var(--hover-overlay), transparent 55%),
         var(--card);
 
     border:1px solid var(--border);
 
-    border-radius:var(--radius-lg);
+    border-radius:var(--radius-card);
 
     overflow:hidden;
 
@@ -70,7 +70,7 @@
 
     background:radial-gradient(
         circle at top right,
-        rgba(37,99,235,.15),
+        var(--glow-primary),
         transparent 60%
     );
 
@@ -89,8 +89,7 @@
 
     box-shadow:
         var(--shadow-lg),
-        0 0 0 1px rgba(37,99,235,.12),
-        0 0 30px rgba(37,99,235,.1);
+        var(--glow-brand-soft);
 
     border-color:var(--primary);
 
@@ -121,9 +120,9 @@
 
     justify-content:center;
 
-    border-radius:18px;
+    border-radius:var(--radius);
 
-    background:rgba(37,99,235,.12);
+    background:var(--primary-soft);
 
     font-size:2rem;
 
@@ -176,7 +175,7 @@
 
 .certificate-card p {
 
-    color:var(--muted);
+    color:var(--text-secondary);
 
 
     font-size:.95rem;
@@ -232,17 +231,17 @@
     /* FE-13 (U6-R5): ≥44px tap target. */
     min-height:44px;
 
-    border-radius:var(--radius-sm);
+    border-radius:var(--radius-btn);
 
     background:var(--primary);
 
-    color:white;
+    color:var(--on-primary);
 
     font-size:.9rem;
 
     font-weight:600;
 
-    box-shadow:0 4px 14px rgba(37,99,235,.25);
+    box-shadow:var(--glow-brand-soft);
 
     transition:
         transform .3s cubic-bezier(.4,0,.2,1),
@@ -258,13 +257,13 @@
     background:var(--primary-dark);
 
 
-    color:white;
+    color:var(--on-primary);
 
 
     transform:translateY(-3px);
 
 
-    box-shadow:0 10px 24px rgba(37,99,235,.35);
+    box-shadow:var(--glow-brand-hover);
 
 }
 
@@ -273,7 +272,7 @@
 
     transform:translateY(-1px) scale(.97);
 
-    box-shadow:0 6px 16px rgba(37,99,235,.28);
+    box-shadow:var(--glow-brand-active);
 
 }
 

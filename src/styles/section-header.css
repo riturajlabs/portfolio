@@ -1,0 +1,69 @@
+/* ===================================================
+   SHARED SECTION HEADER
+   Authoritative styles for the reusable <SectionTitle />
+   component. Section components must not re-declare these
+   rules in their own stylesheets.
+=================================================== */
+
+.section-header {
+    text-align: center;
+    max-width: 750px;
+    margin: 0 auto 4rem;
+}
+
+.section-header.section-left {
+    text-align: left;
+    margin-left: 0;
+    margin-right: auto;
+}
+
+.section-header.section-right {
+    text-align: right;
+    margin-left: auto;
+    margin-right: 0;
+}
+
+.section-tag {
+    display: inline-block;
+    padding: 0.45rem 1.2rem;
+    border-radius: var(--radius-full);
+    background: var(--primary-soft);
+    color: var(--link);
+    font-size: 0.9rem;
+    font-weight: var(--fw-bold);
+    margin-bottom: 1rem;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+}
+
+.section-title {
+    font-size: var(--fs-section);
+    font-weight: var(--fw-extrabold);
+    line-height: var(--lh-tight);
+    margin-bottom: 1.2rem;
+    background: var(--brand-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.section-description {
+    color: var(--text-secondary);
+    font-size: var(--fs-lead);
+    line-height: var(--lh-relaxed);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.section-left .section-description {
+    margin-left: 0;
+}
+
+.section-right .section-description {
+    margin-right: 0;
+}
+
+@media (max-width: 576px) {
+    .section-header {
+        margin-bottom: 3rem;
+    }
+}

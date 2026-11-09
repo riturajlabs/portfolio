@@ -72,4 +72,24 @@ describe("Skills (U4 FE-9: icons decorative, named by adjacent text)", () => {
         );
         expect(labelled).toHaveLength(0);
     });
+
+    it("keys icon tones to the technology name, not list position", () => {
+        const { container } = render(<Skills />);
+
+        const expectedSlugs = skillCategories.flatMap((category) =>
+            category.skills.map((skill) =>
+                skill.name
+                    .toLowerCase()
+                    .replace(/&/g, " ")
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/^-+|-+$/g, "")
+            )
+        );
+
+        const actualSlugs = Array.from(
+            container.querySelectorAll(".skill-icon")
+        ).map((wrapper) => wrapper.getAttribute("data-skill"));
+
+        expect(actualSlugs).toEqual(expectedSlugs);
+    });
 });

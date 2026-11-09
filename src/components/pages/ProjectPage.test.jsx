@@ -92,7 +92,7 @@ describe("ProjectPage (U5 header band + sticky section nav)", () => {
 
         const header = css.match(/\.project-page-header\s*\{[^}]*\}/)?.[0];
         expect(header, ".project-page-header rule missing").toBeTruthy();
-        expect(header).toMatch(/border-radius:\s*var\(--radius-lg\)/);
+        expect(header).toMatch(/border-radius:\s*var\(--radius-card\)/);
         expect(header).toMatch(/var\(--card\)/);
 
         const nav = css.match(/\.project-page-section-nav\s*\{[^}]*\}/)?.[0];

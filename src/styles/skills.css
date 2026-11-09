@@ -37,12 +37,12 @@
     padding:2rem;
 
     background:
-        radial-gradient(circle at top right, rgba(37,99,235,.08), transparent 55%),
+        radial-gradient(circle at top right, var(--hover-overlay), transparent 55%),
         var(--card);
 
     border:1px solid var(--border);
 
-    border-radius:var(--radius-lg);
+    border-radius:var(--radius-card);
 
     transition:
         transform .3s cubic-bezier(.4,0,.2,1),
@@ -63,10 +63,9 @@
 
     box-shadow:
         var(--shadow-lg),
-        0 0 0 1px rgba(37,99,235,.12),
-        0 0 30px rgba(37,99,235,.1);
+        var(--glow-brand-soft);
 
-    border-color:rgba(37,99,235,.4);
+    border-color:var(--primary);
 
 }
 
@@ -105,7 +104,7 @@
 
     border-radius:var(--radius);
 
-    background:rgba(37,99,235,.12);
+    background:var(--primary-soft);
 
     color:var(--primary);
 
@@ -119,7 +118,7 @@
 
     color:var(--text);
 
-    font-size:1.25rem;
+    font-size:clamp(1.1rem, 1.05rem + 0.35vw, 1.25rem);
 
     font-weight:700;
 
@@ -211,32 +210,35 @@
 =================================================== */
 
 
-.skill-item:nth-child(1) .skill-icon {
+/* Brand colours are keyed to the technology, never to its position
+   in the category list. Unknown technologies inherit the theme's
+   primary accent from `.skill-icon` above. */
+.skill-icon[data-skill="react-js"] { color:#61DAFB; }
+.skill-icon[data-skill="javascript"] { color:#F7DF1E; }
+.skill-icon[data-skill="html-css"] { color:#E34F26; }
+.skill-icon[data-skill="bootstrap"] { color:#7952B3; }
+.skill-icon[data-skill="node-js"] { color:#339933; }
+.skill-icon[data-skill="express-js"] { color:var(--text-secondary); }
+.skill-icon[data-skill="fastapi"] { color:#009688; }
+.skill-icon[data-skill="python"] { color:#3776AB; }
+.skill-icon[data-skill="pytorch"] { color:#EE4C2C; }
+.skill-icon[data-skill="langchain"] { color:#1C3C3C; }
+.skill-icon[data-skill="mongodb"] { color:#47A248; }
+.skill-icon[data-skill="postgresql"] { color:#4169E1; }
+.skill-icon[data-skill="git-github"] { color:#F05032; }
+.skill-icon[data-skill="linux"] { color:#FCC624; }
 
-    color:#61DAFB;
-
-}
-
-
-.skill-item:nth-child(2) .skill-icon {
-
-    color:#F7DF1E;
-
-}
-
-
-.skill-item:nth-child(3) .skill-icon {
-
-    color:#E34F26;
-
-}
-
-
-.skill-item:nth-child(4) .skill-icon {
-
-    color:#7952B3;
-
-}
+/* Low-luminance brand tones need a darker/lighter companion so the
+   decorative glyphs stay legible against each theme's surfaces. */
+[data-theme="light"] .skill-icon[data-skill="react-js"] { color:#087EA4; }
+[data-theme="light"] .skill-icon[data-skill="javascript"] { color:#8A6D00; }
+[data-theme="light"] .skill-icon[data-skill="node-js"] { color:#2F7D32; }
+[data-theme="light"] .skill-icon[data-skill="fastapi"] { color:#00796B; }
+[data-theme="light"] .skill-icon[data-skill="python"] { color:#2F5F8F; }
+[data-theme="light"] .skill-icon[data-skill="mongodb"] { color:#2F7D32; }
+[data-theme="light"] .skill-icon[data-skill="postgresql"] { color:#3366CC; }
+[data-theme="light"] .skill-icon[data-skill="linux"] { color:#8A6D00; }
+[data-theme="dark"] .skill-icon[data-skill="langchain"] { color:#4ADE80; }
 
 
 
@@ -277,13 +279,6 @@
     .skill-list {
 
         grid-template-columns:1fr;
-
-    }
-
-
-    .skill-heading h3 {
-
-        font-size:1.1rem;
 
     }
 

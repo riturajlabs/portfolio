@@ -113,6 +113,30 @@ function withoutProjectPageU5Delta(text) {
     return out;
 }
 
+// U9 (docs/PORTFOLIO_UPGRADE.md §7 U9): Inter is loaded from the document
+// head instead of a CSS @import so the stylesheet is discovered during the
+// initial parse. The SPA shell and the no-JS project pages each carry the
+// same three link elements; the surrounding comments are documentation for
+// that authorable move. Strip exactly those anchored shapes from BOTH sides
+// and compare the rest byte-for-byte. If the font URL or link shape changes,
+// this stops matching and the page reports DIFFERS again.
+const U9_FONT_COMMENT =
+    /[ \t]*<!-- =+ -->\n[ \t]*<!-- Fonts[\s\S]*?<!-- =+ -->\n\n|[ \t]*<!-- Fonts:[\s\S]*?-->\n/;
+
+const U9_FONT_LINKS = new RegExp(
+    [
+        String.raw`[ \t]*<link\s+rel="preconnect"\s+href="https://fonts\.googleapis\.com">`,
+        String.raw`<link\s+rel="preconnect"\s+href="https://fonts\.gstatic\.com"\s+crossorigin>`,
+        String.raw`<link\s+rel="stylesheet"\s+href="https://fonts\.googleapis\.com/css2\?family=Inter:wght@400;500;600;700;800&display=swap">\n\n?`,
+    ].join(String.raw`\s*`)
+);
+
+function withoutU9FontDelta(text) {
+    return text
+        .replace(U9_FONT_COMMENT, "")
+        .replace(U9_FONT_LINKS, "");
+}
+
 function assetManifest(text) {
     const manifest = [];
     for (const match of text.matchAll(/\/assets\/[^"']+/g)) {
@@ -168,16 +192,30 @@ for (const entry of entries) {
         continue;
     }
 
+    // U9 moved Inter from a CSS @import to document-head links. Strip that
+    // exact authorable delta before comparing everything else.
+    const baselineContent = withoutU9FontDelta(baselineNorm);
+    const distContent = withoutU9FontDelta(distNorm);
+
+    if (baselineContent === distContent) {
+        results.push({
+            ...entry,
+            status: "ASSETS-VARY",
+            note: "authorable content identical; U9 font-link delta + hashed asset names differ",
+        });
+        continue;
+    }
+
     // Project pages carry the U5 sticky-nav delta described above;
     // strip the anchored shapes and re-compare before giving up.
     if (entry.isProject) {
-        const baselineU5 = withoutProjectPageU5Delta(baselineNorm);
-        const distU5 = withoutProjectPageU5Delta(distNorm);
+        const baselineU5 = withoutProjectPageU5Delta(baselineContent);
+        const distU5 = withoutProjectPageU5Delta(distContent);
         if (baselineU5 === distU5) {
             results.push({
                 ...entry,
                 status: "ASSETS-VARY",
-                note: "authorable content identical; U5 sticky-nav delta + hashed asset names differ",
+                note: "authorable content identical; U9 font-link + U5 sticky-nav deltas + hashed asset names differ",
             });
             continue;
         }
@@ -189,10 +227,10 @@ for (const entry of entries) {
     // is reported (and inspected) rather than silently swallowed.
     if (entry.isShell) {
         const baselineBody = withoutThemeDelta(
-            withoutAssetBlock(normalize(baselineText))
+            withoutAssetBlock(baselineContent)
         );
         const distBody = withoutThemeDelta(
-            withoutAssetBlock(normalize(distText))
+            withoutAssetBlock(distContent)
         );
 
         const baselineAssets = assetManifest(baselineText);
@@ -209,7 +247,7 @@ for (const entry of entries) {
             results.push({
                 ...entry,
                 status: "ASSETS-VARY",
-                note: `authorable content identical; ${delta}`,
+                note: `authorable content identical; U9 font-link delta + ${delta}`,
             });
             continue;
         }

@@ -4,6 +4,8 @@ import {
     FaGithub,
 } from "react-icons/fa";
 
+import SectionTitle from "../common/SectionTitle";
+
 import useGithub from "../../hooks/useGithub";
 
 import "../../styles/github.css";
@@ -64,46 +66,15 @@ function GithubStats() {
 
                 {/* ================= HEADER ================= */}
 
-                <motion.div
+                <SectionTitle
 
-                    className="section-header"
+                    tag="GitHub Activity"
 
-                    initial={{
-                        opacity:0,
-                        y:30
-                    }}
+                    title="My Coding Journey"
 
-                    whileInView={{
-                        opacity:1,
-                        y:0
-                    }}
+                    description="Consistently building projects, improving problem-solving skills, and exploring modern technologies."
 
-                    viewport={{
-                        once:true
-                    }}
-
-                >
-
-                    <span className="section-tag">
-                        GitHub Activity
-                    </span>
-
-
-                    <h2 className="section-title">
-                        My Coding Journey
-                    </h2>
-
-
-                    <p className="section-description">
-
-                        Consistently building projects,
-                        improving problem-solving skills,
-                        and exploring modern technologies.
-
-                    </p>
-
-
-                </motion.div>
+                />
 
 
 

@@ -119,6 +119,15 @@ ${metaName("robots", meta.robots)}
 ${metaName("author", meta.author || "")}
   <link rel="canonical" href="${escapeHtml(meta.canonical)}">
 
+  <!-- Fonts: these pages ship no JavaScript and do not load the
+       homepage's global.css, so the Inter stylesheet must be declared
+       here too. Weights match the public site exactly (400-800), with
+       no font preload — the woff2 URLs vary by browser/unicode-range,
+       so preconnect + display=swap is the reliable strategy. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
   <!-- The project image is this page's LCP element: preload it so the
        browser can start fetching before the stylesheet resolves.
        The href matches the <img> src exactly so the request is
