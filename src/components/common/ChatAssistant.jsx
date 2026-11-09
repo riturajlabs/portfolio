@@ -15,14 +15,33 @@ import {
     FaPlus,
     FaBookOpen,
 } from "react-icons/fa";
-import remarkGfm from "remark-gfm";
 
 import { describeChatError, streamChat } from "../../lib/chatClient";
-// 🚀 Lazy-load markdown — react-markdown + micromark together are ~80 KB
-// (remark-gfm is small and treeshakes well, so it's fine to keep sync).
-// We only pay this cost the first time the user opens the chat AND an
-// AI message arrives. Splitting keeps the initial bundle lean.
-const ReactMarkdown = lazy(() => import("react-markdown"));
+// 🚀 Lazy-load the entire markdown stack — react-markdown + remark-gfm +
+// micromark together are ~80 KB. Loading them in a single dynamic import
+// ensures the markdown chunk is only fetched when an AI message first renders
+// (the greeting, as soon as the dialog opens) — never on the initial page boot.
+// remark-gfm is intentionally NOT imported at the module top-level so that
+// Rollup sees it only as a dynamic dependency: it will not be pulled into the
+// ChatAssistant chunk's static import graph, and the browser will not fetch
+// the markdown chunk until the Suspense boundary first renders.
+const MarkdownMessage = lazy(() =>
+    Promise.all([import("react-markdown"), import("remark-gfm")]).then(
+        ([{ default: ReactMarkdown }, { default: remarkGfm }]) => ({
+            // Wrap into a default export so `lazy()` can unwrap it.
+            default: function MarkdownMessageInner({ components, children }) {
+                return (
+                    <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={components}
+                    >
+                        {children}
+                    </ReactMarkdown>
+                );
+            },
+        })
+    )
+);
 
 import "../../styles/chat.css";
 
@@ -183,8 +202,20 @@ const CodeBlock = ({ inline, className, children, ...props }) => {
 // `chatTransport` is an optional test seam: it can inject `fetchImpl`,
 // `sleep` and `config` into `streamChat` so retries can be exercised
 // deterministically. Production renders `<ChatAssistant />` with no props.
-function ChatAssistant({ chatTransport, externalOpen = false, hideExternalTrigger = false } = {}) {
-    const [isOpen, setIsOpen] = useState(externalOpen);
+function ChatAssistant({
+    chatTransport,
+    // Controlled-mode API: when `open` is provided the parent owns the single
+    // source of truth for open state and mirrors every change through
+    // `onOpenChange`. Direct renders (tests, embeds) may omit it and fall back
+    // to their own state, optionally opened via `initialOpen`.
+    open: controlledOpen,
+    onOpenChange,
+    initialOpen = false,
+    hideExternalTrigger = false,
+} = {}) {
+    const isControlled = controlledOpen !== undefined;
+    const [internalOpen, setInternalOpen] = useState(Boolean(initialOpen));
+    const isOpen = isControlled ? Boolean(controlledOpen) : internalOpen;
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [retryNotice, setRetryNotice] = useState("");
@@ -216,6 +247,30 @@ function ChatAssistant({ chatTransport, externalOpen = false, hideExternalTrigge
     // not the closure-captured stale value (handleSend is memoized).
     const messagesRef = useRef(messages);
     useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+    // Single write path for open state. Controlled mode delegates to the
+    // parent; uncontrolled mode updates local state. Either way we record the
+    // first open and notify the parent, so there is never a second effect that
+    // can silently re-open a deliberately closed dialog.
+    const setOpen = useCallback((nextOpen) => {
+        const next = Boolean(nextOpen);
+        if (!isControlled) {
+            setInternalOpen(next);
+        }
+        if (next) {
+            setHasOpened(true);
+            try {
+                localStorage.setItem(CHAT_OPENED_KEY, "true");
+            } catch {
+                // ignore
+            }
+        }
+        if (typeof onOpenChange === "function") {
+            onOpenChange(next);
+        }
+    }, [isControlled, onOpenChange]);
+
+    const closeChat = useCallback(() => setOpen(false), [setOpen]);
 
     // 💾 Persist conversation for this tab session.
     useEffect(() => {
@@ -252,12 +307,12 @@ function ChatAssistant({ chatTransport, externalOpen = false, hideExternalTrigge
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape' && isOpen) {
-                setIsOpen(false);
+                closeChat();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen]);
+    }, [isOpen, closeChat]);
 
     // 🚧 Focus trap: keep Tab navigation inside the chat window.
     useEffect(() => {
@@ -428,31 +483,7 @@ function ChatAssistant({ chatTransport, externalOpen = false, hideExternalTrigge
         inputRef.current?.focus();
     };
 
-    const handleToggleOpen = () => {
-        if (!isOpen) {
-            setHasOpened(true);
-            try {
-                localStorage.setItem(CHAT_OPENED_KEY, "true");
-            } catch {
-                // ignore
-            }
-        }
-        setIsOpen(!isOpen);
-    };
-
-    useEffect(() => {
-        if (!externalOpen) return;
-        if (isOpen) return;
-        queueMicrotask(() => {
-            setHasOpened(true);
-            try {
-                localStorage.setItem(CHAT_OPENED_KEY, "true");
-            } catch {
-                // ignore
-            }
-            setIsOpen(true);
-        });
-    }, [externalOpen, isOpen]);
+    const handleToggleOpen = () => setOpen(!isOpen);
 
     // 🚀 Run one chat request into a reserved AI bubble. Retry/timeout policy
     // lives in `streamChat` (src/lib/chatClient.js); this only maps SSE events
@@ -682,7 +713,9 @@ function ChatAssistant({ chatTransport, externalOpen = false, hideExternalTrigge
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.4, ease: "easeInOut" }}
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => {
+                            closeChat();
+                        }}
                         aria-hidden="true"
                     />
                 )}
@@ -733,7 +766,7 @@ function ChatAssistant({ chatTransport, externalOpen = false, hideExternalTrigge
                                     )}
                                     <button 
                                         className="chat-close-btn" 
-                                        onClick={() => setIsOpen(false)}
+                                        onClick={closeChat}
                                         aria-label="Close Chat"
                                     >
                                         <FaTimes />
@@ -769,12 +802,11 @@ function ChatAssistant({ chatTransport, externalOpen = false, hideExternalTrigge
                                                         <span className="chat-bubble-loading">…</span>
                                                     }
                                                 >
-                                                    <ReactMarkdown
-                                                        remarkPlugins={[remarkGfm]}
+                                                    <MarkdownMessage
                                                         components={markdownComponents}
                                                     >
                                                         {msg.text}
-                                                    </ReactMarkdown>
+                                                    </MarkdownMessage>
                                                 </Suspense>
                                             ) : (
                                                 msg.text

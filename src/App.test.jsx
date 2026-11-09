@@ -8,7 +8,7 @@
 // not asserted (TESTING.md §6: animations are explicitly not unit-tested).
 
 import { HelmetProvider } from "react-helmet-async";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
@@ -163,4 +163,122 @@ describe("homepage", () => {
 
         expect(unexpected, unexpected.join("\n")).toHaveLength(0);
     }, 30000);
+});
+
+// =========================================================
+// U8 — App-level chat lifecycle regression
+// =========================================================
+// App owns the single source of truth for open state. These tests exercise
+// the real integration: one trigger before opening, the lazy ChatAssistant
+// mount, open → close → remain closed, and reopen — plus the ARIA contract.
+
+// jsdom has no layout engine.
+if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => {};
+}
+
+async function openChat() {
+    const fab = await screen.findByRole(
+        "button",
+        { name: "Open AI Chat" },
+        { timeout: 5000 }
+    );
+    fireEvent.click(fab);
+    await waitFor(
+        () => expect(screen.getByRole("dialog")).toBeInTheDocument(),
+        { timeout: 5000 }
+    );
+    return fab;
+}
+
+describe("U8 — App chat lifecycle", () => {
+    beforeEach(() => {
+        sessionStorage.clear();
+        localStorage.clear();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it("shows exactly one closed trigger before chat is opened", async () => {
+        renderApp();
+
+        const fabs = await screen.findAllByRole("button", {
+            name: "Open AI Chat",
+        });
+        expect(fabs).toHaveLength(1);
+        expect(fabs[0]).toHaveAttribute("aria-haspopup", "dialog");
+        expect(fabs[0]).toHaveAttribute("aria-expanded", "false");
+        expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("clicking the trigger lazy-mounts ChatAssistant and opens the dialog", async () => {
+        renderApp();
+        await openChat();
+
+        expect(screen.getByRole("dialog")).toHaveAccessibleName(
+            "AI Portfolio Assistant"
+        );
+        // The single App trigger is hidden while the dialog is open, and the
+        // internal trigger stays suppressed — no double FAB.
+        expect(
+            screen.queryByRole("button", { name: "Open AI Chat" })
+        ).toBeNull();
+        expect(
+            screen.queryByRole("button", { name: "Close AI Chat" })
+        ).toBeNull();
+    }, 10000);
+
+    it("open → close → remains closed, and the trigger stays available", async () => {
+        renderApp();
+        await openChat();
+
+        fireEvent.click(screen.getByRole("button", { name: "Close Chat" }));
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+        // The trigger is back, closed, and unique.
+        const fabs = await screen.findAllByRole("button", {
+            name: "Open AI Chat",
+        });
+        expect(fabs).toHaveLength(1);
+        expect(fabs[0]).toHaveAttribute("aria-expanded", "false");
+
+        // The old bug re-opened the dialog on the next microtask. Let React
+        // flush pending updates and give timers a chance to run; it must stay
+        // closed.
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+        expect(screen.queryByRole("dialog")).toBeNull();
+    }, 10000);
+
+    it("reopens correctly after a deliberate close", async () => {
+        renderApp();
+        await openChat();
+
+        fireEvent.click(screen.getByRole("button", { name: "Close Chat" }));
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+        fireEvent.click(
+            screen.getByRole("button", { name: "Open AI Chat" })
+        );
+
+        await waitFor(
+            () => expect(screen.getByRole("dialog")).toBeInTheDocument(),
+            { timeout: 5000 }
+        );
+    }, 10000);
+
+    it("Escape closes the dialog and leaves the trigger available", async () => {
+        renderApp();
+        await openChat();
+
+        fireEvent.keyDown(window, { key: "Escape" });
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+        expect(
+            screen.getByRole("button", { name: "Open AI Chat" })
+        ).toHaveAttribute("aria-expanded", "false");
+    }, 10000);
 });

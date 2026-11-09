@@ -60,25 +60,6 @@ export default defineConfig(({ mode }) => ({
     // homepage bundle cannot regress because of admin work.
     manifest: true,
 
-    // Default Vite behaviour eagerly preloads every chunk referenced by
-    // the entry graph — including the markdown chunk behind the chat
-    // assistant's `lazy(() => import("react-markdown"))` boundary. That
-    // wastes ~155 KB of bandwidth on the initial paint for visitors who
-    // never open the chat. resolveDependencies filters those out so we
-    // only preload chunks needed at boot.
-    modulePreload: {
-      polyfill: false,
-      resolveDependencies: (_, deps) => {
-        const lazyChunkNames = ["markdown"];
-        const eager = deps.filter(
-          (url) => !lazyChunkNames.some((name) => url.includes(`/${name}-`)),
-        );
-        // Drop the .css sibling from the deps list — Vite already emits
-        // a <link rel="stylesheet"> tag for it in the HTML head.
-        return eager;
-      },
-    },
-
     rollupOptions: {
       input: {
         main: "index.html",
@@ -97,15 +78,14 @@ export default defineConfig(({ mode }) => ({
               return "motion";
             }
             // 🚀 Removed Gemini from here. It's now safely on the backend!
-            if (
-              id.includes("react-markdown") ||
-              id.includes("remark-gfm") ||
-              id.includes("micromark") ||
-              id.includes("mdast") ||
-              id.includes("hast")
-            ) {
-              return "markdown";
-            }
+            // NOTE: do NOT add a `manualChunks` rule for react-markdown /
+            // remark / micromark. Forcing them into a named chunk makes
+            // Rolldown co-locate shared modules (e.g. react/jsx-runtime) in
+            // that chunk, which turns the markdown chunk into a static
+            // dependency of the entry graph — the whole markdown stack then
+            // preloads on first paint. Left to Vite, they are emitted as
+            // `react-markdown-*` / `remark-gfm-*` chunks reachable only
+            // through ChatAssistant's dynamic import.
             // react-icons v5 (>=5.5) only exposes the *pack* root
             // (`react-icons/fa`), not individual files like `fa/FaX`.
             // With `sideEffects:false` in its package.json, named imports
