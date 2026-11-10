@@ -70,6 +70,42 @@ async def _expect_project_rejection(engine: AsyncEngine, **overrides: object) ->
     await _expect_rejection(engine, statement, **values)
 
 
+def _insert_project_case_study_sql(
+    case_study: str | None,
+) -> tuple[str, dict[str, object]]:
+    """Build an INSERT that binds the JSON document through an explicit `jsonb` cast.
+
+    A plain `:case_study` parameter cannot represent both SQL `NULL` and JSON
+    `null`, and it would make the database reject a non-object before the CHECK
+    is reached. The cast keeps this test on the constraint, not on binding.
+    """
+    values = {**VALID_PROJECT, "case_study": case_study}
+    columns = ", ".join(values)
+    placeholders = ", ".join(
+        "CAST(:case_study AS jsonb)" if column == "case_study" else f":{column}" for column in values
+    )
+    return f"INSERT INTO project ({columns}) VALUES ({placeholders})", values
+
+
+async def _insert_project_case_study(engine: AsyncEngine, case_study: str | None) -> None:
+    statement, values = _insert_project_case_study_sql(case_study)
+    async with engine.begin() as connection:
+        await connection.execute(text(statement), values)
+
+
+async def _expect_case_study_rejection(engine: AsyncEngine, case_study: str | None) -> None:
+    statement, values = _insert_project_case_study_sql(case_study)
+    with pytest.raises(IntegrityError) as exc_info:
+        async with engine.begin() as connection:
+            await connection.execute(text(statement), values)
+
+    original = exc_info.value.orig
+    constraint = getattr(original, "constraint_name", None)
+    if constraint is None:
+        constraint = getattr(getattr(original, "__cause__", None), "constraint_name", None)
+    assert constraint == "ck_project_case_study_object", str(exc_info.value)
+
+
 async def _expect_message_rejection(engine: AsyncEngine, **overrides: object) -> None:
     statement, values = _insert("contact_message", {**VALID_MESSAGE, **overrides})
     await _expect_rejection(engine, statement, **values)
@@ -276,6 +312,30 @@ async def test_project_defaults_match_the_documented_flags(engine: AsyncEngine) 
     assert row.indexable is True
     assert row.display_order == 0
     assert list(row.tech_stack) == []
+
+
+async def test_project_accepts_a_sql_null_case_study(engine: AsyncEngine) -> None:
+    await _insert_project_case_study(engine, None)
+
+    async with engine.connect() as connection:
+        row = (await connection.execute(text("SELECT case_study FROM project"))).one()
+
+    assert row.case_study is None
+
+
+async def test_project_accepts_a_json_object_case_study(engine: AsyncEngine) -> None:
+    await _insert_project_case_study(engine, '{"schemaVersion": 1}')
+
+    async with engine.connect() as connection:
+        row = (await connection.execute(text("SELECT case_study FROM project"))).one()
+
+    assert row.case_study == {"schemaVersion": 1}
+
+
+@pytest.mark.parametrize("case_study", ["[]", '"case study"', "1", "true", "null"])
+async def test_project_rejects_non_object_case_study(engine: AsyncEngine, case_study: str) -> None:
+    """JSON arrays, scalars and JSON null are not the v1 object document."""
+    await _expect_case_study_rejection(engine, case_study)
 
 
 # --------------------------------------------------------------------------

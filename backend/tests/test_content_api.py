@@ -13,6 +13,7 @@ agreed with a fixture.
 from __future__ import annotations
 
 import gzip
+import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -85,6 +86,20 @@ VALID_PROJECT: dict[str, Any] = {
     "seo_description": "A multi-tenant AI support chatbot.",
 }
 
+VALID_CASE_STUDY: dict[str, Any] = {
+    "schemaVersion": 1,
+    "role": "Solo full-stack developer",
+    "problem": {
+        "summary": "Support teams had no way to answer repeat questions.",
+    },
+    "keyDecisions": [
+        {
+            "decision": "Use FastAPI for the content API.",
+            "rationale": "Typed request and response contracts.",
+        }
+    ],
+}
+
 
 async def _insert_profile(
     engine: AsyncEngine,
@@ -124,8 +139,13 @@ def _json(value: Any) -> str:
 
 async def _insert_project(engine: AsyncEngine, **overrides: Any) -> None:
     values = {**VALID_PROJECT, **overrides}
+    if values.get("case_study") is not None:
+        values["case_study"] = _json(values["case_study"])
     columns = ", ".join(values)
-    placeholders = ", ".join(f":{key}" for key in values)
+    placeholders = ", ".join(
+        f"CAST(:{key} AS jsonb)" if key == "case_study" else f":{key}"
+        for key in values
+    )
     async with engine.begin() as connection:
         await connection.execute(
             text(f"INSERT INTO project ({columns}) VALUES ({placeholders})"), values
@@ -378,6 +398,7 @@ async def test_project_keys_match_the_documented_contract(
         "category",
         "techStack",
         "highlights",
+        "caseStudy",
         "featured",
         "indexable",
         "status",
@@ -468,6 +489,95 @@ async def test_optional_project_fields_are_null_not_absent(
     assert project["category"] is None
     assert project["longDescription"] is None
     assert "live" in project and "github" in project
+
+
+async def test_project_case_study_is_present_and_null_when_absent(
+    client: AsyncClient, engine: AsyncEngine
+) -> None:
+    await _insert_profile(engine)
+    await _insert_project(engine)
+
+    project = (await client.get("/api/content")).json()["projects"][0]
+
+    assert "caseStudy" in project
+    assert project["caseStudy"] is None
+    assert "case_study" not in project
+
+
+async def test_valid_project_case_study_is_returned_as_normalized_camel_case(
+    client: AsyncClient, engine: AsyncEngine
+) -> None:
+    await _insert_profile(engine)
+    await _insert_project(engine, case_study=VALID_CASE_STUDY)
+
+    project = (await client.get("/api/content")).json()["projects"][0]
+    case_study = project["caseStudy"]
+
+    assert case_study["schemaVersion"] == 1
+    assert case_study["role"] == "Solo full-stack developer"
+    assert case_study["problem"]["context"] is None
+    assert case_study["keyDecisions"][0]["tradeoff"] is None
+    assert case_study["constraints"] == []
+    assert "case_study" not in project
+    assert "schema_version" not in case_study
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        {},
+        {"schemaVersion": 2, "role": "DO_NOT_LOG_CASE_STUDY"},
+        {
+            "schemaVersion": 1,
+            "role": "DO_NOT_LOG_CASE_STUDY",
+            "unexpected": "DO_NOT_LOG_CASE_STUDY",
+        },
+        {
+            "schemaVersion": 1,
+            "role": "DO_NOT_LOG_CASE_STUDY",
+            "outcomes": [
+                {"kind": "quantitative", "statement": "DO_NOT_LOG_CASE_STUDY"}
+            ],
+        },
+    ],
+    ids=["empty", "unsupported-version", "unknown-key", "invalid-nested-field"],
+)
+async def test_invalid_stored_case_study_degrades_only_that_project(
+    client: AsyncClient,
+    engine: AsyncEngine,
+    caplog: pytest.LogCaptureFixture,
+    invalid: dict[str, Any],
+) -> None:
+    await _insert_profile(engine)
+    await _insert_project(engine, slug="broken-case-study", case_study=invalid)
+    await _insert_project(engine, slug="healthy-case-study", case_study=VALID_CASE_STUDY)
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="app.content"):
+        response = await client.get("/api/content")
+
+    assert response.status_code == 200
+    projects = {project["slug"]: project for project in response.json()["projects"]}
+    assert projects["broken-case-study"]["caseStudy"] is None
+    assert projects["healthy-case-study"]["caseStudy"] is not None
+    assert "DO_NOT_LOG_CASE_STUDY" not in caplog.text
+
+    warnings = [
+        record
+        for record in caplog.records
+        if record.getMessage() == "public_case_study_invalid"
+    ]
+    assert len(warnings) == 1
+    assert warnings[0].slug == "broken-case-study"
+    assert warnings[0].error == "ValidationError"
+    assert warnings[0].errors > 0
+
+    async with engine.connect() as connection:
+        stored = await connection.execute(
+            text("SELECT case_study FROM project WHERE slug = :slug"),
+            {"slug": "broken-case-study"},
+        )
+        assert stored.scalar_one() == invalid
 
 
 async def test_tech_stack_array_is_returned_as_a_list(

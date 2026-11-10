@@ -30,6 +30,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,7 +40,7 @@ from app.models.project import Project
 from app.models.site_profile import SiteProfile
 from app.models.skill import Skill
 from app.models.skill_category import SkillCategory
-from app.schemas.content import Content
+from app.schemas.content import CaseStudy, Content
 
 logger = logging.getLogger("app.content")
 
@@ -98,6 +99,23 @@ def _highlights(long_description: str | None) -> list[str]:
         if cleaned:
             bullets.append(cleaned)
     return bullets
+
+
+def _case_study(slug: str, raw: dict[str, Any] | None) -> CaseStudy | None:
+    if raw is None:
+        return None
+    try:
+        return CaseStudy.model_validate(raw)
+    except ValidationError as exc:
+        log_event(
+            logger,
+            logging.WARNING,
+            "public_case_study_invalid",
+            slug=slug,
+            error=type(exc).__name__,
+            errors=exc.error_count(),
+        )
+        return None
 
 
 def _same_as(social: dict[str, Any]) -> list[str]:
@@ -165,6 +183,7 @@ async def load_content(session: AsyncSession) -> Content:
             "category": row.category,
             "techStack": list(row.tech_stack or []),
             "highlights": _highlights(row.long_description),
+            "caseStudy": _case_study(row.slug, row.case_study),
             "featured": row.featured,
             "indexable": row.indexable,
             "status": row.status,
@@ -291,6 +310,7 @@ def _published_projects() -> Select[Any]:
             Project.image_alt,
             Project.category,
             Project.tech_stack,
+            Project.case_study,
             Project.status,
             Project.featured,
             Project.indexable,

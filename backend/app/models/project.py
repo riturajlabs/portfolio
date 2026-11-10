@@ -19,9 +19,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, Index, Integer, Text, text
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -49,6 +50,7 @@ class Project(Base):
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     live_url: Mapped[str | None] = mapped_column(Text)
     github_url: Mapped[str | None] = mapped_column(Text)
+    case_study: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
     seo_title: Mapped[str] = mapped_column(Text, nullable=False)
     seo_description: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -69,6 +71,10 @@ class Project(Base):
         CheckConstraint("image_width > 0", name="image_width_positive"),
         CheckConstraint("image_height > 0", name="image_height_positive"),
         CheckConstraint("status IN ('published','hidden')", name="status_valid"),
+        CheckConstraint(
+            "case_study IS NULL OR jsonb_typeof(case_study) = 'object'",
+            name="case_study_object",
+        ),
         CheckConstraint("category IS NULL OR char_length(category) <= 60", name="category_length"),
         CheckConstraint("char_length(seo_title) <= 70", name="seo_title_length"),
         CheckConstraint("char_length(seo_description) <= 185", name="seo_description_length"),

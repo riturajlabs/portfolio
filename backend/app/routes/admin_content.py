@@ -184,6 +184,7 @@ def _project_out(row: service.Project) -> ProjectOut:
         image_alt=row.image_alt,
         category=row.category,
         tech_stack=list(row.tech_stack or []),
+        case_study=row.case_study,
         live_url=row.live_url,
         github_url=row.github_url,
         seo_title=row.seo_title,

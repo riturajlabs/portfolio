@@ -65,6 +65,7 @@
   },
   "projects": [
     {
+      "caseStudy": null,
       "category": null,
       "description": "Real-time AI chat application.",
       "display_order": 0,
@@ -86,6 +87,7 @@
       "title": "Alpha"
     },
     {
+      "caseStudy": null,
       "category": null,
       "description": "Real-time AI chat application.",
       "display_order": 0,
@@ -111,6 +113,7 @@
       "title": "Beta"
     },
     {
+      "caseStudy": null,
       "category": null,
       "description": "Real-time AI chat application.",
       "display_order": 0,

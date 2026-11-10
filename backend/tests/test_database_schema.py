@@ -59,6 +59,7 @@ EXPECTED_COLUMNS: dict[str, tuple[tuple[str, str, bool], ...]] = {
         ("display_order", "int4", False),
         ("live_url", "text", True),
         ("github_url", "text", True),
+        ("case_study", "jsonb", True),
         ("seo_title", "text", False),
         ("seo_description", "text", False),
         ("created_at", "timestamptz", False),
@@ -173,6 +174,19 @@ EXPECTED_FOREIGN_KEYS: dict[str, tuple[str, str, str]] = {
     "fk_admin_audit_log_actor_user_id_admin_user": ("actor_user_id", "admin_user", "n"),  # SET NULL
 }
 
+EXPECTED_PROJECT_CHECK_CONSTRAINTS: tuple[str, ...] = (
+    "ck_project_slug_format",
+    "ck_project_slug_length",
+    "ck_project_image_path",
+    "ck_project_image_width_positive",
+    "ck_project_image_height_positive",
+    "ck_project_status_valid",
+    "ck_project_case_study_object",
+    "ck_project_category_length",
+    "ck_project_seo_title_length",
+    "ck_project_seo_description_length",
+)
+
 
 async def _fetch(
     engine: AsyncEngine,
@@ -222,6 +236,10 @@ async def test_alembic_revision_is_applied(engine: AsyncEngine) -> None:
     assert [row[0] for row in rows] == [expected_head()]
 
 
+def test_expected_head_includes_the_case_study_migration() -> None:
+    assert expected_head() == "0005_project_case_study"
+
+
 @pytest.mark.parametrize("table", EXPECTED_TABLES)
 async def test_columns_match_the_specification(engine: AsyncEngine, table: str) -> None:
     rows = await _fetch(engine, 
@@ -236,6 +254,28 @@ async def test_columns_match_the_specification(engine: AsyncEngine, table: str) 
     expected = tuple(sorted(EXPECTED_COLUMNS[table]))
 
     assert actual == expected
+
+
+async def test_case_study_has_no_default_and_no_index(engine: AsyncEngine) -> None:
+    """The column is optional storage, not a generated value or a query key."""
+    rows = await _fetch(
+        engine,
+        text(
+            "SELECT column_default FROM information_schema.columns "
+            "WHERE table_schema = 'public' AND table_name = 'project' "
+            "AND column_name = 'case_study'"
+        ),
+    )
+    assert rows[0][0] is None
+
+    rows = await _fetch(
+        engine,
+        text(
+            "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' "
+            "AND tablename = 'project' AND indexdef LIKE '%case_study%'"
+        ),
+    )
+    assert rows == []
 
 
 async def test_primary_keys_are_generated_uuids(engine: AsyncEngine) -> None:
@@ -315,6 +355,16 @@ async def test_unique_constraint_lookup_indexes_cover_the_documented_lookups(
         )
     )
     assert "uq_admin_session_token_hash" in [row[0] for row in rows]
+
+
+async def test_project_check_constraints_are_unchanged(engine: AsyncEngine) -> None:
+    """`0005` adds one CHECK and must not rewrite the existing project contracts."""
+    rows = await _fetch(
+        engine,
+        text("SELECT conname FROM pg_constraint WHERE conrelid = 'project'::regclass AND contype = 'c'"),
+    )
+
+    assert tuple(sorted(row[0] for row in rows)) == tuple(sorted(EXPECTED_PROJECT_CHECK_CONSTRAINTS))
 
 
 async def test_foreign_keys_and_their_delete_rules(engine: AsyncEngine) -> None:
