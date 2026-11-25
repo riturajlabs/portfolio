@@ -50,7 +50,7 @@ function ProjectPage({ project }) {
     return (
         <div className="project-page">
             <div className="container">
-                <main className="project-page-main">
+                <main id="project-main" tabIndex={-1} className="project-page-main">
                     <article className="project-page-article">
 
                         {/* ============ HEADER ============ */}
@@ -211,6 +211,13 @@ function ProjectPage({ project }) {
                             )}
                         </nav>
 
+                        {project.requiresAuth && (
+                            <p className="project-auth-notice">
+                                This project action is available to signed-in admins only.{" "}
+                                <a href="/admin/login">Sign in to the admin area</a> to continue.
+                            </p>
+                        )}
+
 
 
                         {/* ============ RELATED ============ */}
@@ -271,6 +278,7 @@ ProjectPage.propTypes = {
         category: PropTypes.string,
         live: PropTypes.string,
         github: PropTypes.string,
+        requiresAuth: PropTypes.bool,
         techStack: PropTypes.arrayOf(PropTypes.string),
         highlights: PropTypes.arrayOf(PropTypes.string),
     }).isRequired,

@@ -5,14 +5,11 @@
  * the server (5000 req/hr instead of 60 req/hr/IP).
  *
  * Falls back gracefully: if the backend is offline or rate-limited,
- * returns placeholder data instead of throwing — so the page still
- * renders.
+ * returns an explicit `unavailable` state instead of pretending the
+ * fallback identity is live data. A previous successful payload can be
+ * served as `cached` state.
  */
 
-// Resolved once at module init. In production (`VITE_BACKEND_URL` unset)
-// the call is SAME-ORIGIN `/api/github`, which Vercel rewrites to the
-// Render backend proxy. For local dev, set `VITE_BACKEND_URL` in `.env`
-// (e.g. `http://localhost:8000`) to hit FastAPI directly.
 const BACKEND_URL =
     (import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
@@ -27,6 +24,8 @@ const FALLBACK_PROFILE = {
 };
 
 const FALLBACK_REPOS = [];
+
+let cachedResult = null;
 
 async function fetchFromBackend() {
     const response = await fetch(`${BACKEND_URL}/api/github`, {
@@ -43,18 +42,30 @@ async function fetchFromBackend() {
 export async function getGithubData() {
     try {
         const data = await fetchFromBackend();
-        return {
-            profile: data.profile ?? FALLBACK_PROFILE,
-            repositories: data.repositories ?? FALLBACK_REPOS,
+        if (!data?.profile || !Array.isArray(data.repositories)) {
+            throw new Error("GitHub proxy returned an invalid payload");
+        }
+
+        cachedResult = {
+            profile: data.profile,
+            repositories: data.repositories,
+            status: "live",
+            error: "",
         };
+        return cachedResult;
     } catch (err) {
-        console.warn(
-            "[githubService] Backend proxy unreachable, using fallback:",
-            err.message
-        );
+        const message = err?.message || "GitHub data is unavailable.";
+        console.warn("[githubService] Backend proxy unavailable:", message);
+
+        if (cachedResult) {
+            return { ...cachedResult, status: "cached", error: message };
+        }
+
         return {
             profile: FALLBACK_PROFILE,
             repositories: FALLBACK_REPOS,
+            status: "unavailable",
+            error: message,
         };
     }
 }

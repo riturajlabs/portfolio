@@ -6,14 +6,18 @@ import { profile, socials } from "../../lib/publicContent";
 import "../../styles/footer.css";
 
 function Footer() {
-    const footerLinks = [
+    const primaryLinks = [
         { name: "Home", link: "#home" },
+        { name: "Projects", link: "#projects" },
+        { name: "Contact", link: "#contact" },
+    ];
+
+    const secondaryLinks = [
         { name: "About", link: "#about" },
         { name: "Skills", link: "#skills" },
-        { name: "Projects", link: "#projects" },
+        { name: "GitHub", link: "#github" },
         { name: "Certifications", link: "#certifications" },
         { name: "Blog", link: "#blog" },
-        { name: "Contact", link: "#contact" },
     ];
 
    
@@ -51,21 +55,13 @@ function Footer() {
                         <p className="footer-tagline">
                             Building scalable software and intelligent AI solutions 🚀
                         </p>
-
-                        {/* Added an inspiring tech quote */}
-                        <blockquote className="footer-quote">
-                            "Any fool can write code that a computer can understand.
-                            Good programmers write code that humans can understand."
-                            <span>— &nbsp;Martin Fowler</span>
-                        </blockquote>
                     </motion.div>
 
 
-                    {/* ================= QUICK LINKS ================= */}
-                    <div className="footer-navigation">
-                        <h4>Quick Links</h4>
+                    <nav className="footer-navigation" aria-label="Primary footer navigation">
+                        <h4>Explore</h4>
                         <ul>
-                            {footerLinks.map((item) => (
+                            {primaryLinks.map((item) => (
                                 <li key={item.name}>
                                     <a href={item.link}>
                                         {item.name}
@@ -73,7 +69,20 @@ function Footer() {
                                 </li>
                             ))}
                         </ul>
-                    </div>
+                    </nav>
+
+                    <nav className="footer-navigation" aria-label="More footer navigation">
+                        <h4>More</h4>
+                        <ul>
+                            {secondaryLinks.map((item) => (
+                                <li key={item.name}>
+                                    <a href={item.link}>
+                                        {item.name}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </nav>
 
 
                     {/* ================= CONNECT ================= */}

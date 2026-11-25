@@ -9,7 +9,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { Field, Form } from "../components/Form.jsx";
 
 export default function Login() {
-  const { user, refresh } = useAuth();
+  const { user, refresh, sessionExpiredReason, dismissSessionExpired } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -30,6 +30,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login(email.trim(), password);
+      dismissSessionExpired();
       await refresh();
       navigate("/", { replace: true });
     } catch (err) {
@@ -48,6 +49,20 @@ export default function Login() {
       <div className="admin-card admin-login-card">
         <h1>Portfolio Admin</h1>
         <p>Sign in to manage content. The session is a server-side cookie.</p>
+
+        {sessionExpiredReason ? (
+          <div className="admin-session-notice" role="status">
+            <strong>Session ended</strong>
+            <p>{sessionExpiredReason.message}</p>
+            <button
+              type="button"
+              className="admin-btn admin-btn--ghost admin-btn--sm"
+              onClick={dismissSessionExpired}
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
 
         <Form onSubmit={onSubmit}>
           {error ? (

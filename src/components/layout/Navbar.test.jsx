@@ -42,6 +42,20 @@ describe("Navbar (U4 FE-9)", () => {
         expect(closeToggle).toHaveAttribute("aria-controls", "mobile-menu-panel");
     });
 
+    it("opens the mobile menu as a labelled modal dialog", () => {
+        renderNavbar();
+
+        fireEvent.click(screen.getByRole("button", { name: "Open Menu" }));
+
+        const dialog = screen.getByRole("dialog", {
+            name: "Site navigation",
+        });
+        expect(dialog).toHaveAttribute("aria-modal", "true");
+        expect(
+            screen.getByRole("button", { name: "Close navigation menu" })
+        ).toBeInTheDocument();
+    });
+
     it("renders a nav link for every section id, including #github", () => {
         renderNavbar();
 

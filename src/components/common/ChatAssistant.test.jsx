@@ -9,13 +9,21 @@
 // `chatTransport` injects the fetch/sleep seams from `chatClient.js`, so these
 // tests never touch the network or real timers.
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ChatAssistant from "./ChatAssistant";
+
+vi.mock("react-markdown", () => ({
+    default: ({ children }) => <span>{children}</span>,
+}));
+
+vi.mock("remark-gfm", () => ({
+    default: () => {},
+}));
 
 function readStyle(name) {
     return readFileSync(
@@ -260,5 +268,40 @@ describe("ChatAssistant (U7)", () => {
         // No literal rgb()/hex colours remain in the chat stylesheet (D4).
         expect(css).not.toMatch(/rgba?\(\s*[\d.]/);
         expect(css).not.toMatch(/#[0-9a-fA-F]{3,6}\b/);
+    });
+
+    it("shows a labelled prompt group and sends the full prompt, not the chip label", async () => {
+        const fetchImpl = vi.fn(async () =>
+            streamResponse(successFrames("Projects answer")),
+        );
+
+        render(
+            <ChatAssistant
+                chatTransport={{ fetchImpl, sleep: vi.fn(async () => {}) }}
+            />,
+        );
+        fireEvent.click(screen.getByLabelText("Open AI Chat"));
+
+        const group = screen.getByRole("group", { name: "Try asking about" });
+        const chip = within(group).getByRole("button", { name: "Best projects" });
+        fireEvent.click(chip);
+
+        expect(await screen.findByText("Show me your best projects")).toBeTruthy();
+        expect(await screen.findByText("Projects answer")).toBeTruthy();
+    });
+
+    it("uses skeleton loaders for a pending response", async () => {
+        const fetchImpl = vi.fn(() => new Promise(() => {}));
+
+        render(
+            <ChatAssistant
+                chatTransport={{ fetchImpl, sleep: vi.fn(async () => {}) }}
+            />,
+        );
+        fireEvent.click(screen.getByLabelText("Open AI Chat"));
+        fireEvent.click(screen.getByRole("button", { name: "Best projects" }));
+
+        expect(document.querySelector(".chat-typing-skeleton")).not.toBeNull();
+        expect(document.querySelector(".chat-skeleton-line")).not.toBeNull();
     });
 });

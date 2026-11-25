@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, useId, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     FaRobot,
@@ -11,12 +11,12 @@ import {
     FaThumbsDown,
     FaRedo,
     FaStop,
-    FaSpinner,
     FaPlus,
     FaBookOpen,
 } from "react-icons/fa";
 
 import { describeChatError, streamChat } from "../../lib/chatClient";
+import Skeleton from "./Skeleton";
 // 🚀 Lazy-load the entire markdown stack — react-markdown + remark-gfm +
 // micromark together are ~80 KB. Loading them in a single dynamic import
 // ensures the markdown chunk is only fetched when an AI message first renders
@@ -83,13 +83,13 @@ const CHAT_BASE_URL = import.meta.env.VITE_BACKEND_URL
 const GREETING_TEXT =
     "Hi there! 👋 I'm Ritu Raj's AI Assistant. I can help you explore his projects, technical skills, education, certifications, and internship opportunities. Feel free to ask anything! 🚀";
 
-const SUGGESTED_QUESTIONS = [
-    "Tell me about Ritu Raj 👨‍💻",
-    "Show me your best projects 🚀",
-    "Can I see Ritu's resume? 📄",
-    "Explain Orbit AI 🤖",
-    "What technologies does Ritu know? 💻",
-    "Why should we hire Ritu Raj? ⭐"
+const FIRST_RUN_PROMPTS = [
+    { label: "About Ritu", prompt: "Tell me about Ritu Raj" },
+    { label: "Best projects", prompt: "Show me your best projects" },
+    { label: "Technical skills", prompt: "What technologies does Ritu know?" },
+    { label: "Resume", prompt: "Can I see Ritu's resume?" },
+    { label: "Certifications", prompt: "Which certifications does Ritu have?" },
+    { label: "Why hire Ritu?", prompt: "Why should we hire Ritu Raj?" },
 ];
 
 // ==========================================
@@ -98,15 +98,9 @@ const SUGGESTED_QUESTIONS = [
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 const TypingIndicator = () => (
-    <div className="chat-bubble ai-msg typing-indicator-container">
-        {[0, 1, 2].map((i) => (
-            <motion.span
-                key={i}
-                className="typing-dot"
-                animate={{ y: [0, -5, 0] }}
-                transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.2 }}
-            />
-        ))}
+    <div className="chat-bubble ai-msg typing-indicator-container" aria-label="Loading response">
+        <Skeleton className="chat-typing-skeleton" />
+        <Skeleton className="chat-typing-skeleton chat-typing-skeleton-short" />
     </div>
 );
 
@@ -231,6 +225,8 @@ function ChatAssistant({
         }
     });
 
+    const promptGroupId = useId();
+    const chatInputId = useId();
     const messagesEndRef = useRef(null);
     const chatBodyRef = useRef(null);
     const chatWindowRef = useRef(null);
@@ -730,7 +726,7 @@ function ChatAssistant({
                             initial={{ opacity: 0, y: 30, scale: 0.95, transformOrigin: "bottom right" }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 30, scale: 0.95 }}
-                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
                             role="dialog"
                             aria-modal="true"
                             aria-label="AI Portfolio Assistant"
@@ -792,6 +788,7 @@ function ChatAssistant({
                                         <motion.div 
                                             key={msg.id} 
                                             className={`chat-bubble ${msg.role === "ai" ? "ai-msg" : "user-msg"}${msg.isError ? " error-msg" : ""}`}
+                                            role={msg.isError ? "alert" : undefined}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.3 }}
@@ -799,7 +796,7 @@ function ChatAssistant({
                                             {msg.role === "ai" ? (
                                                 <Suspense
                                                     fallback={
-                                                        <span className="chat-bubble-loading">…</span>
+                                                        <Skeleton className="chat-message-skeleton" />
                                                     }
                                                 >
                                                     <MarkdownMessage
@@ -899,21 +896,32 @@ function ChatAssistant({
                                     );
                                 })}
                                 
-                                {/* SUGGESTED QUESTIONS */}
-                                {messages.length === 1 && !isLoading && (
-                                    <motion.div 
+                                {messages.length === 0 && !isLoading && (
+                                    <p className="chat-empty-state">
+                                        Ask a question to get started.
+                                    </p>
+                                )}
+
+                                {messages.length <= 1 && !isLoading && (
+                                    <motion.div
                                         className="suggested-questions-container"
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         transition={{ delay: 0.2 }}
+                                        role="group"
+                                        aria-labelledby={promptGroupId}
                                     >
-                                        {SUGGESTED_QUESTIONS.map((q, idx) => (
-                                            <button 
-                                                key={idx}
-                                                onClick={() => handleSend(q)}
+                                        <p className="chat-prompts-label" id={promptGroupId}>
+                                            Try asking about
+                                        </p>
+                                        {FIRST_RUN_PROMPTS.map((item) => (
+                                            <button
+                                                key={item.label}
+                                                type="button"
+                                                onClick={() => handleSend(item.prompt)}
                                                 className="suggested-btn"
                                             >
-                                                {q}
+                                                {item.label}
                                             </button>
                                         ))}
                                     </motion.div>
@@ -939,7 +947,7 @@ function ChatAssistant({
                             {isLoading && (
                                 <div className="chat-stream-status">
                                     <span className="chat-searching-hint">
-                                        <FaSpinner className="chat-spinner" aria-hidden="true" />
+                                        <Skeleton className="chat-skeleton-line" />
                                         {retryNotice
                                             ? retryNotice
                                             : isStreamingEmpty
@@ -960,7 +968,11 @@ function ChatAssistant({
 
                             {/* FOOTER */}
                             <form className="chat-footer" onSubmit={onSubmit}>
+                                <label className="chat-input-label" htmlFor={chatInputId}>
+                                    Message
+                                </label>
                                 <input
+                                    id={chatInputId}
                                     ref={inputRef}
                                     type="text"
                                     placeholder={isLoading ? "AI is generating..." : "Ask about my skills or projects..."}

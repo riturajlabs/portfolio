@@ -2,7 +2,7 @@
 // (journey prose + cards) and SEO. All admin field names are snake_case — the
 // admin API speaks column names (docs/API.md §6).
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
 
 import { ApiError, fieldErrorMap, get, put, uploadResume } from "../api/client.js";
@@ -62,6 +62,40 @@ function orNull(value) {
   return typeof value === "string" && value.trim() === "" ? null : value;
 }
 
+function sectionForProfilePath(path) {
+  const key = String(path).split(".")[0];
+  if (key === "seo") return "seo";
+  if (key === "about") return "about";
+  if (key === "stats") return "stats";
+  if (key === "social") return "social";
+  return "basics";
+}
+
+function profileFieldId(path) {
+  const mapped = {
+    name: "profile-name",
+    title: "profile-title",
+    resume: "profile-resume",
+    "seo.image": "profile-seo-image",
+  };
+  return mapped[path] || `profile-section-${sectionForProfilePath(path)}`;
+}
+
+function labelForProfilePath(path) {
+  const mapped = {
+    name: "Name",
+    title: "Title",
+    resume: "Resume path",
+    "seo.image": "SEO image",
+  };
+  return mapped[path] || path;
+}
+
+function focusTarget(id) {
+  const target = typeof document === "undefined" ? null : document.getElementById(id);
+  if (target && typeof target.focus === "function") target.focus();
+}
+
 // Upload the resume PDF. Unlike the cover-image picker, this is not a staged
 // edit: the server stores the object and repoints `site_profile.resume` in one
 // audited transaction, so a successful upload *is* the save for the resume. The
@@ -119,18 +153,23 @@ function ResumeUpload({ onUploaded }) {
   );
 }
 
-function ProfileSection({ title, open, onToggle, children }) {
+function ProfileSection({ id, title, open, onToggle, children }) {
   return (
-    <section className="admin-card">
+    <section id={id} tabIndex={-1} className="admin-card">
       <button
         type="button"
         className="admin-btn admin-btn--ghost"
         aria-expanded={open}
+        aria-controls={id ? `${id}-content` : undefined}
         onClick={onToggle}
       >
         {title} {open ? "▾" : "▸"}
       </button>
-      {open ? <div style={{ marginTop: "1rem" }}>{children}</div> : null}
+      {open ? (
+        <div id={id ? `${id}-content` : undefined} style={{ marginTop: "1rem" }}>
+          {children}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -139,6 +178,8 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
   const [form, setForm] = useState(profile);
   const [status, setStatus] = useState(null);
   const [clientErrors, setClientErrors] = useState({});
+  const errorSummaryRef = useRef(null);
+  const focusSummaryRef = useRef(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- form buffer mirrors a fresh server copy after each save
@@ -165,6 +206,19 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
     }));
 
   const [activeSection, setActiveSection] = useState(null);
+  const errorEntries = [
+    ...Object.entries(fieldErrors || {}),
+    ...Object.entries(clientErrors || {}),
+  ];
+  const errorKey = errorEntries
+    .map(([path, message]) => `${path}:${message}`)
+    .join("|");
+
+  useEffect(() => {
+    if (!focusSummaryRef.current) return;
+    focusSummaryRef.current = false;
+    errorSummaryRef.current?.focus();
+  }, [errorKey]);
 
   function toggle(section) {
     setActiveSection((current) => (current === section ? null : section));
@@ -236,6 +290,7 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
   }
 
   async function submit() {
+    if (saving) return;
     const body = compile();
     const errors = {};
     if (!body.name.trim()) errors.name = "Name is required.";
@@ -246,22 +301,62 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
       errors["seo.image"] = "Must be an absolute http(s) URL — a relative path fails the site build.";
     }
     setClientErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      setActiveSection(sectionForProfilePath(Object.keys(errors)[0]));
+      focusSummaryRef.current = true;
+      return;
+    }
     setStatus(null);
-    onSave(body, setStatus);
+    onSave(body, setStatus, (path) => {
+      setActiveSection(sectionForProfilePath(path));
+      focusSummaryRef.current = true;
+    });
   }
 
   return (
     <Form onSubmit={submit}>
       {status ? <div className="admin-login-error" role="alert">{status}</div> : null}
 
-      <ProfileSection title="Basics" open={activeSection === "basics"} onToggle={() => toggle("basics")}>
-        <Field label="Name" required error={fieldErrors.name || clientErrors.name}>
-          {(id, linked) => (
-            <input id={id} className="admin-input" value={form.name || ""} onChange={(e) => patchProfile({ name: e.target.value })} aria-invalid={Boolean(fieldErrors.name || clientErrors.name)} aria-describedby={linked.errorId} />
+      {errorEntries.length > 0 ? (
+        <div
+          ref={errorSummaryRef}
+          id="profile-error-summary"
+          className="case-study-error-summary"
+          role="alert"
+          tabIndex={-1}
+          aria-labelledby="profile-error-summary-title"
+        >
+          <h3 id="profile-error-summary-title">Check these profile fields</h3>
+          <ul>
+            {errorEntries.map(([path, message]) => {
+              const targetId = profileFieldId(path);
+              return (
+                <li key={path}>
+                  <a
+                    className="case-study-error-link"
+                    href={`#${targetId}`}
+                    onClick={() => focusTarget(targetId)}
+                  >
+                    <span className="case-study-error-label">
+                      {labelForProfilePath(path)}
+                    </span>
+                    <code className="case-study-error-path">{path}</code>
+                  </a>
+                  <span>{message}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+
+      <ProfileSection id="profile-section-basics" title="Basics" open={activeSection === "basics"} onToggle={() => toggle("basics")}>
+        <Field label="Name" htmlFor="profile-name" required error={fieldErrors.name || clientErrors.name}>
+          {(fieldId, linked) => (
+            <input id={fieldId} className="admin-input" value={form.name || ""} onChange={(e) => patchProfile({ name: e.target.value })} aria-invalid={Boolean(fieldErrors.name || clientErrors.name)} aria-describedby={linked.errorId} />
           )}
         </Field>
-        <Field label="Title" required error={fieldErrors.title || clientErrors.title}>
+        <Field label="Title" htmlFor="profile-title" required error={fieldErrors.title || clientErrors.title}>
           {(id, linked) => (
             <input id={id} className="admin-input" value={form.title || ""} onChange={(e) => patchProfile({ title: e.target.value })} aria-invalid={Boolean(fieldErrors.title || clientErrors.title)} aria-describedby={linked.errorId} />
           )}
@@ -276,7 +371,7 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
         <Field label="Location">
           {(id) => <input id={id} className="admin-input" value={form.location || ""} onChange={(e) => patchProfile({ location: e.target.value })} />}
         </Field>
-        <Field label="Resume path" required hint="Absolute path (starts with /) or an http(s) URL" error={fieldErrors.resume || clientErrors.resume}>
+        <Field label="Resume path" htmlFor="profile-resume" required hint="Absolute path (starts with /) or an http(s) URL" error={fieldErrors.resume || clientErrors.resume}>
           {(id, linked) => (
             <input id={id} className="admin-input" value={form.resume || ""} onChange={(e) => patchProfile({ resume: e.target.value })} aria-invalid={Boolean(fieldErrors.resume || clientErrors.resume)} aria-describedby={linked.errorId || linked.hintId} placeholder="/resume.pdf" />
           )}
@@ -293,7 +388,7 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
         </Field>
       </ProfileSection>
 
-      <ProfileSection title="Social" open={activeSection === "social"} onToggle={() => toggle("social")}>
+      <ProfileSection id="profile-section-social" title="Social" open={activeSection === "social"} onToggle={() => toggle("social")}>
         <Field label="GitHub URL">
           {(id) => <input id={id} className="admin-input" value={form.social?.github || ""} onChange={(e) => patchSocial({ github: e.target.value })} autoComplete="off" spellCheck="false" />}
         </Field>
@@ -305,7 +400,7 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
         </Field>
       </ProfileSection>
 
-      <ProfileSection title="Stats" open={activeSection === "stats"} onToggle={() => toggle("stats")}>
+      <ProfileSection id="profile-section-stats" title="Stats" open={activeSection === "stats"} onToggle={() => toggle("stats")}>
         <RowList
           label="Stats"
           addLabel="Add stat"
@@ -329,7 +424,7 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
         </RowList>
       </ProfileSection>
 
-      <ProfileSection title="About content" open={activeSection === "about"} onToggle={() => toggle("about")}>
+      <ProfileSection id="profile-section-about" title="About content" open={activeSection === "about"} onToggle={() => toggle("about")}>
         <Field label="Tag">
           {(id) => <input id={id} className="admin-input" value={form.about?.tag || ""} onChange={(e) => patchAbout({ tag: e.target.value })} />}
         </Field>
@@ -368,7 +463,7 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
         </RowList>
       </ProfileSection>
 
-      <ProfileSection title="Search engine" open={activeSection === "seo"} onToggle={() => toggle("seo")}>
+      <ProfileSection id="profile-section-seo" title="Search engine" open={activeSection === "seo"} onToggle={() => toggle("seo")}>
         <Field label="Site name">
           {(id) => <input id={id} className="admin-input" value={form.seo?.siteName || ""} onChange={(e) => patchSeo({ siteName: e.target.value })} />}
         </Field>
@@ -382,7 +477,7 @@ function ProfileForm({ profile, onSave, saving, fieldErrors }) {
         <Field label="Author">
           {(id) => <input id={id} className="admin-input" value={form.seo?.author || ""} onChange={(e) => patchSeo({ author: e.target.value })} />}
         </Field>
-        <Field label="Image" hint="Absolute http(s) URL — becomes the og:image meta tag" error={fieldErrors["seo.image"] || clientErrors["seo.image"]}>
+        <Field label="Image" htmlFor="profile-seo-image" hint="Absolute http(s) URL — becomes the og:image meta tag" error={fieldErrors["seo.image"] || clientErrors["seo.image"]}>
           {(id, linked) => (
             <input id={id} className="admin-input" value={form.seo?.image || ""} onChange={(e) => patchSeo({ image: e.target.value })} aria-invalid={Boolean(fieldErrors["seo.image"] || clientErrors["seo.image"])} aria-describedby={linked.errorId || linked.hintId} placeholder="https://" autoComplete="off" spellCheck="false" />
           )}
@@ -472,7 +567,7 @@ export default function Profile() {
     refresh();
   }, [refresh]);
 
-  async function save(body, setStatus) {
+  async function save(body, setStatus, openErrorSection) {
     setSaving(true);
     setFieldErrors({});
     try {
@@ -485,6 +580,7 @@ export default function Profile() {
         const mapped = fieldErrorMap(err);
         if (Object.keys(mapped).length > 0) {
           setFieldErrors(mapped);
+          openErrorSection?.(Object.keys(mapped)[0]);
           setStatus("Some fields are invalid — see the errors below the inputs.");
         } else {
           setStatus(err.message);

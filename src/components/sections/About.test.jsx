@@ -8,7 +8,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import About from "./About";
-import { about } from "../../lib/publicContent";
+import { about, profile } from "../../lib/publicContent";
 
 describe("About", () => {
     it("renders the CMS about payload through the public-content adapter", () => {
@@ -32,5 +32,15 @@ describe("About", () => {
         expect(container.textContent).not.toContain("undefined");
         expect(screen.getAllByText((_, el) => el?.classList.contains("about-card")))
             .toHaveLength(about.cards.length);
+    });
+
+    it("exposes labelled About and Experience regions", () => {
+        const { container } = render(<About />);
+
+        expect(screen.getByRole("region", { name: "About" })).toBeTruthy();
+        expect(screen.getByRole("region", { name: "Experience" })).toBeTruthy();
+        const roles = container.querySelector(".experience-roles");
+        expect(roles).toBeTruthy();
+        expect(roles.textContent).toContain(profile.roles.join(""));
     });
 });

@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 import ProjectPage from "./ProjectPage";
 
@@ -77,6 +77,19 @@ describe("ProjectPage (U5 header band + sticky section nav)", () => {
         expect(container.querySelector("#project-highlights")).toBeTruthy();
     });
 
+    it("explains the sign-in requirement for auth-gated actions", () => {
+        const { container } = render(
+            <ProjectPage project={{ ...PROJECT, requiresAuth: true }} />
+        );
+
+        expect(
+            container.querySelector(".project-auth-notice")
+        ).toHaveTextContent(/available to signed-in admins only/i);
+        expect(
+            screen.getByRole("link", { name: "Sign in to the admin area" })
+        ).toHaveAttribute("href", "/admin/login");
+    });
+
     it("keeps explicit image dimensions on the LCP figure", () => {
         const { container } = render(<ProjectPage project={PROJECT} />);
 
@@ -131,5 +144,16 @@ describe("ProjectPage (U5 header band + sticky section nav)", () => {
         expect(tech, ".project-page-tech li rule missing").toBeTruthy();
         expect(tech).toMatch(/color:\s*var\(--link\)/);
         expect(tech).toMatch(/background:\s*var\(--primary-soft\)/);
+    });
+
+    it("keeps the related link and sign-in link at ≥44px", () => {
+        const css = readStyle("project-page.css");
+        const related = css.match(/\.project-page-related-link\s*\{[^}]*\}/)?.[0];
+        const auth = css.match(/\.project-auth-notice a\s*\{[^}]*\}/)?.[0];
+
+        expect(related, ".project-page-related-link rule missing").toBeTruthy();
+        expect(related).toMatch(/min-height:\s*44px/);
+        expect(auth, ".project-auth-notice a rule missing").toBeTruthy();
+        expect(auth).toMatch(/min-height:\s*44px/);
     });
 });

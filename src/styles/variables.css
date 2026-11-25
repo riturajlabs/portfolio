@@ -49,9 +49,11 @@
        BRAND COLORS
     ========================== */
 
-    --primary:#2563EB;
+    --primary:#60A5FA;
 
-    --primary-dark:#1D4ED8;
+    --primary-dark:#3B82F6;
+
+    --primary-text:#60A5FA;
 
     --secondary:#7C3AED;
 
@@ -62,9 +64,9 @@
     --brand-gradient:
     linear-gradient(
         90deg,
-        #2563EB,
-        #7C3AED,
-        #EC4899
+        #60A5FA,
+        #A78BFA,
+        #F472B6
     );
 
 
@@ -214,11 +216,25 @@
        Z INDEX
     ========================== */
 
+    --z-base:0;
+
+    --z-raised:1;
+
+    --z-sticky:5;
+
     --z-navbar:1000;
 
     --z-dropdown:1100;
 
     --z-modal:1200;
+
+    --z-overlay:1300;
+
+    --z-toast:1400;
+
+    --z-chat:1500;
+
+    --z-progress:1600;
 
 
 
@@ -237,7 +253,7 @@
        LINKS / FOCUS / ON-BRAND
     ========================== */
 
-    --on-primary:#FFFFFF;
+    --on-primary:#0F172A;
 
     --link:#60A5FA;
 
@@ -424,6 +440,20 @@
 
 
     --success-text:#166534;
+
+    --primary:#1D4ED8;
+
+    --primary-dark:#1E40AF;
+
+    --primary-text:#1D4ED8;
+
+    --brand-gradient:
+    linear-gradient(
+        90deg,
+        #1D4ED8,
+        #6D28D9,
+        #BE185D
+    );
 
     /* See the dark block: same role, deepened for light surfaces. */
     --secondary-text:#6D28D9;

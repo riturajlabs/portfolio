@@ -214,7 +214,7 @@
 .certificate-card a {
 
     position:relative;
-    z-index:2;
+    z-index:var(--z-raised);
 
     display:inline-flex;
 

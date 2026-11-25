@@ -18,6 +18,7 @@ const hookState = {
     stats: [],
     loading: false,
     error: "",
+    status: "",
 };
 
 vi.mock("../../hooks/useGithub", () => ({
@@ -30,6 +31,7 @@ function setHook(state) {
         stats: [],
         loading: false,
         error: "",
+        status: "",
         ...state,
     });
 }
@@ -126,5 +128,38 @@ describe("GithubStats (U6-R1 status chip)", () => {
 
         expect(rule, ".github-profile-btn rule missing").toBeTruthy();
         expect(rule).toMatch(/min-height:\s*44px/);
+    });
+});
+
+describe("GithubStats (explicit data state)", () => {
+    it("labels the section and hides metrics when data is unavailable", () => {
+        setHook({ status: "unavailable", profile: null, stats: [] });
+        const { container } = render(<GithubStats />);
+
+        expect(screen.getByRole("region", { name: "GitHub activity" })).toBeTruthy();
+        expect(screen.getByText(/metrics are unavailable right now/i)).toBeTruthy();
+        expect(screen.getByText("Unavailable")).toBeTruthy();
+        expect(container.querySelector(".github-cards")).toBeNull();
+        expect(container.querySelector(".github-profile-link")).toBeTruthy();
+    });
+
+    it("marks cached metrics as cached instead of presenting them as live", () => {
+        setHook({ status: "cached", profile: null, stats: REAL_STATS });
+        const { container } = render(<GithubStats />);
+
+        expect(screen.getByText(/last available github metrics/i)).toBeTruthy();
+        expect(container.querySelector(".github-state-chip")).toHaveTextContent("Cached");
+        expect(container.querySelectorAll(".github-card")).toHaveLength(
+            REAL_STATS.length
+        );
+    });
+
+    it("uses skeletons while loading", () => {
+        setHook({ status: "loading", loading: true, stats: [] });
+        const { container } = render(<GithubStats />);
+
+        expect(container.querySelector(".github-loading")).toBeTruthy();
+        expect(container.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+        expect(container.querySelector(".github-profile")).toBeNull();
     });
 });

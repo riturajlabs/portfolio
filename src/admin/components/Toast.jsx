@@ -1,7 +1,7 @@
 // Toast notifications. Errors use `role="alert"` so assistive tech announces
 // them; everything else uses a polite status region.
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 const ToastContext = createContext(null);
 
@@ -10,17 +10,29 @@ const AUTO_DISMISS_MS = 6000;
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const nextId = useRef(0);
+  const timers = useRef(new Set());
+
+  const remove = useCallback((id) => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
 
   const push = useCallback((message, variant = "info") => {
     const id = ++nextId.current;
     setToasts((current) => [...current, { id, message, variant }]);
-    window.setTimeout(() => {
-      setToasts((current) => current.filter((toast) => toast.id !== id));
+    const timer = setTimeout(() => {
+      timers.current.delete(timer);
+      remove(id);
     }, AUTO_DISMISS_MS);
-  }, []);
+    timers.current.add(timer);
+  }, [remove]);
 
   const dismiss = useCallback((id) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id));
+    remove(id);
+  }, [remove]);
+
+  useEffect(() => () => {
+    timers.current.forEach(clearTimeout);
+    timers.current.clear();
   }, []);
 
   const api = useMemo(

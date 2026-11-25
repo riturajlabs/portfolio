@@ -45,6 +45,7 @@ export default function Projects() {
   const ordered = [...(projects || [])].sort((a, b) => a.display_order - b.display_order);
 
   async function move(row, direction) {
+    if (busy) return;
     const index = ordered.indexOf(row);
     const swapWith = ordered[index + direction];
     if (!swapWith) return;
@@ -62,7 +63,7 @@ export default function Projects() {
   }
 
   async function confirmDelete() {
-    if (!deleting) return;
+    if (!deleting || busy) return;
     try {
       setBusy(true);
       const result = await del(`/projects/${deleting.id}`);
@@ -84,8 +85,14 @@ export default function Projects() {
       render: (row) => {
         const index = ordered.indexOf(row);
         return (
-          <span>
-            <span className="admin-order-dot" aria-hidden="true">⋮⋮ </span>
+            <span className="admin-order-control">
+              <span
+                className="admin-order-dot"
+                aria-hidden="true"
+                title="Order handle — use the up and down buttons to reorder"
+              >
+                ⋮⋮
+              </span>
             <button
               type="button"
               className="admin-btn admin-btn--ghost admin-btn--sm"
@@ -155,6 +162,7 @@ export default function Projects() {
           <button
             type="button"
             className="admin-btn admin-btn--danger admin-btn--sm"
+            disabled={busy}
             onClick={() => setDeleting(row)}
           >
             Hide
@@ -167,7 +175,10 @@ export default function Projects() {
   return (
     <div>
       <div className="admin-toolbar">
-        <p>Soft-delete hides a project and removes it from the sitemap; the row survives for audit.</p>
+        <div>
+          <p>Soft-delete hides a project and removes it from the sitemap; the row survives for audit.</p>
+          <p className="admin-field-hint">Use the ↑ / ↓ buttons in the Order column to move a project; ⋮⋮ marks that column.</p>
+        </div>
         <button type="button" className="admin-btn" onClick={() => navigate("/projects/new")}>
           <FaPlus aria-hidden="true" /> New project
         </button>
@@ -191,6 +202,7 @@ export default function Projects() {
         title="Hide this project?"
         message={deleting ? `"${deleting.title}" leaves the site and the sitemap. The row is kept for the audit log.` : ""}
         confirmLabel="Hide project"
+        confirmDisabled={busy}
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />

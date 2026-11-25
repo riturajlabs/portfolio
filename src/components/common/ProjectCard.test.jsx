@@ -140,6 +140,36 @@ describe("ProjectCard (U5 FE-12 modal focus trap)", () => {
         });
         expect(document.activeElement).toBe(details);
     });
+
+    it("tracks dialog expansion on the details trigger and restores the previous overflow", async () => {
+        document.body.style.overflow = "auto";
+        render(<ProjectCard project={PROJECT} />);
+
+        const details = screen.getByRole("button", { name: "Details" });
+        expect(details).toHaveAttribute("aria-expanded", "false");
+        fireEvent.click(details);
+        expect(details).toHaveAttribute("aria-expanded", "true");
+        expect(document.body.style.overflow).toBe("hidden");
+
+        fireEvent.keyDown(window, { key: "Escape" });
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+        expect(document.body.style.overflow).toBe("auto");
+        expect(details).toHaveAttribute("aria-expanded", "false");
+        document.body.style.overflow = "";
+    });
+
+    it("explains the sign-in requirement for auth-gated project actions", () => {
+        render(<ProjectCard project={{ ...PROJECT, requiresAuth: true }} />);
+        fireEvent.click(screen.getByRole("button", { name: "Details" }));
+
+        expect(
+            screen.getByText(/available to signed-in admins only/i)
+        ).toBeTruthy();
+        expect(
+            screen.getByRole("link", { name: "Sign in to the admin area" })
+        ).toHaveAttribute("href", "/admin/login");
+    });
 });
 
 describe("ProjectCard (U5 theme-consistency contracts)", () => {
@@ -213,5 +243,17 @@ describe("ProjectCard (U5 theme-consistency contracts)", () => {
 
         expect(rule, ".project-modal-category rule missing").toBeTruthy();
         expect(rule).toMatch(/color:\s*var\(--secondary-text\)/);
+    });
+
+    it("keeps the modal close and sign-in controls at ≥44px", () => {
+        const css = readStyle("projects.css");
+        const closeRule = css.match(/\.project-modal-close\s*\{[^}]*\}/)?.[0];
+        const authRule = css.match(/\.project-auth-notice a\s*\{[^}]*\}/)?.[0];
+
+        expect(closeRule, ".project-modal-close rule missing").toBeTruthy();
+        expect(closeRule).toMatch(/width:\s*44px/);
+        expect(closeRule).toMatch(/height:\s*44px/);
+        expect(authRule, ".project-auth-notice a rule missing").toBeTruthy();
+        expect(authRule).toMatch(/min-height:\s*44px/);
     });
 });

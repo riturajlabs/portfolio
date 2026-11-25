@@ -29,20 +29,3 @@
 @import "./styles/contacts.css";
 
 @import "./styles/chat.css";
-
-/* ==========================================
-   🚀 ULTIMATE MOBILE TOUCH OVERRIDES 🚀
-   (Put this at the absolute bottom)
-========================================== */
-* {
-    /* Neel rang ke highlight ko hamesha ke liye band karega */
-    -webkit-tap-highlight-color: transparent !important;
-}
-
-/* Double tap delay aur text selection block */
-a, button, .mobile-menu, .mobile-menu a, .logo {
-    touch-action: manipulation !important;
-    -webkit-touch-callout: none !important;
-    -webkit-user-select: none !important;
-    user-select: none !important;
-}

@@ -20,6 +20,7 @@ function Blog() {
         <section
             id="blog"
             className="blog-section"
+            aria-label="Blog"
         >
 
             <div className="container">

@@ -17,6 +17,7 @@ function Projects() {
         <section
             id="projects"
             className="projects-section"
+            aria-label="Projects"
         >
             <div className="container">
 

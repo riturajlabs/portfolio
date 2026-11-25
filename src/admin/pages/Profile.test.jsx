@@ -6,7 +6,7 @@
 // selection, a busy/disabled state, success, server and client rejection, and the
 // guarantee that a failure leaves the previously active resume in the field.
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 
@@ -33,7 +33,7 @@ vi.mock("../api/client.js", () => {
   };
 });
 
-import { ApiError, get, uploadResume } from "../api/client.js";
+import { ApiError, get, put, uploadResume } from "../api/client.js";
 
 const IN_REPO_RESUME = "/Ritu_Raj_Full_Stack_Developer_Resume.pdf";
 
@@ -136,6 +136,37 @@ it("surfaces a server rejection and keeps the previous resume in the field", asy
   expect((await screen.findAllByText("Only PDF documents are supported.")).length).toBeGreaterThan(0);
   // The failed upload changed nothing: the old resume is still the active value.
   expect(screen.getByLabelText(/Resume path/)).toHaveValue(IN_REPO_RESUME);
+});
+
+it("opens a collapsed section and focuses the summary for server validation errors", async () => {
+  const user = userEvent.setup();
+  put.mockRejectedValue(
+    new ApiError(422, {
+      code: "VALIDATION_ERROR",
+      message: "Request validation failed.",
+      fields: [{ field: "name", message: "Name rejected." }],
+    }),
+  );
+
+  renderProfile();
+  const basics = await screen.findByRole("button", { name: /Basics/ });
+  expect(basics).toHaveAttribute("aria-expanded", "false");
+
+  await user.click(screen.getByRole("button", { name: "Save profile" }));
+
+  const summary = await screen.findByRole("alert", {
+    name: "Check these profile fields",
+  });
+  expect(summary).toHaveFocus();
+  expect(screen.getByRole("button", { name: /Basics/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  expect(within(summary).getByRole("link", { name: /Name/ })).toHaveAttribute(
+    "href",
+    "#profile-name",
+  );
+  expect(within(summary).getByText("Name rejected.")).toBeInTheDocument();
 });
 
 it("rejects an obviously non-PDF file before calling the API", async () => {

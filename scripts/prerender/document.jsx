@@ -104,6 +104,25 @@ export function renderProjectDocument(project, stylesheets = []) {
 
 <head>
 
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("theme");
+        var theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.style.colorScheme = theme;
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+
   <meta charset="UTF-8">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -174,6 +193,8 @@ ${styles}
 </head>
 
 <body>
+
+  <a class="skip-link" href="#project-main">Skip to main content</a>
 
   <div id="root">
 ${body}

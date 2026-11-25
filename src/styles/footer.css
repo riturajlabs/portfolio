@@ -24,9 +24,8 @@
 =================================================== */
 .footer-content {
     display: grid;
-    /* Giving the brand section more space for the quote */
-    grid-template-columns: 2fr 1fr 1fr; 
-    gap: 4rem;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
     padding-bottom: 3.5rem;
 }
 
@@ -43,7 +42,7 @@
 }
 
 .footer-logo span {
-    color: var(--primary);
+    color: var(--link);
     font-size: 2.5rem;
 }
 
@@ -134,7 +133,7 @@
 /* Slide-in arrow effect on hover */
 .footer-navigation a::before {
     content: "▹";
-    color: var(--primary);
+    color: var(--link);
     margin-right: 8px;
     font-size: 1.2rem;
     opacity: 0;
@@ -143,7 +142,7 @@
 }
 
 .footer-navigation a:hover {
-    color: var(--primary);
+    color: var(--link);
     transform: translateX(5px);
 }
 

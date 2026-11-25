@@ -9,10 +9,11 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import Hero from "./Hero";
+import { profile as realProfile } from "../../lib/publicContent";
 
 function readStyle(name) {
     return readFileSync(
@@ -71,5 +72,40 @@ describe("Hero (U4 contrast: link/status tokens at source)", () => {
         expect(rule, ".btn-outline rule missing").toBeTruthy();
         expect(rule).toMatch(/color:\s*var\(--link\)/);
         expect(rule).toMatch(/border-color:\s*var\(--primary/);
+    });
+});
+
+describe("Hero (CMS resume)", () => {
+    it("labels the region and links to the CMS resume when present", () => {
+        render(<Hero />);
+
+        expect(screen.getByRole("region", { name: "Home" })).toBeTruthy();
+        expect(screen.getByRole("link", { name: /download resume/i })).toHaveAttribute(
+            "href",
+            realProfile.resume
+        );
+    });
+
+    it("shows a clear message instead of a broken download when the resume is missing", async () => {
+        vi.resetModules();
+        vi.doMock("../../lib/publicContent", () => ({
+            profile: { ...realProfile, resume: "" },
+            socials: [],
+        }));
+
+        try {
+            const { default: FreshHero } = await import("./Hero");
+            render(<FreshHero />);
+
+            expect(
+                screen.getByText("Resume is currently unavailable.")
+            ).toBeTruthy();
+            expect(
+                screen.queryByRole("link", { name: /download resume/i })
+            ).toBeNull();
+        } finally {
+            vi.doUnmock("../../lib/publicContent");
+            vi.resetModules();
+        }
     });
 });

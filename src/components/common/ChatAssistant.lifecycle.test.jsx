@@ -17,6 +17,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ChatAssistant from "./ChatAssistant";
 
+vi.mock("framer-motion", () => {
+    const stripMotionProps = (props) =>
+        Object.fromEntries(
+            Object.entries(props).filter(
+                ([key]) =>
+                    !["initial", "animate", "exit", "transition", "whileHover", "whileTap"].includes(key),
+            ),
+        );
+
+    return {
+        AnimatePresence: ({ children }) => children,
+        motion: {
+            div: (props) => <div {...stripMotionProps(props)} />,
+            button: (props) => <button {...stripMotionProps(props)} />,
+        },
+    };
+});
+
 if (!Element.prototype.scrollIntoView) {
     Element.prototype.scrollIntoView = () => {};
 }

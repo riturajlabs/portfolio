@@ -37,6 +37,12 @@ body {
     text-decoration: none;
 }
 
+.project-page .btn-primary,
+.project-page .btn-primary:hover,
+.project-page .btn-primary:active {
+    color: var(--on-primary);
+}
+
 .project-page img {
     display: block;
     max-width: 100%;
@@ -72,6 +78,55 @@ body {
 .project-page-main {
     max-width: 860px;
     margin: 0 auto;
+}
+
+.project-page-main:focus {
+    outline: none;
+}
+
+.skip-link {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: var(--z-toast);
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+    border-radius: var(--radius-btn);
+    background: var(--primary);
+    color: var(--on-primary);
+    font-weight: var(--fw-semibold);
+    transform: translateY(-200%);
+    transition: transform var(--transition-fast);
+}
+
+.skip-link:focus-visible {
+    transform: translateY(0);
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        transition-delay: 0s !important;
+    }
+}
+
+@media (forced-colors: active) {
+    .skip-link,
+    .btn,
+    a,
+    button {
+        border: 1px solid CanvasText;
+    }
 }
 
 /* ==================================================
@@ -150,7 +205,7 @@ body {
 .project-page-section-nav {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: var(--z-sticky);
 
     display: flex;
     flex-wrap: nowrap;
@@ -336,8 +391,29 @@ body {
 }
 
 .project-page-related-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     color: var(--text);
     font-weight: 600;
+}
+
+.project-auth-notice {
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+    border-radius: var(--radius-sm);
+    background: var(--primary-soft);
+    color: var(--text-secondary);
+    line-height: var(--lh-relaxed);
+}
+
+.project-auth-notice a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--link);
+    font-weight: 600;
+    text-decoration: underline;
 }
 
 .project-page-related-link:hover {

@@ -217,6 +217,36 @@ it("repairs the original JSON and transfers a valid document to structured editi
   expect(draftValue()).toEqual(repaired);
 });
 
+it("collapses the advanced raw JSON editor behind a disclosure", async () => {
+  const user = setupUser();
+  render(
+    <Harness
+      initial={{ schemaVersion: 2, role: "Legacy owner", futureField: true }}
+    />,
+  );
+
+  await user.click(
+    screen.getByRole("button", { name: "Repair existing JSON" }),
+  );
+  const toggle = screen.getByRole("button", {
+    name: /Advanced — edit stored JSON/,
+  });
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByLabelText("Stored case study JSON")).toBeInTheDocument();
+
+  await user.click(toggle);
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(
+    screen.queryByLabelText("Stored case study JSON"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Use structured editor" }),
+  ).toBeInTheDocument();
+
+  await user.click(toggle);
+  expect(screen.getByLabelText("Stored case study JSON")).toBeInTheDocument();
+});
+
 it("distinguishes raw JSON syntax errors from payload validation errors", async () => {
   const user = setupUser();
   render(

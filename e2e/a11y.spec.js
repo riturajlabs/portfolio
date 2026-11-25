@@ -28,9 +28,9 @@
 // grid, github, certifications, blog and contact sections were never
 // actually scanned before. (2) The five prerendered project pages get
 // their own axe scans plus a horizontal-overflow sweep at the four
-// §8 viewports — those pages ship no JavaScript and render only the
-// dark token block (no data-theme mechanism exists for them), so they
-// are scanned under emulated dark without a theme assertion.
+// §8 viewports — those pages ship no application JavaScript but carry
+// the same pre-paint theme bootstrap, so the dark scan asserts the
+// applied theme as well.
 //
 // FAIL-CLOSED ON REGRESSIONS: critical/serious violations fail the
 // build; only advisory (moderate/minor) violations are reported and
@@ -106,8 +106,8 @@ async function scanHomepage(page) {
   return { violations: results.violations, errors };
 }
 
-// Static prerendered page: no sandbox calls of its own, no theme
-// mechanism — scan the settled document as served.
+// Static prerendered page: sandbox calls are intercepted while the
+// pre-paint theme bootstrap applies the emulated palette before scan.
 async function scanProjectPage(page, slug) {
   const errors = watchPageErrors(page);
   await attachBrowserSandbox(page);
@@ -181,6 +181,36 @@ test("homepage honours an explicit light-theme choice and stays accessible", asy
   expectNoNewDebt({ violations, errors }, "light theme");
 });
 
+test("homepage exposes a keyboard-operable skip link", async ({ page }) => {
+  await attachBrowserSandbox(page);
+  await page.goto("/");
+
+  await page.keyboard.press("Tab");
+  await expect(page.locator(".skip-link")).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#main-content")).toBeFocused();
+});
+
+test("mobile menu opens as a focus-managed dialog", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await attachBrowserSandbox(page);
+  await page.goto("/");
+
+  const toggle = page.getByRole("button", { name: "Open Menu" });
+  await toggle.click();
+
+  const dialog = page.getByRole("dialog", { name: "Site navigation" });
+  await expect(dialog).toHaveAttribute("aria-modal", "true");
+  await expect(
+    page.getByRole("button", { name: "Close navigation menu" })
+  ).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(toggle).toBeFocused();
+});
+
 for (const slug of PROJECT_SLUGS) {
   test(`project page /projects/${slug}/ has no critical or serious axe violations`, async ({
     page,
@@ -188,6 +218,7 @@ for (const slug of PROJECT_SLUGS) {
     await page.emulateMedia({ colorScheme: "dark" });
 
     const { violations, errors } = await scanProjectPage(page, slug);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
     expectNoNewDebt({ violations, errors }, `project page ${slug}`);
   });

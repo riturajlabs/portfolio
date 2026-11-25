@@ -64,6 +64,7 @@ export default function CaseStudyEditor({
   onUploadImage,
 }) {
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [rawAdvancedOpen, setRawAdvancedOpen] = useState(true);
   const [uploadedAssets, setUploadedAssets] = useState(() => new Set());
   const [outcomeNotice, setOutcomeNotice] = useState("");
   const removeButtonRef = useRef(null);
@@ -818,37 +819,58 @@ export default function CaseStudyEditor({
 
       {repairing ? (
         <div className="case-study-raw-repair">
-          <Field
-            label="Stored case study JSON"
-            htmlFor="case-study-raw-json"
-            hint="Edit the original JSON. A valid document is sent as a complete replacement; an invalid document is never saved."
-            error={
-              draft.rawParseError
-                ? "JSON syntax error."
-                : Array.isArray(draft.rawProblems) && draft.rawProblems.length > 0
-                  ? "Case study payload is invalid."
-                  : undefined
-            }
+          <button
+            type="button"
+            className="admin-btn admin-btn--ghost admin-btn--sm case-study-advanced-toggle"
+            aria-expanded={rawAdvancedOpen}
+            aria-controls="case-study-raw-repair-body"
+            onClick={() => setRawAdvancedOpen((open) => !open)}
           >
-            {(fieldId, linked) => (
-              <textarea
-                id={fieldId}
-                className="admin-textarea case-study-raw-textarea"
-                value={draft.rawText ?? ""}
-                onChange={handleRawTextChange}
-                aria-invalid={
-                  draft.rawParseError ||
-                  (Array.isArray(draft.rawProblems) &&
-                    draft.rawProblems.length > 0)
-                    ? "true"
-                    : undefined
+            Advanced — edit stored JSON {rawAdvancedOpen ? "▾" : "▸"}
+          </button>
+          {rawAdvancedOpen ? (
+            <div id="case-study-raw-repair-body">
+              <div className="case-study-warning" role="note">
+                <strong>Advanced: raw JSON is a full replacement.</strong>
+                <p>
+                  The text below is sent verbatim when valid. Invalid JSON is
+                  never saved. Prefer the structured editor unless you are
+                  repairing an unsupported stored document.
+                </p>
+              </div>
+              <Field
+                label="Stored case study JSON"
+                htmlFor="case-study-raw-json"
+                hint="Edit the original JSON. A valid document is sent as a complete replacement; an invalid document is never saved."
+                error={
+                  draft.rawParseError
+                    ? "JSON syntax error."
+                    : Array.isArray(draft.rawProblems) && draft.rawProblems.length > 0
+                      ? "Case study payload is invalid."
+                      : undefined
                 }
-                aria-describedby={linked.errorId ?? linked.hintId}
-                spellCheck={false}
-              />
-            )}
-          </Field>
-          {rawDiagnostics()}
+              >
+                {(fieldId, linked) => (
+                  <textarea
+                    id={fieldId}
+                    className="admin-textarea case-study-raw-textarea"
+                    value={draft.rawText ?? ""}
+                    onChange={handleRawTextChange}
+                    aria-invalid={
+                      draft.rawParseError ||
+                      (Array.isArray(draft.rawProblems) &&
+                        draft.rawProblems.length > 0)
+                        ? "true"
+                        : undefined
+                    }
+                    aria-describedby={linked.errorId ?? linked.hintId}
+                    spellCheck={false}
+                  />
+                )}
+              </Field>
+              {rawDiagnostics()}
+            </div>
+          ) : null}
           <div className="case-study-recovery-actions">
             <button
               type="button"

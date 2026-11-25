@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -22,6 +22,8 @@ function Navbar() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [activeSection, setActiveSection] = useScrollSpy("home");
+    const menuButtonRef = useRef(null);
+    const menuPanelRef = useRef(null);
 
     // Navbar background on scroll
     useEffect(() => {
@@ -33,16 +35,63 @@ function Navbar() {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // Lock scroll when mobile menu is open
     useEffect(() => {
-        if (menuOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "";
-        }
+        if (!menuOpen) return undefined;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
 
         return () => {
-            document.body.style.overflow = "";
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [menuOpen]);
+
+    useEffect(() => {
+        if (!menuOpen) return undefined;
+
+        const panel = menuPanelRef.current;
+        const focusableSelector = "a[href], button:not([disabled])";
+        const focusables = () =>
+            panel ? [...panel.querySelectorAll(focusableSelector)] : [];
+        const previouslyFocused = document.activeElement;
+
+        const frame = window.requestAnimationFrame(() => {
+            focusables()[0]?.focus();
+        });
+
+        const handleKeyDown = (event) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                setMenuOpen(false);
+                menuButtonRef.current?.focus({ preventScroll: true });
+                return;
+            }
+
+            if (event.key !== "Tab") return;
+
+            const items = focusables();
+            if (items.length === 0) return;
+
+            const first = items[0];
+            const last = items[items.length - 1];
+
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        };
+
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.cancelAnimationFrame(frame);
+            document.removeEventListener("keydown", handleKeyDown);
+            if (previouslyFocused instanceof HTMLElement) {
+                previouslyFocused.focus({ preventScroll: true });
+            }
         };
     }, [menuOpen]);
 
@@ -51,7 +100,7 @@ function Navbar() {
             className={`navbar-wrapper ${scrolled ? "navbar-scrolled" : ""}`}
         >
             <div className="container">
-                <nav className="navbar-custom">
+                <nav className="navbar-custom" aria-label="Main navigation">
                     
                     {/* LOGO */}
                     <a
@@ -92,6 +141,7 @@ function Navbar() {
                         </a>
 
                         <button
+                            ref={menuButtonRef}
                             className="menu-btn d-lg-none"
                             onClick={() => setMenuOpen(!menuOpen)}
                             aria-label={menuOpen ? "Close Menu" : "Open Menu"}
@@ -108,14 +158,30 @@ function Navbar() {
                 <AnimatePresence>
                     {menuOpen && (
                         <motion.div
+                            ref={menuPanelRef}
                             id="mobile-menu-panel"
                             className="mobile-menu d-lg-none"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Site navigation"
+                            tabIndex={-1}
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                         >
                             <div className="mobile-menu-content">
+                                <button
+                                    type="button"
+                                    className="mobile-menu-close"
+                                    aria-label="Close navigation menu"
+                                    onClick={() => {
+                                        setMenuOpen(false);
+                                        menuButtonRef.current?.focus({ preventScroll: true });
+                                    }}
+                                >
+                                    <FaTimes aria-hidden="true" />
+                                </button>
                                 {navigation.map((item) => (
                                     <a
                                         key={item.id}

@@ -11,6 +11,9 @@ import Button from "../common/Button";
 import SocialLinks from "../common/SocialLinks";
 
 function Hero() {
+    const resume = typeof profile.resume === "string" ? profile.resume.trim() : "";
+    const resumeUrl = /^(https?:\/\/|\/)[^\s]+$/.test(resume) ? resume : "";
+
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -31,6 +34,7 @@ function Hero() {
         <section
             id="home"
             className="hero-section"
+            aria-label="Home"
         >
             <div className="container">
                 <div className="hero-content">
@@ -113,14 +117,20 @@ function Hero() {
                                 <FaArrowRight />
                             </Button>
 
-                            <Button
-                                href={profile.resume}
-                                download
-                                variant="outline"
-                            >
-                                Download Resume
-                                <FaDownload />
-                            </Button>
+                            {resumeUrl ? (
+                                <Button
+                                    href={resumeUrl}
+                                    download
+                                    variant="outline"
+                                >
+                                    Download Resume
+                                    <FaDownload />
+                                </Button>
+                            ) : (
+                                <p className="hero-description hero-resume-note">
+                                    Resume is currently unavailable.
+                                </p>
+                            )}
                         </div>
 
                         {/* ================= SOCIAL ================= */}

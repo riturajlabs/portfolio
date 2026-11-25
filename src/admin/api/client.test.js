@@ -2,8 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ApiError,
+  clearSessionExpiredReason,
   fieldErrorMap,
   get,
+  getSessionExpiredReason,
+  onSessionExpired,
   uploadImage,
   uploadResume,
 } from "./client.js";
@@ -125,6 +128,37 @@ describe("admin error responses", () => {
       "/api/admin/projects/project-1",
       expect.objectContaining({ credentials: "same-origin" }),
     );
+  });
+
+  it("emits an explained session-expired event on 401", async () => {
+    const listener = vi.fn();
+    const unsubscribe = onSessionExpired(listener);
+    clearSessionExpiredReason();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: { code: "UNAUTHENTICATED", message: "Session expired." },
+            }),
+            { status: 401, headers: { "Content-Type": "application/json" } },
+          ),
+      ),
+    );
+
+    const error = await get("/me").catch((thrown) => thrown);
+
+    expect(error.status).toBe(401);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: "UNAUTHENTICATED",
+        message: expect.stringContaining("session cookie"),
+      }),
+    );
+    expect(getSessionExpiredReason()).toEqual(listener.mock.calls[0][0]);
+    unsubscribe();
   });
 
   it("keeps status, fallback message, and Retry-After for a malformed error body", async () => {

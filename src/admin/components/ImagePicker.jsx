@@ -23,11 +23,14 @@ export default function ImagePicker({
   error,
   required,
   uploadFileLabel = "Upload image file",
+  previewVariant = "contained",
 }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [retryFile, setRetryFile] = useState(null);
   const [touched, setTouched] = useState(false);
   const fileInput = useRef(null);
+  const uploadSequence = useRef(0);
 
   const validationError = touched ? validateImagePath(value) : null;
   const fieldError = error || validationError;
@@ -41,28 +44,57 @@ export default function ImagePicker({
     if (onBlur) onBlur(value || "");
   }
 
-  async function handleFile(event) {
-    const file = event.target.files && event.target.files[0];
-    // Reset immediately so choosing the same file again still fires `change`.
-    event.target.value = "";
-    if (!file || !onUpload) return;
+  function invalidateUpload() {
+    uploadSequence.current += 1;
+    setUploading(false);
+    setRetryFile(null);
+  }
+
+  async function runUpload(file) {
+    const sequence = ++uploadSequence.current;
     setUploading(true);
     setUploadError(null);
+    setRetryFile(file);
     try {
       await onUpload(file);
+      if (sequence !== uploadSequence.current) return;
       setUploadError(null);
+      setRetryFile(null);
     } catch (err) {
+      if (sequence !== uploadSequence.current) return;
       setUploadError(err && err.message ? err.message : "Upload failed.");
     } finally {
-      setUploading(false);
+      if (sequence === uploadSequence.current) setUploading(false);
     }
+  }
+
+  function handleFile(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = "";
+    if (!file || !onUpload) return;
+    runUpload(file);
+  }
+
+  function clearValue() {
+    invalidateUpload();
+    setUploadError(null);
+    setTouched(false);
+    onChange("");
   }
 
   return (
     <Field
       label={label || "Image"}
       htmlFor={id}
-      hint="Upload an image (stored in object storage) or paste a path like /images/projects/your-project.webp"
+      hint={
+        <>
+          Upload an image (stored in object storage) or paste a path like
+          /images/projects/your-project.webp
+          {previewVariant === "cover"
+            ? " The preview shows the project card crop; a wide landscape image is predictable."
+            : ""}
+        </>
+      }
       error={localError}
       required={required}
     >
@@ -79,10 +111,33 @@ export default function ImagePicker({
                 aria-label={uploadFileLabel}
                 aria-invalid={uploadError ? "true" : undefined}
                 aria-describedby={uploadError ? linked.errorId : undefined}
+                aria-busy={uploading}
                 onChange={handleFile}
                 disabled={uploading}
               />
-              {uploading ? <span className="admin-image-upload-status">Uploading…</span> : null}
+              {uploading ? (
+                <span className="admin-image-upload-status" role="status">
+                  Uploading…
+                </span>
+              ) : null}
+              {uploadError && retryFile ? (
+                <button
+                  type="button"
+                  className="admin-btn admin-btn--secondary admin-btn--sm"
+                  onClick={() => runUpload(retryFile)}
+                >
+                  Retry upload
+                </button>
+              ) : null}
+              {value ? (
+                <button
+                  type="button"
+                  className="admin-btn admin-btn--ghost admin-btn--sm"
+                  onClick={clearValue}
+                >
+                  Clear image
+                </button>
+              ) : null}
             </div>
           ) : null}
 
@@ -92,6 +147,7 @@ export default function ImagePicker({
             type="text"
             value={value || ""}
             onChange={(event) => {
+              invalidateUpload();
               setUploadError(null);
               onChange(event.target.value);
             }}
@@ -104,7 +160,13 @@ export default function ImagePicker({
           />
 
           {!showError && value ? (
-            <div className="admin-image-picker-preview">
+            <div
+              className={`admin-image-picker-preview ${
+                previewVariant === "cover"
+                  ? "admin-image-picker-preview--cover"
+                  : ""
+              }`}
+            >
               <img src={value} alt="" />
             </div>
           ) : null}
