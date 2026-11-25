@@ -14,6 +14,11 @@ import Skills from "./Skills";
 import { skillCategories } from "../../lib/publicContent";
 
 describe("Skills (U4 FE-9: icons decorative, named by adjacent text)", () => {
+    it("exposes a labelled Skills region", () => {
+        render(<Skills />);
+        expect(screen.getByRole("region", { name: "Skills" })).toBeTruthy();
+    });
+
     it("hides every skill icon from assistive technology", () => {
         const { container } = render(<Skills />);
 

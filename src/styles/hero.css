@@ -202,14 +202,14 @@
     background: var(--primary);
     filter: blur(50px);
     opacity: 0.15; /* Kept very low for a professional look */
-    z-index: 0;
+    z-index: var(--z-base);
     pointer-events: none;
 }
 
 /* Professional Circular Frame */
 .hero-image-frame {
     position: relative;
-    z-index: 1;
+    z-index: var(--z-raised);
     width: 90%;
     aspect-ratio: 1;
     border-radius: 50%;

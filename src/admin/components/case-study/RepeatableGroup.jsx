@@ -16,6 +16,17 @@ export default function RepeatableGroup({
 }) {
   const atLimit = items.length >= maxItems;
 
+  function handleKeyDown(event, index) {
+    if (!onMove || !event.altKey) return;
+    if (event.key === "ArrowUp" && index > 0) {
+      event.preventDefault();
+      onMove(index, index - 1);
+    } else if (event.key === "ArrowDown" && index < items.length - 1) {
+      event.preventDefault();
+      onMove(index, index + 1);
+    }
+  }
+
   return (
     <fieldset
       id={id}
@@ -31,6 +42,9 @@ export default function RepeatableGroup({
       ) : null}
       <p className="admin-field-hint case-study-repeatable-meta">
         {items.length} of {maxItems} added.
+        {onMove
+          ? " Use Move up / Move down, or Alt+↑ / Alt+↓, to reorder rows."
+          : ""}
       </p>
       {groupError ? (
         <p id={id ? `${id}-error` : undefined} className="admin-field-error" role="alert">
@@ -49,11 +63,21 @@ export default function RepeatableGroup({
                 id={rowId}
                 className="case-study-repeatable-row"
                 key={rowId}
+                onKeyDown={(event) => handleKeyDown(event, index)}
               >
                 <div className="case-study-repeatable-fields">
                   {renderItem(item, index)}
                 </div>
                 <div className="case-study-row-actions">
+                  {onMove ? (
+                    <span
+                      className="case-study-repeatable-handle"
+                      aria-hidden="true"
+                      title="Drag-style handle — use the buttons or Alt+arrow keys to reorder"
+                    >
+                      ⋮⋮
+                    </span>
+                  ) : null}
                   {onMove ? (
                     <>
                       <button

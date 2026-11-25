@@ -1,7 +1,7 @@
 // =========================================================
 // 📦 CONTENT SNAPSHOT — GENERATED FILE. DO NOT EDIT.
 // =========================================================
-// Produced by scripts/build-content.mjs from GET http://127.0.0.1:8001/api/content.
+// Produced by scripts/build-content.mjs from GET https://portfolio-api-j7xc.onrender.com/api/content.
 //
 // This module is a build-time snapshot of the public content API
 // (GET /api/content). It is written fresh on every `npm run build`
@@ -20,7 +20,7 @@
 // =========================================================
 
 export const meta = {
-    "generated_at": "2026-10-17T02:29:06.648782Z",
+    "generated_at": "2026-10-25T14:07:56.135056Z",
     "version": 1
 };
 
@@ -128,7 +128,8 @@ export const projects = [
             "Gemini AI",
             "Playwright"
         ],
-        "title": "WebChat AI"
+        "title": "WebChat AI",
+        "caseStudy": null
     },
     {
         "category": "AI",
@@ -160,7 +161,8 @@ export const projects = [
             "MongoDB",
             "AI/LLM"
         ],
-        "title": "Orbit AI"
+        "title": "Orbit AI",
+        "caseStudy": null
     },
     {
         "category": "Full Stack",
@@ -190,7 +192,8 @@ export const projects = [
             "Express",
             "MongoDB"
         ],
-        "title": "Stayora"
+        "title": "Stayora",
+        "caseStudy": null
     },
     {
         "category": "Frontend",
@@ -219,7 +222,8 @@ export const projects = [
             "Bootstrap",
             "JavaScript"
         ],
-        "title": "Zerodha Clone"
+        "title": "Zerodha Clone",
+        "caseStudy": null
     },
     {
         "category": "Web App",
@@ -248,7 +252,8 @@ export const projects = [
             "CSS",
             "JavaScript"
         ],
-        "title": "Scientific Calculator"
+        "title": "Scientific Calculator",
+        "caseStudy": null
     }
 ];
 
@@ -319,16 +324,6 @@ export const skills = [
             "icon_key": "FaNodeJs",
             "name": "Backend Development"
         },
-        "display_order": 2,
-        "icon_key": "SiFastapi",
-        "name": "FastAPI"
-    },
-    {
-        "category": {
-            "display_order": 1,
-            "icon_key": "FaNodeJs",
-            "name": "Backend Development"
-        },
         "display_order": 3,
         "icon_key": "FaCode",
         "name": "REST APIs"
@@ -352,16 +347,6 @@ export const skills = [
         "display_order": 1,
         "icon_key": "FaCode",
         "name": "Machine Learning"
-    },
-    {
-        "category": {
-            "display_order": 2,
-            "icon_key": "FaPython",
-            "name": "AI & Machine Learning"
-        },
-        "display_order": 2,
-        "icon_key": "SiPytorch",
-        "name": "PyTorch"
     },
     {
         "category": {

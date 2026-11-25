@@ -749,6 +749,7 @@ describe("caseStudy validation", () => {
 
     it("normalizes a missing caseStudy to null", () => {
         const payload = payloadFixture();
+        delete payload.projects[0].caseStudy;
         expect(payload.projects[0]).not.toHaveProperty("caseStudy");
 
         const result = validateContent(payload);

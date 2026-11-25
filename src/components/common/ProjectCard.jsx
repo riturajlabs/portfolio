@@ -48,12 +48,13 @@ function ProjectCard({ project }) {
             if (e.key === "Escape") setOpen(false);
         };
 
+        const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
         window.addEventListener("keydown", onKey);
         closeBtn?.focus();
 
         return () => {
-            document.body.style.overflow = "";
+            document.body.style.overflow = previousOverflow;
             window.removeEventListener("keydown", onKey);
             detailsBtn?.focus();
         };
@@ -121,9 +122,11 @@ function ProjectCard({ project }) {
 
                         <div className="project-image-overlay">
                             <button
+                                type="button"
                                 className="project-overlay-btn"
                                 onClick={() => setOpen(true)}
                                 aria-haspopup="dialog"
+                                aria-expanded={open}
                             >
                                 <FaEye />
                                 <span>View Details</span>
@@ -173,8 +176,9 @@ function ProjectCard({ project }) {
                             className="btn btn-ghost"
                             onClick={() => setOpen(true)}
                             aria-haspopup="dialog"
+                            aria-expanded={open}
                         >
-                            <FaEye />
+                            <FaEye aria-hidden="true" />
                             <span>Details</span>
                         </button>
 
@@ -321,6 +325,13 @@ function ProjectCard({ project }) {
                                         </Button>
                                     )}
                                 </div>
+
+                                {project.requiresAuth && (
+                                    <p className="project-auth-notice">
+                                        This project action is available to signed-in admins only.{" "}
+                                        <a href="/admin/login">Sign in to the admin area</a> to continue.
+                                    </p>
+                                )}
                             </div>
                         </motion.div>
                     </motion.div>
@@ -340,6 +351,7 @@ ProjectCard.propTypes = {
         github: PropTypes.string,
         live: PropTypes.string,
         featured: PropTypes.bool,
+        requiresAuth: PropTypes.bool,
         category: PropTypes.string,
         techStack: PropTypes.arrayOf(PropTypes.string),
         technologies: PropTypes.arrayOf(PropTypes.string),

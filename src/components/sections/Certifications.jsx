@@ -20,6 +20,7 @@ function Certifications() {
         <section
             id="certifications"
             className="certifications-section"
+            aria-label="Certifications"
         >
 
             <div className="container">

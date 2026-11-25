@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import Certifications from "./Certifications";
@@ -32,6 +32,11 @@ function readStyle(name) {
 }
 
 describe("Certifications", () => {
+    it("exposes a labelled Certifications region", () => {
+        render(<Certifications />);
+        expect(screen.getByRole("region", { name: "Certifications" })).toBeTruthy();
+    });
+
     it("does not render an empty description paragraph when the field is absent", () => {
         const { container } = render(<Certifications />);
         expect(container.textContent).not.toContain("undefined");

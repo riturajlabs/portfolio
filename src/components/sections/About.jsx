@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 
 import { resolveIcon } from "../icons.jsx";
-import { about } from "../../lib/publicContent";
+import { about, profile } from "../../lib/publicContent";
 import SectionTitle from "../common/SectionTitle";
 
 import "../../styles/about.css";
@@ -15,10 +15,14 @@ const aboutCards = Array.isArray(about?.cards)
     : [];
 
 function About() {
+    const roles = Array.isArray(profile?.roles) ? profile.roles : [];
+
     return (
+        <>
         <section
             id="about"
             className="about-section"
+            aria-label="About"
         >
             <div className="container">
                 <SectionTitle
@@ -94,6 +98,37 @@ function About() {
                 </div>
             </div>
         </section>
+
+        <section
+            id="experience"
+            className="experience-section"
+            aria-label="Experience"
+        >
+            <div className="container">
+                <div className="section-header section-center">
+                    <span className="section-tag">Experience</span>
+
+                    <h2 className="section-title">
+                        {profile?.title || "Experience"}
+                    </h2>
+
+                    {profile?.description && (
+                        <p className="section-description">
+                            {profile.description}
+                        </p>
+                    )}
+                </div>
+
+                {roles.length > 0 && (
+                    <ul className="experience-roles">
+                        {roles.map((role) => (
+                            <li key={role}>{role}</li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </section>
+        </>
     );
 }
 

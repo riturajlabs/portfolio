@@ -1,9 +1,4 @@
 /* ==================================================
-   COMPONENT IMPORTS
-================================================== */
-@import "./button.css";
-
-/* ==================================================
    RESET
 ================================================== */
 *,
@@ -72,12 +67,6 @@ body {
     -moz-osx-font-smoothing: grayscale;
     transition: background 0.35s ease, color 0.35s ease;
     font-size: var(--fs-body);
-    
-    /* 🚀 FIX: Prevent ANY text selection on mobile by default */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -161,7 +150,7 @@ section {
 
 .container {
     width: 100%;
-    max-width: 1200px;
+    max-width: var(--container-width);
     margin: auto;
     padding: 0 20px;
 }
@@ -204,11 +193,51 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 [tabindex]:focus-visible {
-    /* --focus-ring is a high-contrast tone per theme, so the ring stays
-       visible on both --bg and --card without relying on --primary. */
     outline: 2px solid var(--focus-ring);
     outline-offset: 3px;
     border-radius: 8px;
+}
+
+.skip-link {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: var(--z-toast);
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+    border-radius: var(--radius-btn);
+    background: var(--primary);
+    color: var(--on-primary);
+    font-weight: var(--fw-semibold);
+    transform: translateY(-200%);
+    transition: transform var(--transition-fast);
+}
+
+.skip-link:focus-visible {
+    transform: translateY(0);
+}
+
+main:focus {
+    outline: none;
+}
+
+@media (forced-colors: active) {
+    .skip-link,
+    .btn,
+    button,
+    a,
+    input,
+    textarea,
+    select {
+        border: 1px solid CanvasText;
+    }
+
+    .section-title,
+    .logo-name {
+        background: none;
+        -webkit-text-fill-color: CanvasText;
+        color: CanvasText;
+    }
 }
 
 /* ==================================================
@@ -281,7 +310,7 @@ section[id] {
     width: 100%;
     height: 3px;
     background: transparent;
-    z-index: 10000;
+    z-index: var(--z-progress);
     pointer-events: none;
 }
 

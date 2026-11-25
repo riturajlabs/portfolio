@@ -23,6 +23,7 @@ function Skills() {
         <section
             id="skills"
             className="skills-section"
+            aria-label="Skills"
         >
             <div className="container">
 

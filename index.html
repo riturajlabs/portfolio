@@ -45,30 +45,6 @@
     content="IE=edge">
 
   <!-- ========================================================= -->
-  <!-- Fonts
-       Loaded once from the document head instead of a CSS
-       @import so the font stylesheet is discovered during the
-       initial HTML parse. Only the weights the UI actually uses
-       are requested. No font preload: the woff2 URLs are
-       browser- and unicode-range-dependent, so a hardcoded
-       preload would be fragile and could issue a duplicate
-       request. Preconnect + display=swap is the reliable path. -->
-  <!-- ========================================================= -->
-
-  <link
-    rel="preconnect"
-    href="https://fonts.googleapis.com">
-
-  <link
-    rel="preconnect"
-    href="https://fonts.gstatic.com"
-    crossorigin>
-
-  <link
-    rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-
-  <!-- ========================================================= -->
   <!-- Primary SEO (server-delivered baseline)
        Every tag below also carries `data-rh="true"` so the
        react-helmet-async <SEO /> component adopts and manages it
@@ -350,12 +326,12 @@
   <div id="root"></div>
 
 
-
   <script
     type="module"
     src="/src/main.jsx">
   </script>
   
+
 </body>
 
 

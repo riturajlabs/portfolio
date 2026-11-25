@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
@@ -21,15 +21,29 @@ function deferred() {
 
 function Harness({ error, onBlur, onUpload, uploadFileLabel }) {
   const [value, setValue] = useState("/images/projects/old.webp");
+  const version = useRef(0);
 
   return (
     <ImagePicker
       id="image-path"
       label="Image path"
       value={value}
-      onChange={setValue}
+      onChange={(next) => {
+        version.current += 1;
+        setValue(next);
+      }}
       onBlur={onBlur}
-      onUpload={onUpload}
+      onUpload={
+        onUpload
+          ? async (file) => {
+              const uploadVersion = ++version.current;
+              const result = await onUpload(file);
+              if (uploadVersion === version.current && result && result.image) {
+                setValue(result.image);
+              }
+            }
+          : undefined
+      }
       error={error}
       uploadFileLabel={uploadFileLabel}
     />
@@ -128,6 +142,56 @@ it("clears a retry's upload error while preserving the field error", async () =>
   expect(screen.getByText("Server rejected this image.")).toBeInTheDocument();
   expect(fileInput).not.toHaveAttribute("aria-invalid");
   expect(onUpload).toHaveBeenCalledTimes(2);
+});
+
+it("retries a failed upload and clears the selected image", async () => {
+  const user = setupUser();
+  const onUpload = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("Upload failed."))
+    .mockResolvedValueOnce(undefined);
+  render(<Harness onUpload={onUpload} />);
+
+  const file = new File(["image"], "retry.png", { type: "image/png" });
+  await user.upload(screen.getByLabelText("Upload image file"), file);
+  expect(await screen.findByText("Upload failed.")).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Retry upload" }));
+  await waitFor(() =>
+    expect(screen.queryByText("Upload failed.")).not.toBeInTheDocument(),
+  );
+  expect(onUpload).toHaveBeenCalledTimes(2);
+
+  await user.click(screen.getByRole("button", { name: "Clear image" }));
+  expect(screen.getByLabelText(/Image path/)).toHaveValue("");
+  expect(
+    screen.queryByRole("button", { name: "Clear image" }),
+  ).not.toBeInTheDocument();
+});
+
+it("ignores a stale upload after the path is edited manually", async () => {
+  const user = setupUser();
+  const pending = deferred();
+  render(<Harness onUpload={vi.fn(() => pending.promise)} />);
+
+  await user.upload(
+    screen.getByLabelText("Upload image file"),
+    new File(["image"], "stale.png", { type: "image/png" }),
+  );
+  expect(screen.getByRole("status")).toHaveTextContent("Uploading…");
+
+  const path = screen.getByLabelText(/Image path/);
+  await user.clear(path);
+  await user.paste("/images/projects/manual.webp");
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+  await act(async () => {
+    pending.resolve({ image: "/images/projects/stale.webp" });
+    await pending.promise;
+  });
+
+  expect(path).toHaveValue("/images/projects/manual.webp");
+  expect(screen.queryByText(/Upload failed/)).not.toBeInTheDocument();
 });
 
 it("can upload the same file twice", async () => {

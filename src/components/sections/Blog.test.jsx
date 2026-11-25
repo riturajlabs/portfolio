@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import Blog from "./Blog";
@@ -33,6 +33,11 @@ function readStyle(name) {
 }
 
 describe("Blog", () => {
+    it("exposes a labelled Blog region", () => {
+        render(<Blog />);
+        expect(screen.getByRole("region", { name: "Blog" })).toBeTruthy();
+    });
+
     it("never renders the string 'undefined' when date is absent and readTime is missing", () => {
         const { container } = render(<Blog />);
         expect(container.textContent).not.toContain("undefined");

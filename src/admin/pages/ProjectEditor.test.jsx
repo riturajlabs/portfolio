@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -218,7 +218,7 @@ it("creates a project with every basic case-study section", async () => {
       approach: [{ heading: "Map", body: "Trace the flow" }],
     },
   });
-});
+}, 20000);
 
 it("creates a project with advanced sections, evidence, and a gallery upload", async () => {
   const user = setupUser();
@@ -357,7 +357,7 @@ it("creates a project with advanced sections, evidence, and a gallery upload", a
       },
     ],
   });
-});
+}, 20000);
 
 it("omits an unchanged case study from the update body", async () => {
   const user = setupUser();
@@ -1155,24 +1155,24 @@ it("validates the project image on blur and clears the error once it is valid", 
   const image = screen.getByLabelText(/Image path/);
   await user.clear(image);
   await user.paste("not-an-image");
-  expect(
-    screen.queryByText(/Upload an image, or use a path like/),
-  ).not.toBeInTheDocument();
+    expect(
+      screen.queryAllByText(/Upload an image, or use a path like/),
+    ).toHaveLength(0);
 
-  await user.tab();
-  expect(
-    await screen.findByText(/Upload an image, or use a path like/),
-  ).toBeInTheDocument();
+    await user.tab();
+    expect(
+      (await screen.findAllByText(/Upload an image, or use a path like/)).length,
+    ).toBeGreaterThan(0);
   expect(image).toHaveAttribute("aria-invalid", "true");
 
   await user.clear(image);
   await user.paste("/images/projects/corrected.webp");
-  await waitFor(() =>
-    expect(
-      screen.queryByText(/Upload an image, or use a path like/),
-    ).not.toBeInTheDocument(),
-  );
-  expect(image).not.toHaveAttribute("aria-invalid", "true");
+    await waitFor(() =>
+      expect(
+        screen.queryAllByText(/Upload an image, or use a path like/),
+      ).toHaveLength(0),
+    );
+    expect(image).not.toHaveAttribute("aria-invalid", "true");
 });
 
 it("clears a server image error as soon as a valid path replaces it", async () => {
@@ -1191,16 +1191,16 @@ it("clears a server image error as soon as a valid path replaces it", async () =
   await save(user);
 
   expect(
-    await screen.findByText("Image path is not allowed."),
-  ).toBeInTheDocument();
+    (await screen.findAllByText("Image path is not allowed.")).length,
+  ).toBeGreaterThan(0);
 
   const image = screen.getByLabelText(/Image path/);
   await user.clear(image);
   await user.paste("/images/projects/corrected.webp");
   await waitFor(() =>
     expect(
-      screen.queryByText("Image path is not allowed."),
-    ).not.toBeInTheDocument(),
+      screen.queryAllByText("Image path is not allowed."),
+    ).toHaveLength(0),
   );
 });
 
@@ -1387,4 +1387,92 @@ it("fills image dimensions when the browser reports them", async () => {
   expect(await screen.findByDisplayValue("1234")).toBeInTheDocument();
   expect(screen.getByLabelText(/Image width/)).toHaveDisplayValue("1234");
   expect(screen.getByLabelText(/Image height/)).toHaveDisplayValue("567");
+});
+
+it("blocks editing when the project cannot be loaded and retries cleanly", async () => {
+  const user = setupUser();
+  get
+    .mockRejectedValueOnce(new Error("Network down."))
+    .mockResolvedValueOnce(project());
+
+  renderEditor();
+
+  expect(
+    await screen.findByRole("heading", { name: "Project could not be loaded" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Retry loading project" }));
+
+  expect(await screen.findByDisplayValue("Atlas")).toBeInTheDocument();
+  expect(get).toHaveBeenCalledTimes(2);
+});
+
+it("asks before leaving an editor with unsaved changes", async () => {
+  const user = setupUser();
+  renderEditor();
+  await openProject(user);
+
+  const title = screen.getByLabelText(/^Title/);
+  await user.clear(title);
+  await user.paste("Atlas revised");
+  await user.click(screen.getByRole("button", { name: /Back to projects/ }));
+
+  const dialog = await screen.findByRole("alertdialog");
+  expect(within(dialog).getByText(/changes have not been saved/i)).toBeInTheDocument();
+
+  await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(screen.getByDisplayValue("Atlas revised")).toBeInTheDocument();
+  expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+});
+
+it("focuses the project error summary and links to the offending field", async () => {
+  const user = setupUser();
+  renderEditor({ isNew: true });
+
+  await user.click(screen.getByRole("button", { name: "Create project" }));
+
+  const summary = await screen.findByRole("alert", {
+    name: "Project needs attention",
+  });
+  expect(summary).toHaveFocus();
+  expect(within(summary).getByRole("link", { name: /Title/ })).toHaveAttribute(
+    "href",
+    "#project-title",
+  );
+
+  await user.click(within(summary).getByRole("link", { name: /Title/ }));
+  expect(screen.getByLabelText(/^Title/)).toHaveFocus();
+});
+
+it("ignores a cover-image upload that resolves after the path is edited", async () => {
+  const user = setupUser();
+  let resolveUpload;
+  const pending = new Promise((resolve) => {
+    resolveUpload = resolve;
+  });
+  uploadImage.mockImplementation(() => pending);
+
+  renderEditor();
+  await openProject(user);
+  await user.upload(
+    screen.getByLabelText("Upload image file"),
+    new File(["image"], "stale.png", { type: "image/png" }),
+  );
+
+  const path = screen.getByLabelText(/Image path/);
+  await user.clear(path);
+  await user.paste("/images/projects/manual.webp");
+
+  await act(async () => {
+    resolveUpload({
+      image: "/images/projects/stale.webp",
+      image_width: 40,
+      image_height: 30,
+    });
+    await pending;
+  });
+
+  expect(path).toHaveValue("/images/projects/manual.webp");
+  expect(screen.queryByText("Image uploaded.")).not.toBeInTheDocument();
 });

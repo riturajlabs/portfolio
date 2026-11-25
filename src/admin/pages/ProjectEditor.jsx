@@ -10,8 +10,10 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError, fieldErrorMap, get, post, put, uploadImage } from "../api/client.js";
 import CaseStudyEditor from "../components/case-study/CaseStudyEditor.jsx";
+import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import { Field, Form } from "../components/Form.jsx";
 import ImagePicker from "../components/ImagePicker.jsx";
+import ProjectErrorSummary from "../components/ProjectErrorSummary.jsx";
 import { useToast } from "../components/Toast.jsx";
 import {
   CASE_STUDY_FIELD,
@@ -46,6 +48,21 @@ function normalizeServerErrors(errors) {
       message,
     ]),
   );
+}
+
+function projectSectionForPath(path) {
+  const key = String(path).split(".")[0];
+  if (["image", "image_alt", "image_width", "image_height"].includes(key)) {
+    return "project-media";
+  }
+  if (["seo_title", "seo_description"].includes(key)) return "project-seo";
+  if (["status", "indexable", "featured", "display_order"].includes(key)) {
+    return "project-publishing";
+  }
+  if (["live_url", "github_url", "long_description"].includes(key)) {
+    return "project-content";
+  }
+  return "project-identity";
 }
 
 function sourceMapFor(paths, source) {
@@ -110,17 +127,43 @@ export default function ProjectEditor() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [errorSources, setErrorSources] = useState({});
   const [loading, setLoading] = useState(isEditing);
+  const [loadedProjectId, setLoadedProjectId] = useState(null);
+  const [loaded, setLoaded] = useState(!isEditing);
+  const [loadError, setLoadError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [techText, setTechText] = useState("");
   const [dimensionsDetected, setDimensionsDetected] = useState(false);
   const caseStudyErrorSummaryRef = useRef(null);
+  const projectErrorSummaryRef = useRef(null);
   const focusCaseStudyErrorsRef = useRef(false);
+  const focusProjectErrorsRef = useRef(false);
+  const savingRef = useRef(false);
+  const imageUploadVersion = useRef(0);
+  const imagePathVersion = useRef(0);
 
   useEffect(() => {
+    if (focusProjectErrorsRef.current) {
+      focusProjectErrorsRef.current = false;
+      projectErrorSummaryRef.current?.focus();
+      return;
+    }
     if (!focusCaseStudyErrorsRef.current) return;
     focusCaseStudyErrorsRef.current = false;
     caseStudyErrorSummaryRef.current?.focus();
   }, [fieldErrors]);
+
+  useEffect(() => {
+    if (!dirty) return undefined;
+    function warnBeforeUnload(event) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [dirty]);
 
   const caseStudyErrorSource = caseStudyErrorSourceFor(
     fieldErrors,
@@ -129,7 +172,13 @@ export default function ProjectEditor() {
 
   const patch = useCallback((changes) => {
     setForm((current) => ({ ...current, ...changes }));
+    setDirty(true);
   }, []);
+
+  function updateTechText(value) {
+    setTechText(value);
+    patch({ tech_stack: parseTechStack(value) });
+  }
 
   function clearFieldError(field) {
     setFieldErrors((current) => {
@@ -145,6 +194,7 @@ export default function ProjectEditor() {
     setCaseStudyDraft((current) =>
       typeof updater === "function" ? updater(current) : updater,
     );
+    setDirty(true);
   }, []);
 
   const clearCaseStudyError = useCallback((path) => {
@@ -241,6 +291,8 @@ export default function ProjectEditor() {
   // Detection runs from the change handler (not an effect) so the asynchronous
   // callback owns the state update.
   function handleImageChange(value) {
+    const version = ++imagePathVersion.current;
+    imageUploadVersion.current += 1;
     patch({ image: value });
     if (validateImagePath(value)) {
       setDimensionsDetected(false);
@@ -249,10 +301,16 @@ export default function ProjectEditor() {
     clearFieldError("image");
     const probe = new Image();
     probe.onload = () => {
-      patch({ image_width: probe.naturalWidth, image_height: probe.naturalHeight });
+      if (version !== imagePathVersion.current) return;
+      patch({
+        image_width: probe.naturalWidth,
+        image_height: probe.naturalHeight,
+      });
       setDimensionsDetected(true);
     };
-    probe.onerror = () => setDimensionsDetected(false);
+    probe.onerror = () => {
+      if (version === imagePathVersion.current) setDimensionsDetected(false);
+    };
     probe.src = value;
   }
 
@@ -286,7 +344,10 @@ export default function ProjectEditor() {
   }
 
   async function handleUpload(file) {
+    const version = ++imageUploadVersion.current;
     const result = await requestImageUpload(file);
+    if (version !== imageUploadVersion.current) return;
+    imagePathVersion.current += 1;
     patch({
       image: result.image,
       image_width: result.image_width,
@@ -327,30 +388,56 @@ export default function ProjectEditor() {
     });
     setCaseStudyDraft(initCaseStudyDraft(detail.case_study ?? null));
     setTechText((detail.tech_stack || []).join(", "));
+    setDirty(false);
+    setLoaded(true);
+    setLoadedProjectId(id);
+    imageUploadVersion.current += 1;
+    imagePathVersion.current += 1;
   }, [id]);
 
   useEffect(() => {
-    if (!isEditing) return;
+    if (!isEditing) return undefined;
     let alive = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag flips once the project GET resolves (asynchronous)
-    setLoading(true);
-    refresh()
+    void Promise.resolve()
+      .then(() => refresh())
       .catch((err) => {
-        if (alive) toast.error(err.message);
-        if (err instanceof ApiError && err.status === 404) navigate("/projects", { replace: true });
+        if (!alive) return;
+        if (err instanceof ApiError && err.status === 404) {
+          navigate("/projects", { replace: true });
+          return;
+        }
+        setLoadError(
+          err && err.message ? err.message : "Could not load this project.",
+        );
+        toast.error(err.message);
       })
-      .finally(() => alive && setLoading(false));
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, reloadKey, refresh, navigate, toast, isEditing]);
 
   function parseTechStack(text) {
     return text
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
+  }
+
+  function requestLeave() {
+    if (dirty) {
+      setConfirmLeave(true);
+      return;
+    }
+    navigate("/projects");
+  }
+
+  function confirmLeaveEditor() {
+    setConfirmLeave(false);
+    setDirty(false);
+    navigate("/projects");
   }
 
   function validate() {
@@ -372,6 +459,7 @@ export default function ProjectEditor() {
   }
 
   async function onSubmit() {
+    if (savingRef.current || (isEditing && !loaded)) return;
     const projectErrors = validate();
     const caseStudyPayload = buildCaseStudyPayload({
       draft: caseStudyDraft,
@@ -382,6 +470,7 @@ export default function ProjectEditor() {
       ...caseStudyPayload.errors,
     };
     focusCaseStudyErrorsRef.current = hasCaseStudyErrors(caseStudyPayload.errors);
+    focusProjectErrorsRef.current = Object.keys(projectErrors).length > 0;
     setErrorSources(sourceMapFor(Object.keys(errors), "client"));
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -409,6 +498,7 @@ export default function ProjectEditor() {
       body.case_study = caseStudyPayload.value;
     }
 
+    savingRef.current = true;
     setSaving(true);
     try {
       if (isEditing) {
@@ -424,6 +514,7 @@ export default function ProjectEditor() {
         await post("/projects", body);
         toast.success("Project created.");
       }
+      setDirty(false);
       navigate("/projects");
     } catch (err) {
       if (err instanceof ApiError) {
@@ -433,6 +524,9 @@ export default function ProjectEditor() {
           const mapped = normalizeServerErrors(fieldErrorMap(err));
           if (Object.keys(mapped).length > 0) {
             focusCaseStudyErrorsRef.current = hasCaseStudyErrors(mapped);
+            focusProjectErrorsRef.current = Object.keys(mapped).some(
+              (path) => !isCaseStudyErrorPath(path),
+            );
             setErrorSources(sourceMapFor(Object.keys(mapped), "server"));
             setFieldErrors(mapped);
           } else toast.error(err.message);
@@ -441,29 +535,86 @@ export default function ProjectEditor() {
         toast.error(err.message);
       }
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
 
-  if (loading) {
+  if (loadError) {
+    return (
+      <div className="admin-card admin-error-state" role="alert">
+        <h2>Project could not be loaded</h2>
+        <p>{loadError}</p>
+        <p>
+          Editing is blocked until the project loads, so an empty form cannot
+          overwrite it. Retry or return to the projects list.
+        </p>
+        <div className="admin-toolbar">
+          <button
+            type="button"
+            className="admin-btn"
+            onClick={() => {
+              setLoadError(null);
+              setLoading(true);
+              setReloadKey((key) => key + 1);
+            }}
+          >
+            Retry loading project
+          </button>
+          <button
+            type="button"
+            className="admin-btn admin-btn--secondary"
+            onClick={() => navigate("/projects")}
+          >
+            Back to projects
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || (isEditing && loadedProjectId !== id)) {
     return <div className="admin-loading">Loading project…</div>;
   }
 
   const permalinkSlug = isEditing ? form.slug : slugPreview(form.title);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const permalink = `${origin}/projects/${permalinkSlug || "…"}/`;
+  const canSave = !isEditing || loaded;
 
   return (
     <div>
       <p>
-        <a href="/admin/projects">← Back to projects</a>
+        <button
+          type="button"
+          className="admin-btn admin-btn--ghost admin-btn--sm"
+          onClick={requestLeave}
+        >
+          ← Back to projects
+        </button>
       </p>
 
-      <Form onSubmit={onSubmit}>
-        <section className="admin-card">
-          <h2>Basics</h2>
+      <Form id="project-form" onSubmit={onSubmit}>
+        <ProjectErrorSummary
+          ref={projectErrorSummaryRef}
+          errors={fieldErrors}
+          sectionForPath={projectSectionForPath}
+        />
 
-          <Field label="Title" required error={fieldErrors.title}>
+        <section
+          id="project-identity"
+          tabIndex={-1}
+          className="admin-card"
+          aria-labelledby="project-identity-heading"
+        >
+          <h2 id="project-identity-heading">1 · Identity</h2>
+
+          <Field
+            label="Title"
+            htmlFor="project-title"
+            required
+            error={fieldErrors.title}
+          >
             {(fieldId, linked) => (
               <input
                 id={fieldId}
@@ -478,6 +629,7 @@ export default function ProjectEditor() {
 
           <Field
             label="Permalink"
+            htmlFor="project-permalink"
             hint={
               isEditing
                 ? "The project's permanent URL. It is generated once and does not change when the title is edited."
@@ -496,7 +648,7 @@ export default function ProjectEditor() {
             )}
           </Field>
 
-          <Field label="Short description" required error={fieldErrors.short_description}>
+          <Field label="Short description" htmlFor="project-short-description" required error={fieldErrors.short_description}>
             {(fieldId, linked) => (
               <textarea
                 id={fieldId}
@@ -509,18 +661,7 @@ export default function ProjectEditor() {
             )}
           </Field>
 
-          <Field label="Long description">
-            {(fieldId) => (
-              <textarea
-                id={fieldId}
-                className="admin-textarea"
-                value={form.long_description}
-                onChange={(event) => patch({ long_description: event.target.value })}
-              />
-            )}
-          </Field>
-
-          <Field label="Category">
+          <Field label="Category" htmlFor="project-category">
             {(fieldId) => (
               <input
                 id={fieldId}
@@ -534,35 +675,27 @@ export default function ProjectEditor() {
 
           <Field
             label="Tech stack"
-            hint="Comma-separated list, e.g. React, FastAPI, PostgreSQL"
+            htmlFor="project-tech-stack"
+            hint="Comma-separated list, e.g. React, FastAPI, PostgreSQL. Spaces around commas are trimmed."
           >
             {(fieldId) => (
               <input
                 id={fieldId}
                 className="admin-input"
                 value={techText}
-                onChange={(event) => {
-                  setTechText(event.target.value);
-                  patch({ tech_stack: parseTechStack(event.target.value) });
-                }}
+                onChange={(event) => updateTechText(event.target.value)}
               />
             )}
           </Field>
         </section>
 
-        <CaseStudyEditor
-          draft={caseStudyDraft}
-          onChange={updateCaseStudyDraft}
-          errors={fieldErrors}
-          errorSource={caseStudyErrorSource}
-          errorSummaryRef={caseStudyErrorSummaryRef}
-          onBlurPath={validateCaseStudyField}
-          onClearPath={clearCaseStudyError}
-          onUploadImage={handleCaseStudyUpload}
-        />
-
-        <section className="admin-card">
-          <h2>Image</h2>
+        <section
+          id="project-media"
+          tabIndex={-1}
+          className="admin-card"
+          aria-labelledby="project-media-heading"
+        >
+          <h2 id="project-media-heading">2 · Media</h2>
 
           <ImagePicker
             id="project-image"
@@ -572,10 +705,11 @@ export default function ProjectEditor() {
             onBlur={handleImageBlur}
             onUpload={handleUpload}
             error={fieldErrors.image}
+            previewVariant="cover"
             required
           />
 
-          <Field label="Image alt text" required error={fieldErrors.image_alt}>
+          <Field label="Image alt text" htmlFor="project-image-alt" required error={fieldErrors.image_alt}>
             {(fieldId, linked) => (
               <input
                 id={fieldId}
@@ -588,14 +722,20 @@ export default function ProjectEditor() {
             )}
           </Field>
 
-          <p>
+          <p className="admin-field-hint" id="project-image-dimensions-hint">
             {dimensionsDetected
-              ? "Image size detected from the file. It is filled in for you."
-              : "Enter the image's pixel size if it could not be detected automatically."}
+              ? "Size detected from the upload and locked. The preview shows the project card crop."
+              : "If detection fails, enter the image's intrinsic pixel size (width × height). Landscape images crop more predictably."}
           </p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 1rem" }}>
-            <Field label="Image width (px)" required error={fieldErrors.image_width}>
+          <div className="admin-grid-two">
+            <Field
+              label="Image width (px)"
+              htmlFor="project-image-width"
+              hint="Whole pixels from the original file."
+              required
+              error={fieldErrors.image_width}
+            >
               {(fieldId, linked) => (
                 <input
                   id={fieldId}
@@ -607,11 +747,17 @@ export default function ProjectEditor() {
                   readOnly={dimensionsDetected}
                   onChange={(event) => patch({ image_width: event.target.value })}
                   aria-invalid={Boolean(fieldErrors.image_width)}
-                  aria-describedby={linked.errorId}
+                  aria-describedby={linked.errorId || linked.hintId}
                 />
               )}
             </Field>
-            <Field label="Image height (px)" required error={fieldErrors.image_height}>
+            <Field
+              label="Image height (px)"
+              htmlFor="project-image-height"
+              hint="Whole pixels from the original file."
+              required
+              error={fieldErrors.image_height}
+            >
               {(fieldId, linked) => (
                 <input
                   id={fieldId}
@@ -623,18 +769,35 @@ export default function ProjectEditor() {
                   readOnly={dimensionsDetected}
                   onChange={(event) => patch({ image_height: event.target.value })}
                   aria-invalid={Boolean(fieldErrors.image_height)}
-                  aria-describedby={linked.errorId}
+                  aria-describedby={linked.errorId || linked.hintId}
                 />
               )}
             </Field>
           </div>
         </section>
 
-        <section className="admin-card">
-          <h2>Links</h2>
+        <section
+          id="project-content"
+          tabIndex={-1}
+          className="admin-card"
+          aria-labelledby="project-content-heading"
+        >
+          <h2 id="project-content-heading">3 · Content & links</h2>
+
+          <Field label="Long description" htmlFor="project-long-description">
+            {(fieldId) => (
+              <textarea
+                id={fieldId}
+                className="admin-textarea"
+                value={form.long_description}
+                onChange={(event) => patch({ long_description: event.target.value })}
+              />
+            )}
+          </Field>
 
           <Field
             label="Live URL"
+            htmlFor="project-live-url"
             hint={<><code>https://…</code> or <code>http://…</code></>}
             error={fieldErrors.live_url}
           >
@@ -653,7 +816,12 @@ export default function ProjectEditor() {
             )}
           </Field>
 
-          <Field label="GitHub URL" hint={<><code>https://github.com/…</code></>} error={fieldErrors.github_url}>
+          <Field
+            label="GitHub URL"
+            htmlFor="project-github-url"
+            hint={<><code>https://github.com/…</code></>}
+            error={fieldErrors.github_url}
+          >
             {(fieldId, linked) => (
               <input
                 id={fieldId}
@@ -670,21 +838,42 @@ export default function ProjectEditor() {
           </Field>
         </section>
 
-        <section className="admin-card">
-          <h2>Visibility & order</h2>
+        <CaseStudyEditor
+          draft={caseStudyDraft}
+          onChange={updateCaseStudyDraft}
+          errors={fieldErrors}
+          errorSource={caseStudyErrorSource}
+          errorSummaryRef={caseStudyErrorSummaryRef}
+          onBlurPath={validateCaseStudyField}
+          onClearPath={clearCaseStudyError}
+          onUploadImage={handleCaseStudyUpload}
+        />
+
+        <section
+          id="project-publishing"
+          tabIndex={-1}
+          className="admin-card"
+          aria-labelledby="project-publishing-heading"
+        >
+          <h2 id="project-publishing-heading">4 · Publishing</h2>
           <p>
             Two independent controls: <strong>status</strong> puts the project on the
             site; <strong>indexable</strong> puts it in the sitemap and generated pages.
             No draft or archive state exists (ADR-016).
           </p>
 
-          <Field label="Status">
-            {(fieldId) => (
+          <Field
+            label="Status"
+            htmlFor="project-status"
+            hint="Published shows the project on the site; hidden keeps the row but removes it from listings."
+          >
+            {(fieldId, linked) => (
               <select
                 id={fieldId}
                 className="admin-select"
                 value={form.status}
                 onChange={(event) => patch({ status: event.target.value })}
+                aria-describedby={linked.hintId}
               >
                 <option value="published">published</option>
                 <option value="hidden">hidden</option>
@@ -698,9 +887,13 @@ export default function ProjectEditor() {
               type="checkbox"
               checked={form.indexable}
               onChange={(event) => patch({ indexable: event.target.checked })}
+              aria-describedby="project-indexable-hint"
             />
             <label htmlFor="project-indexable">Indexable (included in sitemap)</label>
           </div>
+          <p className="admin-field-hint" id="project-indexable-hint">
+            Turn off only for thin or duplicate pages; the sitemap and generated project pages follow this flag.
+          </p>
 
           <div className="admin-checkbox">
             <input
@@ -712,8 +905,8 @@ export default function ProjectEditor() {
             <label htmlFor="project-featured">Featured</label>
           </div>
 
-          <Field label="Display order">
-            {(fieldId) => (
+          <Field label="Display order" htmlFor="project-display-order" hint="Lower numbers appear first in project listings.">
+            {(fieldId, linked) => (
               <input
                 id={fieldId}
                 className="admin-input"
@@ -721,16 +914,22 @@ export default function ProjectEditor() {
                 step="1"
                 value={form.display_order}
                 onChange={(event) => patch({ display_order: event.target.value })}
+                aria-describedby={linked.hintId}
               />
             )}
           </Field>
         </section>
 
-        <section className="admin-card">
-          <h2>Search engine</h2>
+        <section
+          id="project-seo"
+          tabIndex={-1}
+          className="admin-card"
+          aria-labelledby="project-seo-heading"
+        >
+          <h2 id="project-seo-heading">Search engine</h2>
           <p>These fields are validated at build time; both are required.</p>
 
-          <Field label="SEO title" required error={fieldErrors.seo_title}>
+          <Field label="SEO title" htmlFor="project-seo-title" required error={fieldErrors.seo_title}>
             {(fieldId, linked) => (
               <input
                 id={fieldId}
@@ -743,7 +942,7 @@ export default function ProjectEditor() {
             )}
           </Field>
 
-          <Field label="SEO description" required error={fieldErrors.seo_description}>
+          <Field label="SEO description" htmlFor="project-seo-description" required error={fieldErrors.seo_description}>
             {(fieldId, linked) => (
               <textarea
                 id={fieldId}
@@ -757,19 +956,35 @@ export default function ProjectEditor() {
           </Field>
         </section>
 
-        <div className="admin-toolbar">
-          <button type="submit" className="admin-btn" disabled={saving}>
-            {saving ? "Saving…" : isEditing ? "Save changes" : "Create project"}
-          </button>
-          <button
-            type="button"
-            className="admin-btn admin-btn--secondary"
-            onClick={() => navigate("/projects")}
-          >
-            Cancel
-          </button>
+        <div className="admin-toolbar admin-save-bar">
+          <div className="admin-toolbar-actions">
+            <button type="submit" className="admin-btn" disabled={saving || !canSave}>
+              {saving ? "Saving…" : isEditing ? "Save changes" : "Create project"}
+            </button>
+            <button
+              type="button"
+              className="admin-btn admin-btn--secondary"
+              onClick={requestLeave}
+            >
+              Cancel
+            </button>
+          </div>
+          {dirty ? (
+            <span className="admin-dirty-status" role="status">
+              Unsaved changes
+            </span>
+          ) : null}
         </div>
       </Form>
+
+      <ConfirmDialog
+        open={confirmLeave}
+        title="Leave without saving?"
+        message="Your project changes have not been saved. Leave this page anyway?"
+        confirmLabel="Leave page"
+        onCancel={() => setConfirmLeave(false)}
+        onConfirm={confirmLeaveEditor}
+      />
     </div>
   );
 }

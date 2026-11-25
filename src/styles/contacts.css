@@ -85,8 +85,10 @@
 
     gap:1rem;
 
+    min-height:44px;
 
     padding:1.1rem;
+
 
 
     background:var(--card);
@@ -434,11 +436,70 @@
 
 
 /* ===================================================
-   SEND BUTTON
+    SEND BUTTON
 =================================================== */
+
+.contact-field label {
+
+    display:block;
+
+    margin-bottom:.4rem;
+
+    color:var(--text);
+
+    font-size:.9rem;
+
+    font-weight:600;
+
+}
+
+.contact-form-actions {
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:.75rem;
+
+}
+
+.contact-form-actions > button {
+
+    flex:1;
+
+}
+
+.contact-form .contact-cancel-btn,
+.contact-form .contact-retry-btn,
+.contact-form .contact-dismiss-btn {
+
+    min-height:44px;
+
+    padding:.75rem 1.2rem;
+
+    border-radius:var(--radius-btn);
+
+    background:var(--primary-soft);
+
+    color:var(--link);
+
+    font-weight:600;
+
+}
+
+.contact-form .contact-cancel-btn:hover,
+.contact-form .contact-retry-btn:hover,
+.contact-form .contact-dismiss-btn:hover {
+
+    background:var(--primary);
+
+    color:var(--on-primary);
+
+}
 
 
 .contact-form button {
+
 
 
     display:flex;
@@ -531,6 +592,16 @@
 
 .contact-status {
 
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    flex-wrap:wrap;
+
+    gap:.5rem;
+
     text-align:center;
 
     margin-top:.5rem;
@@ -543,6 +614,10 @@
 
 .contact-status-success {
     color: var(--success-text);
+}
+
+.contact-status-info {
+    color: var(--muted);
 }
 
 .contact-status-error {
@@ -618,7 +693,7 @@
     border: 1px solid var(--primary);
     color: var(--text);
     box-shadow: var(--shadow-lg);
-    z-index: 9999;
+    z-index: var(--z-toast);
     font-weight: 600;
     font-size: 0.9rem;
     animation: contactToastIn 0.3s ease;

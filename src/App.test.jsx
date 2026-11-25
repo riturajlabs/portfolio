@@ -74,7 +74,9 @@ describe("homepage", () => {
             );
         }
 
-        const nav = screen.getByRole("navigation");
+        const nav = screen.getByRole("navigation", {
+            name: "Main navigation",
+        });
         const links = [...nav.querySelectorAll("a[href^='#']")];
         const hrefs = links.map((link) => link.getAttribute("href"));
 
@@ -135,6 +137,17 @@ describe("homepage", () => {
             expect(document.title).toBeTruthy();
         });
         expect(document.title).toContain(profile.name.split(" ")[0]);
+    });
+
+    it("provides a skip link to the main landmark", async () => {
+        renderApp();
+
+        const skipLink = screen.getByRole("link", {
+            name: "Skip to main content",
+        });
+        expect(skipLink).toHaveAttribute("href", "#main-content");
+        expect(document.getElementById("main-content")).not.toBeNull();
+        expect(document.getElementById("main-content").tagName).toBe("MAIN");
     });
 
     it("mounts the footer", async () => {

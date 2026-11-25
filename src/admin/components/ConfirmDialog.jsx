@@ -12,22 +12,30 @@ export default function ConfirmDialog({
   confirmLabel = "Delete",
   onCancel,
   onConfirm,
+  confirmDisabled = false,
   children,
 }) {
   const titleId = useId();
   const firstButtonRef = useRef(null);
   const dialogRef = useRef(null);
+  const onCancelRef = useRef(onCancel);
+
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+  }, [onCancel]);
 
   useEffect(() => {
     if (!open) return undefined;
 
     const dialog = dialogRef.current;
+    const previouslyFocused =
+      typeof document === "undefined" ? null : document.activeElement;
     firstButtonRef.current?.focus();
 
     function onKeyDown(event) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onCancel();
+        onCancelRef.current();
         return;
       }
       if (event.key !== "Tab" || !dialog) return;
@@ -50,8 +58,17 @@ export default function ConfirmDialog({
     }
 
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onCancel]);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      if (
+        previouslyFocused &&
+        typeof previouslyFocused.focus === "function" &&
+        document.contains(previouslyFocused)
+      ) {
+        previouslyFocused.focus();
+      }
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -76,7 +93,12 @@ export default function ConfirmDialog({
           >
             Cancel
           </button>
-          <button type="button" className="admin-btn admin-btn--danger" onClick={onConfirm}>
+          <button
+            type="button"
+            className="admin-btn admin-btn--danger"
+            onClick={onConfirm}
+            disabled={confirmDisabled}
+          >
             {confirmLabel}
           </button>
         </div>

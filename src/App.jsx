@@ -47,6 +47,8 @@ function App() {
 
         <MotionConfig reducedMotion="user">
 
+            <a className="skip-link" href="#main-content">Skip to main content</a>
+
             {/* SEO Metadata */}
             <SEO />
 
@@ -56,7 +58,7 @@ function App() {
             <Navbar />
 
 
-            <main>
+            <main id="main-content" tabIndex={-1}>
 
                 <Home />
 
@@ -95,7 +97,7 @@ function App() {
                 every change through `onOpenChange`. hideExternalTrigger keeps
                 the FAB above as the single trigger. */}
             {chatMounted && (
-                <Suspense fallback={null}>
+                <Suspense fallback={<div className="chat-loading" role="status">Loading assistant…</div>}>
                     <ChatAssistant
                         open={isChatOpen}
                         onOpenChange={setIsChatOpen}

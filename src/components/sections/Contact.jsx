@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 import {
@@ -14,9 +14,6 @@ import { socials } from "../../lib/publicContent";
 
 import "../../styles/contacts.css";
 
-// ==========================================
-// 🛡️ VALIDATION RULES
-// ==========================================
 const VALIDATION = {
     name: {
         min: 2,
@@ -30,7 +27,6 @@ const VALIDATION = {
         },
     },
     email: {
-        // Simple but effective — full RFC parsing happens on the backend.
         pattern: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
         messages: {
             required: "Please enter your email.",
@@ -69,12 +65,6 @@ function validateField(name, value) {
 
 const initialForm = { name: "", email: "", message: "" };
 
-// ==========================================
-// 🧩 FIELD — defined OUTSIDE Contact so React preserves its identity
-// across renders. Defining it inside Contact would create a new
-// component type on every keystroke, unmounting the <input> and
-// stealing focus. (This was the root cause of the focus-loss bug.)
-// ==========================================
 function Field({
     name,
     label,
@@ -91,9 +81,13 @@ function Field({
     const showError = touched[name] && errors[name];
     const Tag = as;
     const maxLength = VALIDATION[name]?.max ?? undefined;
+    const id = `contact-${name}`;
+
     return (
         <div className="contact-field">
+            <label htmlFor={id}>{label}</label>
             <Tag
+                id={id}
                 type={as === "input" ? type : undefined}
                 name={name}
                 value={formData[name]}
@@ -130,17 +124,19 @@ function Field({
 function Contact() {
     const [formData, setFormData] = useState(initialForm);
     const [errors, setErrors] = useState({});
-    // `touched` tracks which fields the user has interacted with, so we
-    // only show validation errors AFTER they leave a field (less noisy).
     const [touched, setTouched] = useState({});
     const [status, setStatus] = useState({ kind: "", text: "" });
     const [loading, setLoading] = useState(false);
-    // Honeypot: a hidden field bots tend to fill. If non-empty, silently
-    // pretend success without sending the email.
     const [honeypot, setHoneypot] = useState("");
     const [copied, setCopied] = useState("");
     const [shake, setShake] = useState(false);
     const copyTimeoutRef = useRef(null);
+    const abortRef = useRef(null);
+
+    useEffect(() => () => {
+        abortRef.current?.abort();
+        clearTimeout(copyTimeoutRef.current);
+    }, []);
 
     const handleCopyEmail = async (email) => {
         try {
@@ -153,13 +149,6 @@ function Contact() {
         }
     };
 
-    // FE-11 (U6-R4): destinations come from the CMS-backed
-    // `profile.social` via the `socials` adapter, not hardcoded
-    // literals. The adapter is the single source of truth (GitHub,
-    // LinkedIn, Email); we re-order to the established UI order
-    // (Email, LinkedIn, GitHub) and derive the display value from the
-    // URL so nothing is duplicated or fabricated. Fields that are
-    // missing are simply skipped.
     const contactLinks = useMemo(() => {
         const byName = Object.fromEntries(
             socials.map((social) => [social.name, social])
@@ -193,12 +182,8 @@ function Contact() {
         return links;
     }, []);
 
-    // Stable handlers — using `useCallback` here is optional (Field is
-    // now a stable component), but it keeps referential equality tidy
-    // and makes the component easier to reason about.
     const updateField = (name, value) => {
         setFormData((prev) => ({ ...prev, [name]: value }));
-        // Live-clear an error once the user starts fixing it.
         if (errors[name]) {
             const next = validateField(name, value);
             if (!next) {
@@ -219,11 +204,51 @@ function Contact() {
         setErrors((prev) => (msg ? { ...prev, [name]: msg } : prev));
     };
 
+    async function deliver(payload) {
+        if (loading) return;
+
+        if (honeypot) {
+            setStatus({ kind: "success", text: "Message sent successfully" });
+            setFormData(initialForm);
+            setTouched({});
+            return;
+        }
+
+        const controller = new AbortController();
+        abortRef.current = controller;
+        setLoading(true);
+        setStatus({ kind: "", text: "" });
+
+        try {
+            await sendEmail(payload, { signal: controller.signal });
+            setStatus({ kind: "success", text: "Message sent successfully" });
+            setFormData(initialForm);
+            setTouched({});
+            setErrors({});
+        } catch (error) {
+            if (controller.signal.aborted) {
+                setStatus({
+                    kind: "info",
+                    text: "Sending was cancelled. Your message was not sent.",
+                });
+            } else {
+                setStatus({
+                    kind: "error",
+                    text:
+                        error?.message ||
+                        "Failed to send message. Please email me directly or try again.",
+                });
+            }
+        } finally {
+            if (abortRef.current === controller) abortRef.current = null;
+            setLoading(false);
+        }
+    }
+
     async function handleSubmit(e) {
         e.preventDefault();
         if (loading) return;
 
-        // Final validation pass on submit (covers untouched fields).
         const nextErrors = {
             name: validateField("name", formData.name),
             email: validateField("email", formData.email),
@@ -231,7 +256,6 @@ function Contact() {
         };
         const hasErrors = Object.values(nextErrors).some(Boolean);
         setErrors(nextErrors);
-        // Mark every field touched so messages render.
         setTouched({ name: true, email: true, message: true });
 
         if (hasErrors) {
@@ -244,41 +268,14 @@ function Contact() {
             return;
         }
 
-        // 🐝 Honeypot: if a bot filled the hidden field, pretend success
-        // without actually sending. Saves backend quota.
-        if (honeypot) {
-            setStatus({ kind: "success", text: "Message sent successfully 🚀" });
-            setFormData(initialForm);
-            setTouched({});
-            return;
-        }
-
-        setLoading(true);
-        setStatus({ kind: "", text: "" });
-
-        try {
-            await sendEmail(formData);
-            setStatus({
-                kind: "success",
-                text: "Message sent successfully 🚀",
-            });
-            setFormData(initialForm);
-            setTouched({});
-        } catch (error) {
-            console.error("[Contact] sendEmail failed:", error);
-            setStatus({
-                kind: "error",
-                text:
-                    error?.message ||
-                    "Failed to send message. Please email me directly or try again.",
-            });
-        } finally {
-            setLoading(false);
-        }
+        await deliver({ ...formData });
     }
 
+    const handleCancel = () => abortRef.current?.abort();
+    const handleRetry = () => deliver({ ...formData });
+
     return (
-        <section id="contact" className="contact-section">
+        <section id="contact" className="contact-section" aria-label="Contact">
             <div className="container">
                 <SectionTitle
                     tag="Contact"
@@ -287,7 +284,6 @@ function Contact() {
                 />
 
                 <div className="contact-content">
-                    {/* CONTACT INFO */}
                     <motion.div
                         className="contact-info"
                         initial={{ opacity: 0, x: -40 }}
@@ -336,9 +332,9 @@ function Contact() {
                                             title="Copy to clipboard"
                                         >
                                             {copied === item.copy ? (
-                                                <FaCheck />
+                                                <FaCheck aria-hidden="true" />
                                             ) : (
-                                                <FaCopy />
+                                                <FaCopy aria-hidden="true" />
                                             )}
                                         </button>
                                     )}
@@ -347,7 +343,6 @@ function Contact() {
                         </div>
                     </motion.div>
 
-                    {/* FORM */}
                     <motion.form
                         className={`contact-form ${shake ? "shake" : ""}`}
                         onSubmit={handleSubmit}
@@ -390,7 +385,6 @@ function Contact() {
                             onBlur={handleBlur}
                         />
 
-                        {/* 🐝 Honeypot: hidden field bots love to fill. */}
                         <div
                             className="contact-honeypot"
                             aria-hidden="true"
@@ -411,17 +405,29 @@ function Contact() {
                             />
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            aria-disabled={loading}
-                        >
-                            {loading ? "Sending..." : "Send Message"}
-                            <FaPaperPlane />
-                        </button>
+                        <div className="contact-form-actions">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                aria-disabled={loading}
+                            >
+                                {loading ? "Sending..." : "Send Message"}
+                                <FaPaperPlane aria-hidden="true" />
+                            </button>
+
+                            {loading && (
+                                <button
+                                    type="button"
+                                    className="contact-cancel-btn"
+                                    onClick={handleCancel}
+                                >
+                                    Cancel
+                                </button>
+                            )}
+                        </div>
 
                         {status.text && (
-                            <p
+                            <div
                                 className={`contact-status contact-status-${status.kind}`}
                                 role={status.kind === "error" ? "alert" : "status"}
                             >
@@ -431,14 +437,41 @@ function Contact() {
                                         style={{ marginRight: 6 }}
                                     />
                                 )}
-                                {status.text}
-                            </p>
+                                <span>{status.text}</span>
+                                {status.kind === "error" && (
+                                    <button
+                                        type="button"
+                                        className="contact-retry-btn"
+                                        onClick={handleRetry}
+                                        disabled={loading}
+                                    >
+                                        Try again
+                                    </button>
+                                )}
+                                {status.kind === "info" && (
+                                    <button
+                                        type="button"
+                                        className="contact-retry-btn"
+                                        onClick={handleRetry}
+                                    >
+                                        Try again
+                                    </button>
+                                )}
+                                {status.kind === "success" && (
+                                    <button
+                                        type="button"
+                                        className="contact-dismiss-btn"
+                                        onClick={() => setStatus({ kind: "", text: "" })}
+                                    >
+                                        Dismiss
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </motion.form>
                 </div>
             </div>
 
-            {/* Copy-to-clipboard toast */}
             {copied && (
                 <div className="contact-copy-toast" role="status">
                     <FaCheck aria-hidden="true" />

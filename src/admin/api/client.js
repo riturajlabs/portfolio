@@ -38,16 +38,29 @@ export class ApiError extends Error {
 }
 
 let csrfToken = null;
+let sessionExpiredReason = null;
 
 const sessionEvents = new EventTarget();
 
 export function onSessionExpired(handler) {
-  sessionEvents.addEventListener("session-expired", handler);
-  return () => sessionEvents.removeEventListener("session-expired", handler);
+  const listener = (event) => handler(event.detail || null);
+  sessionEvents.addEventListener("session-expired", listener);
+  return () => sessionEvents.removeEventListener("session-expired", listener);
 }
 
-function emitSessionExpired() {
-  sessionEvents.dispatchEvent(new Event("session-expired"));
+export function getSessionExpiredReason() {
+  return sessionExpiredReason;
+}
+
+export function clearSessionExpiredReason() {
+  sessionExpiredReason = null;
+}
+
+function emitSessionExpired(reason) {
+  sessionExpiredReason = reason;
+  sessionEvents.dispatchEvent(
+    new CustomEvent("session-expired", { detail: reason }),
+  );
 }
 
 async function parseResponse(response) {
@@ -71,7 +84,11 @@ async function parseResponse(response) {
       retryAfter: response.headers.get("Retry-After"),
     });
     if (response.status === 401) {
-      emitSessionExpired();
+      emitSessionExpired({
+        code: error.code || "UNAUTHENTICATED",
+        message:
+          "Your session ended before this request could finish. The server cleared the session cookie, so sign in again and retry the action.",
+      });
     }
     throw err;
   }

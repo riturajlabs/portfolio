@@ -3,12 +3,21 @@
 // gate. `null` user → redirect to /admin/login. `undefined` → still bootstrapping.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { getMe, logout, onSessionExpired } from "../api/client.js";
+import {
+  clearSessionExpiredReason,
+  getMe,
+  getSessionExpiredReason,
+  logout,
+  onSessionExpired,
+} from "../api/client.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined);
+  const [sessionExpiredReason, setSessionExpiredReason] = useState(
+    () => getSessionExpiredReason(),
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -25,7 +34,13 @@ export function AuthProvider({ children }) {
   }, [refresh]);
 
   useEffect(() => {
-    const unsubscribe = onSessionExpired(() => {
+    const unsubscribe = onSessionExpired((detail) => {
+      setSessionExpiredReason(
+        detail || {
+          code: "UNAUTHENTICATED",
+          message: "Your session ended. Sign in again to continue.",
+        },
+      );
       setUser(null);
     });
     return unsubscribe;
@@ -41,9 +56,14 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const dismissSessionExpired = useCallback(() => {
+    clearSessionExpiredReason();
+    setSessionExpiredReason(null);
+  }, []);
+
   const value = useMemo(
-    () => ({ user, refresh, signOut }),
-    [user, refresh, signOut],
+    () => ({ user, refresh, signOut, sessionExpiredReason, dismissSessionExpired }),
+    [user, refresh, signOut, sessionExpiredReason, dismissSessionExpired],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
