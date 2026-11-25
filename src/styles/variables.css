@@ -75,6 +75,13 @@
 
     --success:#22C55E;
 
+    --success-text:#22C55E;
+
+    /* --secondary as TEXT on soft-tinted chips (U5): a lighter purple
+       so the chip label clears 4.5:1 over rgba(124,58,237,.12-.15)
+       in the dark theme, mirroring the --success-text split. */
+    --secondary-text:#A78BFA;
+
     --warning:#F59E0B;
 
     --danger:#EF4444;
@@ -97,11 +104,27 @@
 
 
     /* ==========================
+       ELEVATION SCALE
+       (canonical; the legacy --shadow* names point at it)
+    ========================== */
+
+    --elev-1:
+    0 4px 14px rgba(2,6,23,.16);
+
+    --elev-2:
+    0 10px 30px rgba(2,6,23,.18);
+
+    --elev-3:
+    0 30px 80px rgba(2,6,23,.38);
+
+
+
+    /* ==========================
        SHADOW
     ========================== */
 
     --shadow:
-    0 10px 30px rgba(2,6,23,.18);
+    var(--elev-2);
 
 
 
@@ -111,12 +134,30 @@
 
 
     --shadow-xl:
-    0 30px 80px rgba(2,6,23,.38);
+    var(--elev-3);
 
 
 
     --shadow-primary:
+    var(--glow-brand);
+
+
+
+    /* ==========================
+       BRAND GLOW (buttons / links)
+    ========================== */
+
+    --glow-brand:
     0 10px 25px rgba(37,99,235,.35);
+
+    --glow-brand-hover:
+    0 16px 36px rgba(37,99,235,.45);
+
+    --glow-brand-active:
+    0 8px 20px rgba(37,99,235,.35);
+
+    --glow-brand-soft:
+    0 12px 28px rgba(37,99,235,.18);
 
 
 
@@ -128,6 +169,10 @@
 
     --radius:16px;
 
+    --radius-card:20px;
+
+    --radius-btn:12px;
+
     --radius-lg:24px;
 
     --radius-xl:32px;
@@ -137,14 +182,25 @@
 
 
     /* ==========================
+       MOTION DURATIONS
+    ========================== */
+
+    --dur-fast:.2s;
+
+    --dur-base:.3s;
+
+    --dur-slow:.45s;
+
+
+    /* ==========================
        TRANSITION
     ========================== */
 
-    --transition-fast:.2s ease;
+    --transition-fast:var(--dur-fast) ease;
 
-    --transition:.3s ease;
+    --transition:var(--dur-base) ease;
 
-    --transition-slow:.45s ease;
+    --transition-slow:var(--dur-slow) ease;
 
 
 
@@ -153,8 +209,6 @@
     ========================== */
 
     --container-width:1200px;
-
-
 
     /* ==========================
        Z INDEX
@@ -165,6 +219,147 @@
     --z-dropdown:1100;
 
     --z-modal:1200;
+
+
+
+    /* ==========================
+       SEMANTIC SURFACES
+       (raised levels above --surface / --card)
+    ========================== */
+
+    --surface-2:#111827;
+
+    --surface-3:#1E293B;
+
+
+
+    /* ==========================
+       LINKS / FOCUS / ON-BRAND
+    ========================== */
+
+    --on-primary:#FFFFFF;
+
+    --link:#60A5FA;
+
+    --link-hover:#93C5FD;
+
+    --focus-ring:#38BDF8;
+
+    --accent-cyan:#22D3EE;
+
+
+
+    /* ==========================
+       INTERACTION OVERLAYS
+    ========================== */
+
+    --overlay:
+        rgba(2,6,23,0.62);
+
+    --hover-overlay:
+        rgba(37,99,235,0.08);
+
+    --primary-soft:
+        rgba(37,99,235,0.12);
+
+    --control-bg:var(--card);
+
+    --control-border:var(--border);
+
+    --control-fg:var(--text);
+
+
+
+    /* ==========================
+       SECTION GLOW DECORATIONS
+    ========================== */
+
+    --glow-primary:
+        rgba(37,99,235,0.14);
+
+    --glow-secondary:
+        rgba(124,58,237,0.12);
+
+    --glow-cyan:
+        rgba(6,182,212,0.10);
+
+
+
+    /* ==========================
+       SPACING SCALE (4 → 64 px)
+    ========================== */
+
+    --space-1:0.25rem;
+
+    --space-2:0.5rem;
+
+    --space-3:0.75rem;
+
+    --space-4:1rem;
+
+    --space-5:1.5rem;
+
+    --space-6:2rem;
+
+    --space-7:3rem;
+
+    --space-8:4rem;
+
+
+
+    /* ==========================
+       TYPE SCALE
+    ========================== */
+
+    --fs-xs:0.75rem;
+
+    --fs-sm:0.875rem;
+
+    --fs-body:1rem;
+
+    --fs-lead:clamp(1.0625rem, 1rem + 0.3vw, 1.125rem);
+
+    --fs-subtitle:clamp(1.25rem, 1.05rem + 1.1vw, 2rem);
+
+    --fs-section:clamp(2rem, 1.4rem + 2.4vw, 3.5rem);
+
+    --fs-display:clamp(2.5rem, 1.4rem + 4.4vw, 4.8rem);
+
+
+
+    /* ==========================
+       TYPE: WEIGHT / LINE HEIGHT / TRACKING
+    ========================== */
+
+    --fw-normal:400;
+
+    --fw-medium:500;
+
+    --fw-semibold:600;
+
+    --fw-bold:700;
+
+    --fw-extrabold:800;
+
+
+
+    --lh-tight:1.15;
+
+    --lh-snug:1.3;
+
+    --lh-base:1.6;
+
+    --lh-relaxed:1.75;
+
+
+
+    --tracking-tight:-0.02em;
+
+    --tracking-normal:0;
+
+    --tracking-wide:0.04em;
+
+
 
 }
 
@@ -224,6 +419,17 @@
 
 
     /* ==========================
+       STATUS COLORS (text)
+    ========================== */
+
+
+    --success-text:#166534;
+
+    /* See the dark block: same role, deepened for light surfaces. */
+    --secondary-text:#6D28D9;
+
+
+    /* ==========================
        BORDER
     ========================== */
 
@@ -233,14 +439,27 @@
     --border-light:#CBD5E1;
 
 
+    /* ==========================
+       ELEVATION SCALE
+    ========================== */
+
+    --elev-1:
+    0 4px 14px rgba(15,23,42,.06);
+
+    --elev-2:
+    0 10px 30px rgba(15,23,42,.08);
+
+    --elev-3:
+    0 30px 80px rgba(15,23,42,.18);
+
+
 
     /* ==========================
        SHADOW
     ========================== */
 
-
     --shadow:
-    0 10px 30px rgba(15,23,42,.08);
+    var(--elev-2);
 
 
 
@@ -250,12 +469,93 @@
 
 
     --shadow-xl:
-    0 30px 80px rgba(15,23,42,.18);
+    var(--elev-3);
 
 
 
     --shadow-primary:
+    var(--glow-brand);
+
+
+
+    /* ==========================
+       BRAND GLOW (buttons / links)
+    ========================== */
+
+    --glow-brand:
     0 10px 25px rgba(37,99,235,.25);
+
+    --glow-brand-hover:
+    0 16px 36px rgba(37,99,235,.34);
+
+    --glow-brand-active:
+    0 8px 20px rgba(37,99,235,.28);
+
+    --glow-brand-soft:
+    0 12px 28px rgba(37,99,235,.16);
+
+
+
+    /* ==========================
+       SEMANTIC SURFACES
+    ========================== */
+
+    --surface-2:#FFFFFF;
+
+    --surface-3:#F1F5F9;
+
+
+
+    /* ==========================
+       LINKS / FOCUS / ON-BRAND
+    ========================== */
+
+    --on-primary:#FFFFFF;
+
+    --link:#1D4ED8;
+
+    --link-hover:#1E40AF;
+
+    --focus-ring:#0369A1;
+
+    --accent-cyan:#0E7490;
+
+
+
+    /* ==========================
+       INTERACTION OVERLAYS
+    ========================== */
+
+    --overlay:
+        rgba(15,23,42,0.45);
+
+    --hover-overlay:
+        rgba(37,99,235,0.08);
+
+    --primary-soft:
+        rgba(37,99,235,0.10);
+
+    --control-bg:var(--card);
+
+    --control-border:var(--border);
+
+    --control-fg:var(--text);
+
+
+
+    /* ==========================
+       SECTION GLOW DECORATIONS
+    ========================== */
+
+    --glow-primary:
+        rgba(37,99,235,0.10);
+
+    --glow-secondary:
+        rgba(124,58,237,0.08);
+
+    --glow-cyan:
+        rgba(6,182,212,0.07);
+
 
 
 }

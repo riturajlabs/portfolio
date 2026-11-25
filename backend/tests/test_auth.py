@@ -388,7 +388,6 @@ async def test_a_failed_login_on_a_disabled_account_is_audited(
     assert rows[0].after == {
         "outcome": "failure",
         "reason": "inactive_account",
-        "email": ADMIN_EMAIL,
     }
     assert rows[0].entity == "admin_user"
 
@@ -407,14 +406,15 @@ async def test_a_failed_login_on_an_unknown_email_is_audited_with_no_actor(
     entry = rows[0]
     assert entry.actor_user_id is None
     assert entry.entity_id is None
+    # BE-3 (U7): the diagnostic (outcome/reason) is kept, but the attempted
+    # address is NOT persisted — correlation for an unknown-email attempt comes
+    # from the `ip_hash` on the accompanying warning log, not stored PII.
     assert entry.after == {
         "outcome": "failure",
         "reason": "unknown_email",
-        # The attempted address is kept: credential stuffing against a guessed
-        # address is the event an operator most needs to see, and it would
-        # otherwise leave no trace at all.
-        "email": "nobody@example.com",
     }
+    assert "email" not in entry.after
+    assert "nobody@example.com" not in str(entry.after)
 
 
 async def test_login_audits_a_wrong_password_with_the_admin_as_actor(

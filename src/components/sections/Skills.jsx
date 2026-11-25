@@ -6,6 +6,18 @@ import { skillCategories } from "../../lib/publicContent";
 
 import "../../styles/skills.css";
 
+// Position-independent icon tone key. The skill data intentionally
+// stays display-agnostic (src/data/** is not modified), so the visual
+// mapping lives with the renderer and is keyed by the technology name
+// rather than by list order.
+function skillTone(name) {
+    return name
+        .toLowerCase()
+        .replace(/&/g, " ")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
+
 function Skills() {
     return (
         <section
@@ -45,8 +57,8 @@ function Skills() {
                                 }}
                             >
                                 <div className="skill-heading">
-                                    <div className="skill-category-icon">
-                                        <CategoryIcon />
+                                    <div className="skill-category-icon" aria-hidden="true">
+                                        <CategoryIcon aria-hidden="true" />
                                     </div>
 
                                     <h3>{category.title}</h3>
@@ -61,8 +73,12 @@ function Skills() {
                                                 key={skill.id || skill.name}
                                                 className="skill-item"
                                             >
-                                                <span className="skill-icon">
-                                                    <SkillIcon />
+                                                <span
+                                                    className="skill-icon"
+                                                    data-skill={skillTone(skill.name)}
+                                                    aria-hidden="true"
+                                                >
+                                                    <SkillIcon aria-hidden="true" />
                                                 </span>
 
                                                 <span>{skill.name}</span>

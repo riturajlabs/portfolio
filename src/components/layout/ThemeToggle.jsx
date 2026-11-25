@@ -10,6 +10,13 @@ function ThemeToggle(){
 const {theme,toggleTheme}=useTheme();
 
 
+// The control is a two-state toggle: `aria-pressed` announces whether
+// light mode is currently active, and the label names the action, so
+// state is conveyed by more than the icon alone.
+const isLight = theme === "light";
+
+const label = isLight ? "Switch to dark theme" : "Switch to light theme";
+
 
 return (
 
@@ -29,17 +36,21 @@ whileHover={{
 rotate:20
 }}
 
-aria-label="Theme Toggle"
+aria-pressed={isLight}
+
+aria-label={label}
+
+title={label}
 
 >
 
 
 {
-theme==="dark"
+isLight
 ?
-<FaSun/>
+<FaMoon aria-hidden="true" />
 :
-<FaMoon/>
+<FaSun aria-hidden="true" />
 }
 
 

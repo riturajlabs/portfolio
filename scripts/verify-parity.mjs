@@ -43,11 +43,12 @@ if (!fs.existsSync(baselineDir)) {
     );
 }
 
-const HASHED_ASSET = /-([A-Za-z0-9]{8,})\.(js|css)\b/g;
+// Asset-hash normalisation lives in `scripts/asset-hash.mjs` so its regex has
+// its own regression tests (`scripts/asset-hash.test.mjs`) without importing
+// this side-effect-heavy script. See that module for the rule and rationale.
+import { HASHED_ASSET, normalize } from "./asset-hash.mjs";
 
-function normalize(text) {
-    return text.replace(HASHED_ASSET, "-HASH.$2");
-}
+export { HASHED_ASSET, normalize };
 
 // The bundler-owned asset block of the SPA shell: <script> entries and
 // <link rel="modulepreload"> manifests. These lines are emitted by
@@ -58,6 +59,82 @@ const ASSET_BLOCK = /^\s*<(script[^>]*src="\/assets\/|link[^>]*rel="modulepreloa
 
 function withoutAssetBlock(text) {
     return text.replace(ASSET_BLOCK, "");
+}
+
+// U3 (docs/PORTFOLIO_UPGRADE.md §7 U3) makes two deliberate, authorable
+// changes to the SPA shell that are not migrations of migrated content:
+//   1. a pre-paint theme-bootstrap <script> (chooses data-theme from
+//      localStorage → prefers-color-scheme → dark before first paint), and
+//   2. the single static `theme-color` meta is replaced by a
+//      `prefers-color-scheme` dark/light pair.
+// Both are sanctioned by the U3 plan and neither touches an SEO/content
+// contract, so the shell body comparison ignores exactly these two
+// anchored regions. It is deliberately *not* a blanket ignore: any other
+// change to the shell body (title, canonical, OG/Twitter, JSON-LD) still
+// reports DIFFERS. If the bootstrap script text changes, the anchor below
+// stops matching and the shell is compared byte-for-byte again.
+const THEME_BOOTSTRAP_BLOCK =
+    /[ \t]*<!-- Theme bootstrap[\s\S]*?<\/script>\n\n[ \t]*<!-- =+ -->\n/;
+const THEME_COLOR_META = /[ \t]*<meta\s+name="theme-color"[\s\S]*?>\n\n/g;
+
+function withoutThemeDelta(text) {
+    return text
+        .replace(THEME_BOOTSTRAP_BLOCK, "")
+        .replace(THEME_COLOR_META, "");
+}
+
+// U5 (docs/PORTFOLIO_UPGRADE.md §7 U5): the five project pages gain
+// an authorable sticky section nav — a plain, no-JS anchor bar — plus
+// the four exact `id` attributes its anchors target. This is the
+// plan-sanctioned markup addition for the phase; it touches no
+// SEO/content contract (title, canonical, OG/Twitter, JSON-LD and the
+// visible copy stay byte-identical, and those are still compared).
+// Following the U3 mechanism above, the comparator strips exactly
+// these anchored shapes from BOTH sides and compares the rest
+// byte-for-byte. It is fail-closed by construction: the anchors are
+// exact literals keyed on the nav's unique class, so if the markup
+// ever drifts the anchors stop matching and the pages report DIFFERS
+// again rather than silently widening the exception.
+const U5_SECTION_NAV =
+    /<nav class="project-page-section-nav"[^>]*>[\s\S]*?<\/nav>/;
+
+const U5_SECTION_IDS = [
+    ' id="project-about"',
+    ' id="project-tech"',
+    ' id="project-highlights"',
+    ' id="project-related"',
+];
+
+function withoutProjectPageU5Delta(text) {
+    let out = text.replace(U5_SECTION_NAV, "");
+    for (const id of U5_SECTION_IDS) {
+        out = out.split(id).join("");
+    }
+    return out;
+}
+
+// U9 (docs/PORTFOLIO_UPGRADE.md §7 U9): Inter is loaded from the document
+// head instead of a CSS @import so the stylesheet is discovered during the
+// initial parse. The SPA shell and the no-JS project pages each carry the
+// same three link elements; the surrounding comments are documentation for
+// that authorable move. Strip exactly those anchored shapes from BOTH sides
+// and compare the rest byte-for-byte. If the font URL or link shape changes,
+// this stops matching and the page reports DIFFERS again.
+const U9_FONT_COMMENT =
+    /[ \t]*<!-- =+ -->\n[ \t]*<!-- Fonts[\s\S]*?<!-- =+ -->\n\n|[ \t]*<!-- Fonts:[\s\S]*?-->\n/;
+
+const U9_FONT_LINKS = new RegExp(
+    [
+        String.raw`[ \t]*<link\s+rel="preconnect"\s+href="https://fonts\.googleapis\.com">`,
+        String.raw`<link\s+rel="preconnect"\s+href="https://fonts\.gstatic\.com"\s+crossorigin>`,
+        String.raw`<link\s+rel="stylesheet"\s+href="https://fonts\.googleapis\.com/css2\?family=Inter:wght@400;500;600;700;800&display=swap">\n\n?`,
+    ].join(String.raw`\s*`)
+);
+
+function withoutU9FontDelta(text) {
+    return text
+        .replace(U9_FONT_COMMENT, "")
+        .replace(U9_FONT_LINKS, "");
 }
 
 function assetManifest(text) {
@@ -81,6 +158,7 @@ for (const slug of ["webchat-ai", "orbit-ai", "stayora", "zerodha-clone", "scien
         baseline: `project-${slug}.html`,
         dist: path.join("projects", slug, "index.html"),
         label: `projects/${slug}/index.html`,
+        isProject: true,
     });
 }
 
@@ -114,13 +192,46 @@ for (const entry of entries) {
         continue;
     }
 
+    // U9 moved Inter from a CSS @import to document-head links. Strip that
+    // exact authorable delta before comparing everything else.
+    const baselineContent = withoutU9FontDelta(baselineNorm);
+    const distContent = withoutU9FontDelta(distNorm);
+
+    if (baselineContent === distContent) {
+        results.push({
+            ...entry,
+            status: "ASSETS-VARY",
+            note: "authorable content identical; U9 font-link delta + hashed asset names differ",
+        });
+        continue;
+    }
+
+    // Project pages carry the U5 sticky-nav delta described above;
+    // strip the anchored shapes and re-compare before giving up.
+    if (entry.isProject) {
+        const baselineU5 = withoutProjectPageU5Delta(baselineContent);
+        const distU5 = withoutProjectPageU5Delta(distContent);
+        if (baselineU5 === distU5) {
+            results.push({
+                ...entry,
+                status: "ASSETS-VARY",
+                note: "authorable content identical; U9 font-link + U5 sticky-nav deltas + hashed asset names differ",
+            });
+            continue;
+        }
+    }
+
     // The SPA shell additionally carries a purely bundler-owned asset
     // manifest. Authorable content is everything outside that block;
     // the manifest itself is compared as a set so a chunk graph change
     // is reported (and inspected) rather than silently swallowed.
     if (entry.isShell) {
-        const baselineBody = withoutAssetBlock(normalize(baselineText));
-        const distBody = withoutAssetBlock(normalize(distText));
+        const baselineBody = withoutThemeDelta(
+            withoutAssetBlock(baselineContent)
+        );
+        const distBody = withoutThemeDelta(
+            withoutAssetBlock(distContent)
+        );
 
         const baselineAssets = assetManifest(baselineText);
         const distAssets = assetManifest(distText);
@@ -136,7 +247,7 @@ for (const entry of entries) {
             results.push({
                 ...entry,
                 status: "ASSETS-VARY",
-                note: `authorable content identical; ${delta}`,
+                note: `authorable content identical; U9 font-link delta + ${delta}`,
             });
             continue;
         }

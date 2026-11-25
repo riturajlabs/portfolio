@@ -180,12 +180,13 @@ async def send_contact(
         raise HTTPException(status_code=502, detail=_SEND_FAILED) from exc
 
     await contact_service.mark_delivery(session, record, "sent")
+    # BE-3 (U7): log the row id for correlation, never the sender's name/email —
+    # delivery logs are not a place to store personal data.
     log_event(
         logger,
         logging.INFO,
         "contact_delivered",
-        from_name=payload.name,
-        from_email=payload.email,
+        message_id=str(record.id),
     )
     return ContactResponse(success=True, message=_SUCCESS_MESSAGE)
 

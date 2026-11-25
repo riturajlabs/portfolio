@@ -3,6 +3,9 @@
 =================================================== */
 .hero-section {
     min-height: 100vh;
+    /* svh avoids the mobile browser-chrome resize jump; vh stays as the
+       fallback for browsers without small-viewport units. */
+    min-height: 100svh;
     display: flex;
     align-items: center;
     padding-top: 90px;
@@ -26,7 +29,7 @@
 }
 
 .hero-greeting {
-    color: var(--primary);
+    color: var(--link);
     font-size: 1.15rem;
     font-weight: 600;
     margin-bottom: .75rem;
@@ -43,9 +46,9 @@
     gap: .6rem;
     padding: .45rem 1rem;
     border-radius: 999px;
-    background: rgba(34, 197, 94, 0.12);
-    color: var(--success);
-    border: 1px solid rgba(34, 197, 94, 0.25);
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+    color: var(--success-text);
+    border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
     font-size: .82rem;
     font-weight: 600;
 }
@@ -58,7 +61,7 @@
     height: 0.8rem;
     background-color: var(--success);
     border-radius: 50%;
-    box-shadow: 0 0 0 rgba(34, 197, 94, 0.7);
+    box-shadow: 0 0 0 color-mix(in srgb, var(--success) 70%, transparent);
     animation: pulse 2s infinite;
     /* Purani padding aur border agar galti se inherit ho toh usko hata dega */
     padding: 0;
@@ -66,12 +69,12 @@
 }
 
 @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-    70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 70%, transparent); }
+    70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--success) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 0%, transparent); }
 }
 .hero-title {
-    font-size: clamp(3rem, 6vw, 4.8rem);
+    font-size: var(--fs-display);
     line-height: 1.1;
     font-weight: 800;
     letter-spacing: -1px;
@@ -83,9 +86,14 @@
 
 .hero-subtitle {
     color: var(--muted);
-    font-size: clamp(1.35rem, 3vw, 2rem);
+    font-size: var(--fs-subtitle);
+    line-height: var(--lh-snug);
     font-weight: 600;
-    min-height: 60px;
+    /* One line by default; narrow screens reserve two lines below so
+       the rotating role text cannot push the rest of the hero down. */
+    min-height: 1.3em;
+    max-width: 100%;
+    overflow-wrap: break-word;
     margin-bottom: 1.4rem;
 }
 
@@ -99,9 +107,9 @@
 
 .hero-description {
     max-width: 580px;
-    color: var(--muted);
-    font-size: 1.05rem;
-    line-height: 1.8;
+    color: var(--text-secondary);
+    font-size: var(--fs-lead);
+    line-height: var(--lh-relaxed);
     margin-bottom: 2rem;
 }
 
@@ -125,7 +133,7 @@
 
 .hero-stat h3 {
     color: var(--primary);
-    font-size: 2rem;
+    font-size: clamp(1.5rem, 1.25rem + 1vw, 2rem);
     font-weight: 800;
     margin-bottom: .2rem;
     line-height: 1;
@@ -183,8 +191,6 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    /* Subtle up and down floating animation */
-    animation: heroFloat 6s ease-in-out infinite;
 }
 
 /* Very subtle background glow that blends with your website bg */
@@ -209,8 +215,8 @@
     border-radius: 50%;
     padding: 6px; /* Gradient ring thickness */
     /* Elegant blue to purple gradient ring */
-    background: linear-gradient(135deg, var(--primary), #8b5cf6);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    box-shadow: var(--elev-2);
     transition: transform 0.4s ease, box-shadow 0.4s ease;
 }
 
@@ -248,7 +254,7 @@
 @media (max-width: 991px) {
     .hero-content {
         grid-template-columns: 1fr;
-        gap: 4rem;
+        gap: 3rem;
         text-align: center;
     }
     .hero-left {
@@ -271,6 +277,23 @@
     }
     .hero-visual {
         max-width: 380px;
+        margin-inline: auto;
+    }
+}
+
+/* Keep both CTAs on one row on small tablets. Below 576px they stack;
+   between 577px and 768px they share the available width instead of
+   wrapping into an awkward single-button row. */
+@media (min-width: 577px) and (max-width: 768px) {
+    .hero-buttons {
+        width: 100%;
+        max-width: 520px;
+        flex-wrap: nowrap;
+    }
+
+    .hero-buttons .btn {
+        flex: 1 1 0;
+        min-width: 0;
     }
 }
 
@@ -282,21 +305,8 @@
         padding-top: 120px;
     }
 
-    .hero-title {
-        font-size: 2.7rem;
-    }
-    .hero-subtitle {
-        min-height: 48px;
-        font-size: 1.25rem;
-    }
-    .hero-description {
-        font-size: .95rem;
-    }
     .hero-stats {
         gap: 1.5rem;
-    }
-    .hero-stat h3 {
-        font-size: 1.6rem;
     }
     .hero-buttons {
         width: 100%;
@@ -315,6 +325,13 @@
     .hero-visual {
         max-width: 280px; /* Slight increase to prevent crowding */
         margin-top: 1rem;
+        margin-inline: auto;
     }
+}
 
+/* Reserve a stable two-line box only where the rotating role can wrap. */
+@media (max-width: 380px) {
+    .hero-subtitle {
+        min-height: 2.6em;
+    }
 }

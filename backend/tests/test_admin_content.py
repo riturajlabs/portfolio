@@ -15,6 +15,7 @@ name here. Two structural guarantees stand behind the individual cases:
 
 from __future__ import annotations
 
+import asyncio
 import re
 from datetime import UTC, datetime, timedelta
 from email.utils import format_datetime
@@ -152,6 +153,28 @@ def _project_payload(slug: str, **changes: object) -> dict[str, object]:
     }
     payload.update(changes)
     return payload
+
+
+def _case_study(
+    *,
+    role: str = "Solo full-stack developer",
+    summary: str = "Support teams had no way to answer repeat questions.",
+    context: str | None = None,
+) -> dict[str, object]:
+    problem: dict[str, object] = {"summary": summary}
+    if context is not None:
+        problem["context"] = context
+    return {
+        "schemaVersion": 1,
+        "role": role,
+        "problem": problem,
+        "keyDecisions": [
+            {
+                "decision": "Use FastAPI for the content API.",
+                "rationale": "Typed request and response contracts.",
+            }
+        ],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -302,6 +325,297 @@ async def test_create_project_with_an_unknown_icon_key_is_422_anywhere_else(
     assert response.status_code == 422
     fields = [f["field"] for f in response.json()["error"]["fields"]]
     assert "icon_key" in fields
+
+
+# ---------------------------------------------------------------------------
+# Projects — case studies
+# ---------------------------------------------------------------------------
+
+
+async def test_create_project_with_case_study_returns_normalized_document(
+    client: AsyncClient,
+) -> None:
+    csrf = await _authng_headers(client)
+
+    response = await client.post(
+        "/api/admin/projects",
+        json=_project_payload("case-study", case_study=_case_study(context="Original context.")),
+        headers=csrf,
+    )
+    assert response.status_code == 201, response.text
+
+    entity = response.json()["entity"]
+    case_study = entity["case_study"]
+    assert case_study["schemaVersion"] == 1
+    assert case_study["role"] == "Solo full-stack developer"
+    assert case_study["problem"]["context"] == "Original context."
+    assert case_study["keyDecisions"][0]["tradeoff"] is None
+    assert case_study["constraints"] == []
+    assert "caseStudy" not in entity
+
+    detail = await client.get(f"/api/admin/projects/{entity['id']}")
+    assert detail.status_code == 200
+    assert detail.json()["case_study"] == case_study
+
+    listed = await client.get("/api/admin/projects")
+    assert listed.status_code == 200
+    assert all("case_study" not in item for item in listed.json())
+
+
+async def test_create_project_without_case_study_returns_null(client: AsyncClient) -> None:
+    csrf = await _authng_headers(client)
+
+    response = await client.post(
+        "/api/admin/projects", json=_project_payload("no-case-study"), headers=csrf
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["entity"]["case_study"] is None
+
+
+async def test_create_project_with_explicit_null_case_study_returns_null(
+    client: AsyncClient,
+) -> None:
+    csrf = await _authng_headers(client)
+
+    response = await client.post(
+        "/api/admin/projects",
+        json=_project_payload("null-case-study", case_study=None),
+        headers=csrf,
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["entity"]["case_study"] is None
+
+
+@pytest.mark.parametrize(
+    "case_study",
+    [
+        {},
+        {"schemaVersion": 1},
+        {"schemaVersion": 2, "role": "Developer"},
+        {"schemaVersion": 1, "role": "Developer", "unexpected": True},
+    ],
+    ids=["empty", "version-only", "unsupported-version", "unknown-key"],
+)
+async def test_create_project_with_invalid_case_study_is_422(
+    client: AsyncClient, case_study: dict[str, object]
+) -> None:
+    csrf = await _authng_headers(client)
+
+    response = await client.post(
+        "/api/admin/projects",
+        json=_project_payload("invalid-case-study", case_study=case_study),
+        headers=csrf,
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+    listed = await client.get("/api/admin/projects")
+    assert listed.status_code == 200
+    assert listed.json() == []
+
+
+async def test_create_project_with_oversized_case_study_is_422(client: AsyncClient) -> None:
+    csrf = await _authng_headers(client)
+    oversized = {
+        "schemaVersion": 1,
+        "problem": {"summary": "p" * 1200, "context": "c" * 2000},
+        "approach": [{"heading": "Approach", "body": "x" * 2000} for _ in range(12)],
+        "constraints": ["c" * 240 for _ in range(12)],
+        "learnings": ["l" * 300 for _ in range(12)],
+    }
+
+    response = await client.post(
+        "/api/admin/projects",
+        json=_project_payload("oversized-case-study", case_study=oversized),
+        headers=csrf,
+    )
+    assert response.status_code == 422, response.text
+    assert "32768" in response.text
+
+
+async def test_update_without_case_study_preserves_the_stored_document(
+    client: AsyncClient,
+) -> None:
+    csrf = await _authng_headers(client)
+    original = _case_study(role="Original role")
+    entity = (
+        await client.post(
+            "/api/admin/projects",
+            json=_project_payload("case-study-preserved", case_study=original),
+            headers=csrf,
+        )
+    ).json()["entity"]
+
+    response = await client.put(
+        f"/api/admin/projects/{entity['id']}", json={"title": "Renamed"}, headers=csrf
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["entity"]["case_study"]["role"] == "Original role"
+
+    detail = await client.get(f"/api/admin/projects/{entity['id']}")
+    assert detail.json()["case_study"]["role"] == "Original role"
+
+
+async def test_update_with_explicit_null_case_study_clears_it(client: AsyncClient) -> None:
+    csrf = await _authng_headers(client)
+    entity = (
+        await client.post(
+            "/api/admin/projects",
+            json=_project_payload("case-study-clear", case_study=_case_study()),
+            headers=csrf,
+        )
+    ).json()["entity"]
+
+    response = await client.put(
+        f"/api/admin/projects/{entity['id']}", json={"case_study": None}, headers=csrf
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["entity"]["case_study"] is None
+
+    detail = await client.get(f"/api/admin/projects/{entity['id']}")
+    assert detail.json()["case_study"] is None
+
+
+async def test_update_case_study_replaces_the_complete_document(client: AsyncClient) -> None:
+    csrf = await _authng_headers(client)
+    original = _case_study(
+        role="Original role", summary="Original summary.", context="Original context."
+    )
+    replacement = _case_study(role="Replacement role", summary="Replacement summary.")
+    entity = (
+        await client.post(
+            "/api/admin/projects",
+            json=_project_payload("case-study-replace", case_study=original),
+            headers=csrf,
+        )
+    ).json()["entity"]
+
+    response = await client.put(
+        f"/api/admin/projects/{entity['id']}",
+        json={"case_study": replacement},
+        headers=csrf,
+    )
+    assert response.status_code == 200, response.text
+
+    case_study = response.json()["entity"]["case_study"]
+    assert case_study["role"] == "Replacement role"
+    assert case_study["problem"] == {
+        "summary": "Replacement summary.",
+        "context": None,
+    }
+    assert case_study["constraints"] == []
+    assert case_study["keyDecisions"][0]["tradeoff"] is None
+
+
+@pytest.mark.parametrize(
+    "case_study",
+    [{}, {"schemaVersion": 1, "role": "Developer", "unexpected": True}],
+    ids=["empty", "unknown-key"],
+)
+async def test_update_with_invalid_case_study_is_422_and_preserves_the_row(
+    client: AsyncClient, case_study: dict[str, object]
+) -> None:
+    csrf = await _authng_headers(client)
+    entity = (
+        await client.post(
+            "/api/admin/projects",
+            json=_project_payload("case-study-invalid-update", case_study=_case_study(role="Original")),
+            headers=csrf,
+        )
+    ).json()["entity"]
+
+    response = await client.put(
+        f"/api/admin/projects/{entity['id']}",
+        json={"case_study": case_study},
+        headers=csrf,
+    )
+    assert response.status_code == 422, response.text
+
+    detail = await client.get(f"/api/admin/projects/{entity['id']}")
+    assert detail.json()["case_study"]["role"] == "Original"
+
+
+async def test_case_study_is_included_in_create_and_update_audit_rows(
+    client: AsyncClient, engine
+) -> None:
+    csrf = await _authng_headers(client)
+    entity = (
+        await client.post(
+            "/api/admin/projects",
+            json=_project_payload("case-study-audit", case_study=_case_study(role="Original")),
+            headers=csrf,
+        )
+    ).json()["entity"]
+    await client.put(
+        f"/api/admin/projects/{entity['id']}",
+        json={"case_study": _case_study(role="Replacement")},
+        headers=csrf,
+    )
+
+    creates = await audit_rows(engine, action="create")
+    updates = await audit_rows(engine, action="update")
+    created = next(row for row in creates if row.entity_id == entity["id"])
+    updated = next(row for row in updates if row.entity_id == entity["id"])
+
+    assert created.after["case_study"]["role"] == "Original"
+    assert updated.before["case_study"]["role"] == "Original"
+    assert updated.after["case_study"]["role"] == "Replacement"
+    assert updated.after["case_study"]["keyDecisions"][0]["tradeoff"] is None
+
+
+async def test_updating_case_study_refreshes_public_payload_and_etag(
+    client: AsyncClient, engine
+) -> None:
+    csrf = await _authng_headers(client)
+    await _seed_full_profile(engine)
+    entity = (
+        await client.post(
+            "/api/admin/projects",
+            json=_project_payload("case-study-cache", case_study=_case_study(role="Before")),
+            headers=csrf,
+        )
+    ).json()["entity"]
+
+    first = await client.get("/api/content")
+    assert first.status_code == 200
+    first_project = next(
+        project for project in first.json()["projects"] if project["slug"] == "case-study-cache"
+    )
+    assert first_project["caseStudy"]["role"] == "Before"
+
+    await asyncio.sleep(0.01)
+    response = await client.put(
+        f"/api/admin/projects/{entity['id']}",
+        json={"case_study": _case_study(role="After")},
+        headers=csrf,
+    )
+    assert response.status_code == 200, response.text
+
+    second = await client.get("/api/content")
+    assert second.status_code == 200
+    second_project = next(
+        project for project in second.json()["projects"] if project["slug"] == "case-study-cache"
+    )
+    assert second_project["caseStudy"]["role"] == "After"
+    assert second.headers["etag"] != first.headers["etag"]
+    assert second.json()["meta"]["generated_at"] != first.json()["meta"]["generated_at"]
+
+
+async def test_delete_project_preserves_its_case_study(client: AsyncClient) -> None:
+    csrf = await _authng_headers(client)
+    entity = (
+        await client.post(
+            "/api/admin/projects",
+            json=_project_payload("case-study-delete", case_study=_case_study()),
+            headers=csrf,
+        )
+    ).json()["entity"]
+
+    response = await client.delete(f"/api/admin/projects/{entity['id']}", headers=csrf)
+    assert response.status_code == 200, response.text
+
+    detail = await client.get(f"/api/admin/projects/{entity['id']}")
+    assert detail.json()["case_study"]["role"] == "Solo full-stack developer"
 
 
 # ---------------------------------------------------------------------------

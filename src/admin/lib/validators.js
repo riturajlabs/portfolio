@@ -13,6 +13,16 @@ export const IMAGE_RE = /^\/images\/projects\/[a-z0-9-]+\.webp$/;
 export const IMAGE_URL_RE = /^https?:\/\/[^\s"'<>]+$/;
 export const HTTP_URL_RE = /^https?:\/\/.+/;
 
+export function normalizeFieldPath(path) {
+  if (typeof path !== "string") return "";
+  return path
+    .trim()
+    .replace(/\[([^\]]+)\]/g, ".$1")
+    .replace(/\.{2,}/g, ".")
+    .replace(/^\.+/, "")
+    .replace(/\.+$/, "");
+}
+
 export function isRemoteImage(value) {
   return typeof value === "string" && IMAGE_URL_RE.test(value);
 }

@@ -69,14 +69,16 @@ jobs:
               || psql -h 127.0.0.1 -U postgres -d postgres -c "CREATE DATABASE $db"
           done
 
-      # Production behaviour guard: the content stylesheets and data modules are
-      # read-only paddles for the PR; any change fails the build. (MIGRATION.md §7)
-      - name: Tripwire — src/data and src/styles must be unchanged
+      # Production behaviour guard: the content data modules are read-only
+      # paddles for the PR; any change fails the build. `src/styles/**` was
+      # unfrozen by ADR-018 (2026-10-17, docs/ARCHITECTURE.md) for the approved
+      # public design upgrade, so it is deliberately NOT checked here.
+      - name: Tripwire — src/data must be unchanged
         run: |
           base="$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null || echo HEAD)"
-          if ! git diff --quiet "$base" HEAD -- src/data src/styles; then
-            echo "::error::src/data or src/styles changed relative to $(git rev-parse --short "$base")"
-            git diff --stat "$base" HEAD -- src/data src/styles
+          if ! git diff --quiet "$base" HEAD -- src/data; then
+            echo "::error::src/data changed relative to $(git rev-parse --short "$base")"
+            git diff --stat "$base" HEAD -- src/data
             exit 1
           fi
 

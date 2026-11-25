@@ -4,9 +4,25 @@ import {
     FaGithub,
 } from "react-icons/fa";
 
+import SectionTitle from "../common/SectionTitle";
+
 import useGithub from "../../hooks/useGithub";
 
 import "../../styles/github.css";
+
+const FALLBACK_AVATAR = "https://github.com/riturajlabs.png";
+
+// Cold-start safety net (U6-R1). The service already returns a complete
+// fallback profile, but the hook can still hand us `null` before data
+// lands or if a future failure path skips it. This shape guarantees the
+// profile card always renders identity + avatar with no `@undefined` and
+// no broken image, independent of the hook's state.
+const SAFE_PROFILE = {
+    html_url: "https://github.com/riturajlabs",
+    avatar_url: FALLBACK_AVATAR,
+    login: "riturajlabs",
+    name: "Rituraj Labh",
+};
 
 
 function GithubStats() {
@@ -17,6 +33,24 @@ function GithubStats() {
         loading,
         error,
     } = useGithub();
+
+    // Only substitute when the hook gave us nothing usable; a real
+    // profile (even a partial one) is always preferred, and every field
+    // read below still falls back per-key.
+    const safeProfile = profile || SAFE_PROFILE;
+
+    // Status chip (U6-R1): derive a label from state the component
+    // already has rather than inventing a metric. The Contribution card
+    // carries a real status string as its value ("Active" / "Consistent"
+    // / "Learning"), so reuse it; numeric cards report the only honest
+    // state available here — that the data is live from the proxy.
+    const statsWithStatus = stats.map((item) => ({
+        ...item,
+        status:
+            typeof item.value === "string" && item.value
+                ? item.value
+                : "Live",
+    }));
 
 
 
@@ -32,46 +66,15 @@ function GithubStats() {
 
                 {/* ================= HEADER ================= */}
 
-                <motion.div
+                <SectionTitle
 
-                    className="section-header"
+                    tag="GitHub Activity"
 
-                    initial={{
-                        opacity:0,
-                        y:30
-                    }}
+                    title="My Coding Journey"
 
-                    whileInView={{
-                        opacity:1,
-                        y:0
-                    }}
+                    description="Consistently building projects, improving problem-solving skills, and exploring modern technologies."
 
-                    viewport={{
-                        once:true
-                    }}
-
-                >
-
-                    <span className="section-tag">
-                        GitHub Activity
-                    </span>
-
-
-                    <h2 className="section-title">
-                        My Coding Journey
-                    </h2>
-
-
-                    <p className="section-description">
-
-                        Consistently building projects,
-                        improving problem-solving skills,
-                        and exploring modern technologies.
-
-                    </p>
-
-
-                </motion.div>
+                />
 
 
 
@@ -115,7 +118,7 @@ function GithubStats() {
                 {
                     error && (
 
-                        <div className="github-error">
+                        <div className="github-error" role="status">
 
                             {error}
 
@@ -130,8 +133,13 @@ function GithubStats() {
 
                 {/* ================= STATS ================= */}
 
+                {/* U6-R1: the profile fallback renders whenever we are
+                    past loading — including on a proxy failure — so a
+                    cold start degrades to a complete, safe identity
+                    card instead of only an error string. The stats grid
+                    is naturally empty when the fetch failed. */}
                 {
-                    !loading && !error && (
+                    !loading && (
 
                         <>
 
@@ -139,20 +147,20 @@ function GithubStats() {
                             {/* ================= PROFILE CARD ================= */}
 
                             {
-                                profile && (
+                                safeProfile && (
 
                                     <div className="github-profile">
 
                                         <a
-                                            href={profile.html_url}
+                                            href={safeProfile.html_url || SAFE_PROFILE.html_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="github-profile-link"
-                                            aria-label={`${profile.name || profile.login} on GitHub`}
+                                            aria-label={`${safeProfile.name || safeProfile.login || "riturajlabs"} on GitHub`}
                                         >
                                             <img
-                                                src={profile.avatar_url}
-                                                alt={profile.name || profile.login}
+                                                src={safeProfile.avatar_url || FALLBACK_AVATAR}
+                                                alt={safeProfile.name || safeProfile.login || "GitHub profile"}
                                                 className="github-avatar"
                                                 loading="lazy"
                                             />
@@ -160,11 +168,11 @@ function GithubStats() {
                                             <div className="github-profile-info">
 
                                                 <h3>
-                                                    {profile.name || profile.login}
+                                                    {safeProfile.name || safeProfile.login || "riturajlabs"}
                                                 </h3>
 
                                                 <span>
-                                                    @{profile.login}
+                                                    @{safeProfile.login || "riturajlabs"}
                                                 </span>
 
                                             </div>
@@ -172,9 +180,9 @@ function GithubStats() {
                                         </a>
 
                                         {
-                                            profile.bio && (
+                                            safeProfile.bio && (
                                                 <p className="github-bio">
-                                                    {profile.bio}
+                                                    {safeProfile.bio}
                                                 </p>
                                             )
                                         }
@@ -189,7 +197,7 @@ function GithubStats() {
 
 
                                 {
-                                    stats.map(
+                                    statsWithStatus.map(
                                         (item,index)=>(
 
 
@@ -232,6 +240,17 @@ function GithubStats() {
                                                 {item.title}
                                             </h4>
 
+                                            {item.status && (
+                                                <span
+                                                    className="github-status-chip"
+                                                    data-status={item.status
+                                                        .toLowerCase()
+                                                        .replace(/\s+/g, "-")}
+                                                >
+                                                    {item.status}
+                                                </span>
+                                            )}
+
 
                                             <p>
                                                 {item.description}
@@ -257,14 +276,14 @@ function GithubStats() {
 
 
                             {
-                                profile && (
+                                safeProfile && (
 
                                     <div className="github-action">
 
 
                                         <a
 
-                                            href={profile.html_url}
+                                            href={safeProfile.html_url || SAFE_PROFILE.html_url}
 
                                             target="_blank"
 

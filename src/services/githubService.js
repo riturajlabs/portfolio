@@ -21,6 +21,9 @@ const FALLBACK_PROFILE = {
     followers: 0,
     following: 0,
     html_url: "https://github.com/riturajlabs",
+    avatar_url: "https://github.com/riturajlabs.png",
+    login: "riturajlabs",
+    name: "Rituraj Labh",
 };
 
 const FALLBACK_REPOS = [];

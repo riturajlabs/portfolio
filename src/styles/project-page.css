@@ -28,7 +28,7 @@ body {
     color: var(--text);
     font-family: "Inter", system-ui, -apple-system, "Segoe UI",
         Roboto, sans-serif;
-    line-height: 1.6;
+    line-height: var(--lh-base);
     -webkit-font-smoothing: antialiased;
 }
 
@@ -57,10 +57,16 @@ body {
 }
 
 /* Reset the homepage's global `section` padding; sections here
-   are content blocks inside one article, not full-bleed bands. */
+   are content blocks inside one article, not full-bleed bands.
+   The scroll-margin keeps the sticky section nav from covering
+   a heading after an in-page jump (U5). */
 .project-page section {
     padding: 0;
     margin-top: 2.5rem;
+}
+
+.project-page section[id] {
+    scroll-margin-top: 4.75rem;
 }
 
 .project-page-main {
@@ -70,14 +76,27 @@ body {
 
 /* ==================================================
    HEADER
-================================================== */
-
+   ==================================================
+   U5: the header becomes a "band" — the same raised card
+   language the homepage cards use (surface + fine border +
+   radius-card + the restrained brand tint), so the page opens
+   on a deliberate focal block instead of loose text. */
 .project-page-header {
     margin-bottom: 2rem;
+
+    padding: 2rem 2.25rem;
+
+    background:
+        radial-gradient(circle at top right, var(--hover-overlay), transparent 55%),
+        var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
 }
 
 .project-page-back {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     margin-bottom: 1.5rem;
 
     color: var(--muted);
@@ -86,7 +105,7 @@ body {
 }
 
 .project-page-back:hover {
-    color: var(--primary);
+    color: var(--link-hover);
 }
 
 .project-page-category {
@@ -94,30 +113,87 @@ body {
     margin-bottom: 0.9rem;
 
     padding: 0.35rem 0.85rem;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
 
-    background: rgba(124, 58, 237, 0.15);
-    color: var(--secondary);
+    background: var(--glow-secondary);
+    color: var(--secondary-text);
 
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--tracking-wide);
 }
 
 .project-page-title {
     margin-bottom: 1rem;
 
     color: var(--text);
-    font-size: 2.6rem;
-    line-height: 1.15;
+    font-size: clamp(2rem, 1.5rem + 2vw, 2.6rem);
+    line-height: var(--lh-tight);
 }
 
 .project-page-summary {
     color: var(--text-secondary);
     font-size: 1.08rem;
-    line-height: 1.75;
+    line-height: var(--lh-relaxed);
     max-width: 65ch;
+}
+
+/* ==================================================
+   STICKY SECTION NAV (U5)
+   ==================================================
+   The project pages ship no JavaScript, so this is a plain
+   in-page anchor nav made sticky with CSS only. It links only
+   to sections the current project actually renders. Links get
+   a 44px-tall hit area and a visible focus ring — the static
+   pages do not load global.css, so the ring is declared here. */
+.project-page-section-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+    overflow-x: auto;
+
+    margin: 0 0 0.5rem;
+    padding: 0.35rem 0;
+
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+
+    scrollbar-width: none;
+}
+
+.project-page-section-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.project-page-section-nav a {
+    flex: 0 0 auto;
+
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 44px;
+    padding: 0 0.9rem;
+
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+}
+
+.project-page-section-nav a:hover {
+    color: var(--link-hover);
+}
+
+.project-page-section-nav a:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
 }
 
 /* ==================================================
@@ -128,7 +204,7 @@ body {
     margin: 0 0 0.5rem;
 
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius, 14px);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     background: var(--surface);
 }
@@ -155,7 +231,7 @@ body {
 
 .project-page-section p {
     color: var(--text-secondary);
-    line-height: 1.8;
+    line-height: var(--lh-relaxed);
 }
 
 /* ==================================================
@@ -171,10 +247,10 @@ body {
 .project-page-tech li {
     padding: 0.45rem 0.9rem;
 
-    border-radius: 999px;
+    border-radius: var(--radius-full);
 
-    background: rgba(37, 99, 235, 0.12);
-    color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--link);
 
     font-size: 0.78rem;
     font-weight: 600;
@@ -191,7 +267,7 @@ body {
     padding-left: 1.6rem;
 
     color: var(--text-secondary);
-    line-height: 1.75;
+    line-height: var(--lh-relaxed);
 }
 
 .project-page-highlights li::before {
@@ -227,13 +303,16 @@ body {
 }
 
 .project-page-footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     color: var(--muted);
     font-size: 0.9rem;
     font-weight: 600;
 }
 
 .project-page-footer a:hover {
-    color: var(--primary);
+    color: var(--link-hover);
 }
 
 /* ==================================================
@@ -262,14 +341,14 @@ body {
 }
 
 .project-page-related-link:hover {
-    color: var(--primary);
+    color: var(--link-hover);
 }
 
 .project-page-related-category {
     color: var(--muted);
     font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
 }
 
@@ -282,12 +361,8 @@ body {
         padding: 2rem 0 3rem;
     }
 
-    .project-page-title {
-        font-size: 2rem;
-    }
-
-    .project-page-summary {
-        font-size: 1rem;
+    .project-page-header {
+        padding: 1.4rem 1.4rem;
     }
 
     .project-page-actions .btn {

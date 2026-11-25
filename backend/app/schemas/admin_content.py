@@ -24,11 +24,12 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.registry import ICON_KEYS, UNKNOWN_ICON_KEY
-from app.schemas.content import About, Person, Robots, Social, Stat
+from app.schemas.content import About, CaseStudy, Person, Robots, Social, Stat
 
 _STRICT = ConfigDict(extra="forbid")
 
@@ -167,6 +168,7 @@ class ProjectOut(ProjectListItem):
     image_alt: str
     category: str | None = None
     tech_stack: list[str] = Field(default_factory=list)
+    case_study: dict[str, Any] | None = None
     live_url: str | None = None
     github_url: str | None = None
     seo_title: str
@@ -203,6 +205,7 @@ class ProjectCreateIn(BaseModel):
     long_description: str | None = None
     category: str | None = None
     tech_stack: list[str] = Field(default_factory=list)
+    case_study: CaseStudy | None = None
     status: str = "published"
     featured: bool = False
     indexable: bool = True
@@ -264,6 +267,7 @@ class ProjectUpdateIn(BaseModel):
     image_alt: str | None = None
     category: str | None = None
     tech_stack: list[str] | None = None
+    case_study: CaseStudy | None = None
     status: str | None = None
     featured: bool | None = None
     indexable: bool | None = None

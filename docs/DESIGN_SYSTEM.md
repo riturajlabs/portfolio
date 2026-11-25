@@ -12,12 +12,16 @@
 This document **records the design system that exists**. It is an inventory and
 a set of conventions to follow when adding to it.
 
-> **This is not a redesign proposal.**
-> No token is changed, no component restyled, no stylesheet refactored as part of
-> the content migration. `MIGRATION.md` Phase 7 acceptance criterion:
-> `git diff --stat src/styles` **must be empty**.
+> **This is not a redesign proposal — for the migration.** During the content
+> migration no token was changed, no component restyled, no stylesheet refactored
+> (`MIGRATION.md` Phase 7: `git diff --stat src/styles` empty).
 >
-> Any change to this system is a separate, explicitly approved task.
+> **Update — 2026-10-17 (ADR-018):** the owner approved a **public design
+> upgrade track** (`docs/PORTFOLIO_UPGRADE.md`). For the *public* UI only,
+> `src/styles/**` is now **unfrozen** and invariants **D1–D3** and the
+> byte-identical reading of **D5** are superseded. **`src/data/**` remains
+> frozen**; admin isolation, API contracts, security and SEO are unchanged. See
+> §2 and the new §8 (v3 TARGET).
 
 ---
 
@@ -229,6 +233,14 @@ The migration must preserve the design exactly.
 `git diff --stat src/styles`, the migration has done something it promised not to
 do.
 
+> **Status update — 2026-10-17 (ADR-018).** These invariants were the
+> **migration-era** freeze. For the public UI they are superseded as follows:
+> **D1, D2, D3** and the byte-identical reading of **D5** no longer bind the
+> public design track (`docs/PORTFOLIO_UPGRADE.md`); the `src/styles/**` half of
+> the tripwire/CI guard is lifted. **D4** (colour is always a token), **D6**
+> (Lighthouse accessibility does not regress) and **D7** (`prefers-reduced-motion`
+> honoured) remain goals. The admin isolation rules below are **not** superseded.
+
 ---
 
 # 3. Conventions When Extending
@@ -336,6 +348,77 @@ Any change to this system requires:
 
 **A design change is never bundled into a data migration.** Bundling makes the
 migration unrevertible and makes the diff unreviewable.
+
+---
+
+# 8. v3 TARGET — Public Design Upgrade (ADR-018)
+
+**Status:** approved direction, **not yet implemented** (Phase U1 is
+change-control only). The full per-section plan and acceptance criteria live in
+`docs/PORTFOLIO_UPGRADE.md`; this section records the design-system rules the
+upgrade must follow.
+
+**Principle — evolve, don't replace.** Keep the identity: dark slate palette
+(`--bg #0F172A`, `--card #1E293B`), Inter, blue→violet brand accent, pill tags,
+single-page IA. Raise *craft*: a real elevation scale, a consistent spacing
+rhythm, confident typography, accessible motion, consistent image treatment. No
+new framework, no Tailwind, no CSS-in-JS, no preprocessor.
+
+**Both themes are first-class (blueprint v2.0).** The upgraded public UI is
+deliberately designed and tested in dark **and** light (`[data-theme="light"]`
+overrides live only in `variables.css`; no per-theme component duplication;
+pre-paint script + `prefers-color-scheme` per `PORTFOLIO_UPGRADE.md` §5.2). The
+visual register is "futuristic tech": fine borders, restrained cyan/electric-
+blue/violet accents, selective glow in dark mode, shadow-free separation in
+light mode. Full rules: `PORTFOLIO_UPGRADE.md` §5.
+
+**Token additions (additive, in `variables.css`; existing token names kept):**
+
+| Family | Rule |
+|---|---|
+| Spacing | `--space-1…8` (4→64 px); new components use these, not ad-hoc `rem` |
+| Elevation | `--elev-1..3` consolidating today's 9 distinct box-shadows |
+| Motion | `--dur-fast/base/slow`; **reduced-motion honoured centrally** |
+| Type scale | explicit `--fs-*` steps for eyebrow / section / display |
+
+**Retained design rules:** colour is always a token (**D4**); radius/shadow/
+transition use tokens; class naming stays lowercase, hyphenated, single-level;
+one stylesheet per component; **admin styles never import `src/styles/*.css`**.
+
+**Accessibility target:** Lighthouse accessibility ≥ 95 on `/` and project
+pages; every interactive target ≥ 44×44 px; `prefers-reduced-motion` respected
+in a real browser; keyboard-operable nav, modal and chat.
+
+**Change process:** §7 still applies. Each upgrade phase is a separate commit;
+Lighthouse is compared against `docs/upgrade-baselines/U1-before.md`.
+
+## 8.1 U3 baseline — tokens & theme foundation (landed)
+
+U3 makes the §8 token contract real in `variables.css` and fixes the theme
+init path. Existing token names are unchanged; the families below are additive
+and have a `[data-theme="light"]` counterpart.
+
+| Family | Tokens | Notes |
+|---|---|---|
+| Elevation | `--elev-1/2/3` | Canonical shadows; `--shadow`→`--elev-2`, `--shadow-xl`→`--elev-3` |
+| Brand glow | `--glow-brand`, `--glow-brand-hover`, `--glow-brand-active`, `--glow-brand-soft` | `--shadow-primary`→`--glow-brand` |
+| Surfaces | `--surface-2`, `--surface-3` | Layered panels over `--surface`/`--card` |
+| Link/focus | `--on-primary`, `--link`, `--link-hover`, `--focus-ring`, `--accent-cyan` | `--on-primary` replaces literals on brand fills |
+| Overlays | `--overlay`, `--hover-overlay`, `--primary-soft`, `--control-bg/-border/-fg` | Modal scrims, hover/ghost fills, form controls |
+| Section glow | `--glow-primary/-secondary/-cyan` | Decorative section blobs; dimmer in light |
+| Spacing | `--space-1…8` (4→64 px) | New components use these, not ad-hoc `rem` |
+| Type | `--fs-xs/sm/body/lead/section/display` | Eyebrow→display; fluid section/display steps |
+| Motion | `--dur-fast/base/slow` | `--transition*` now reference these |
+
+**Theme contract (both themes first-class).** The source of truth is
+`data-theme` on `<html>` plus `color-scheme`. A pre-paint inline script in
+`index.html` sets the initial theme from `localStorage.theme` (strictly
+`"light"|"dark"`) → `prefers-color-scheme` → dark, before first paint, so there
+is no flash. `src/lib/theme.js` is the single resolver shared by that script and
+`ThemeContext.jsx`; the provider only writes on an explicit choice, keeps the OS
+preference live until then, and memoizes its context value. The toggle exposes
+`aria-pressed` and an action-revealing name. `@axe-core/playwright` scans `/` in
+**both** themes (`e2e/a11y.spec.js`).
 
 ---
 

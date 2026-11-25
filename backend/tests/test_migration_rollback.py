@@ -29,6 +29,7 @@ from tests.conftest import (
 
 ROLLBACK_DATABASE = "portfolio_test_rollback"
 ROLLBACK_DATABASE_PREEXISTING = "portfolio_test_rollback_preexisting"
+CASE_STUDY_DATABASE = "portfolio_test_case_study"
 
 
 def _application_tables(url: str) -> set[str]:
@@ -82,6 +83,129 @@ def _create_extension(url: str, name: str = "citext") -> None:
         try:
             async with engine.begin() as connection:
                 await connection.execute(text(f"CREATE EXTENSION IF NOT EXISTS {name}"))
+        finally:
+            await engine.dispose()
+            await asyncio.sleep(0)
+
+    asyncio.run(_run())
+
+
+def _project_case_study_column(url: str) -> tuple[str, str] | None:
+    async def _run() -> tuple[str, str] | None:
+        engine = create_async_engine(url)
+        try:
+            async with engine.connect() as connection:
+                row = (
+                    await connection.execute(
+                        text(
+                            "SELECT is_nullable, udt_name "
+                            "FROM information_schema.columns "
+                            "WHERE table_schema = 'public' AND table_name = 'project' "
+                            "AND column_name = 'case_study'"
+                        )
+                    )
+                ).one_or_none()
+                return (row[0], row[1]) if row is not None else None
+        finally:
+            await engine.dispose()
+            await asyncio.sleep(0)
+
+    return asyncio.run(_run())
+
+
+def _project_case_study_constraint(url: str) -> str | None:
+    async def _run() -> str | None:
+        engine = create_async_engine(url)
+        try:
+            async with engine.connect() as connection:
+                row = (
+                    await connection.execute(
+                        text(
+                            "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
+                            "WHERE conname = 'ck_project_case_study_object' "
+                            "AND conrelid = 'project'::regclass"
+                        )
+                    )
+                ).one_or_none()
+                return row[0] if row is not None else None
+        finally:
+            await engine.dispose()
+            await asyncio.sleep(0)
+
+    return asyncio.run(_run())
+
+
+def _insert_existing_project(url: str) -> None:
+    async def _run() -> None:
+        engine = create_async_engine(url)
+        try:
+            async with engine.begin() as connection:
+                await connection.execute(
+                    text(
+                        "INSERT INTO project ("
+                        "slug, title, short_description, image, image_width, "
+                        "image_height, image_alt, seo_title, seo_description"
+                        ") VALUES ("
+                        "'existing-project', 'Existing Project', 'Existing description.', "
+                        "'/images/projects/existing-project.webp', 1200, 800, "
+                        "'Screenshot', 'Existing Project', 'Existing description.'"
+                        ")"
+                    )
+                )
+        finally:
+            await engine.dispose()
+            await asyncio.sleep(0)
+
+    asyncio.run(_run())
+
+
+def _project_title_and_case_study(url: str) -> tuple[str, object]:
+    async def _run() -> tuple[str, object]:
+        engine = create_async_engine(url)
+        try:
+            async with engine.connect() as connection:
+                row = (
+                    await connection.execute(
+                        text("SELECT title, case_study FROM project WHERE slug = 'existing-project'")
+                    )
+                ).one()
+                return row[0], row[1]
+        finally:
+            await engine.dispose()
+            await asyncio.sleep(0)
+
+    return asyncio.run(_run())
+
+
+def _project_title(url: str) -> str:
+    async def _run() -> str:
+        engine = create_async_engine(url)
+        try:
+            async with engine.connect() as connection:
+                return (
+                    await connection.execute(
+                        text("SELECT title FROM project WHERE slug = 'existing-project'")
+                    )
+                ).scalar_one()
+        finally:
+            await engine.dispose()
+            await asyncio.sleep(0)
+
+    return asyncio.run(_run())
+
+
+def _set_project_case_study(url: str, case_study: str) -> None:
+    async def _run() -> None:
+        engine = create_async_engine(url)
+        try:
+            async with engine.begin() as connection:
+                await connection.execute(
+                    text(
+                        "UPDATE project SET case_study = CAST(:case_study AS jsonb) "
+                        "WHERE slug = 'existing-project'"
+                    ),
+                    {"case_study": case_study},
+                )
         finally:
             await engine.dispose()
             await asyncio.sleep(0)
@@ -144,3 +268,44 @@ def test_downgrade_base_is_safe_when_citext_pre_exists(
         assert "citext" in _extensions(url)
     finally:
         _drop_and_create_database(admin_database_url, ROLLBACK_DATABASE_PREEXISTING)
+
+
+def test_case_study_migration_preserves_rows_and_round_trips(
+    admin_database_url: str, test_database_url: str
+) -> None:
+    """`0005` adds one nullable column, never backfills, and undoes cleanly."""
+    url = _with_database(test_database_url, CASE_STUDY_DATABASE)
+    _drop_and_create_database(admin_database_url, CASE_STUDY_DATABASE)
+    try:
+        _run_alembic(["upgrade", "0004_profile_resume_key"], url)
+        _insert_existing_project(url)
+        assert _project_case_study_column(url) is None
+        assert _project_case_study_constraint(url) is None
+
+        _run_alembic(["upgrade", "0005_project_case_study"], url)
+        assert _project_case_study_column(url) == ("YES", "jsonb")
+        constraint = _project_case_study_constraint(url)
+        assert constraint is not None
+        assert "case_study IS NULL" in constraint
+        assert "jsonb_typeof(case_study) = 'object'" in constraint
+
+        title, case_study = _project_title_and_case_study(url)
+        assert title == "Existing Project"
+        assert case_study is None, "0005 must not backfill existing rows"
+
+        _set_project_case_study(url, '{"schemaVersion": 1}')
+        _title, case_study = _project_title_and_case_study(url)
+        assert case_study == {"schemaVersion": 1}
+
+        _run_alembic(["downgrade", "0004_profile_resume_key"], url)
+        assert _project_case_study_column(url) is None
+        assert _project_case_study_constraint(url) is None
+        assert _project_title(url) == "Existing Project"
+
+        _run_alembic(["upgrade", "0005_project_case_study"], url)
+        assert _project_case_study_column(url) == ("YES", "jsonb")
+        assert _project_case_study_constraint(url) is not None
+        _title, case_study = _project_title_and_case_study(url)
+        assert case_study is None
+    finally:
+        _drop_and_create_database(admin_database_url, CASE_STUDY_DATABASE)

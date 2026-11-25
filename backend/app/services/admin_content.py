@@ -57,6 +57,7 @@ from app.schemas.admin_content import (
     SkillCreateIn,
     SkillUpdateIn,
 )
+from app.schemas.content import CaseStudy
 from app.services.slugs import slugify, suffixed_slug
 
 ACTION_CREATE = "create"
@@ -344,6 +345,8 @@ async def update_project(
 ) -> Mutation:
     row = await _load_project(db, project_id)
     changes = payload.model_dump(exclude_unset=True)
+    if isinstance(payload.case_study, CaseStudy):
+        changes["case_study"] = payload.case_study.model_dump(mode="json", by_alias=True)
 
     if if_unmodified_since is not None:
         stored = row.updated_at

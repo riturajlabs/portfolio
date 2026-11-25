@@ -79,6 +79,39 @@ function ProjectPage({ project }) {
 
 
 
+                        {/* ============ STICKY SECTION NAV ============ */}
+                        {/* Plain in-page anchors: these pages ship no
+                            JavaScript, so the nav is CSS-sticky only
+                            (see .project-page-section-nav). Links are
+                            emitted only for sections this project
+                            actually renders, so no anchor is dead. */}
+                        <nav
+                            className="project-page-section-nav"
+                            aria-label="Section navigation"
+                        >
+                            <a href="#project-about">About</a>
+
+                            {technologies.length > 0 && (
+                                <a href="#project-tech">
+                                    Built with
+                                </a>
+                            )}
+
+                            {highlights.length > 0 && (
+                                <a href="#project-highlights">
+                                    Highlights
+                                </a>
+                            )}
+
+                            {related.length > 0 && (
+                                <a href="#project-related">
+                                    Related
+                                </a>
+                            )}
+                        </nav>
+
+
+
                         {/* ============ IMAGE ============ */}
                         {project.image && (
                             <figure className="project-page-figure">
@@ -103,7 +136,10 @@ function ProjectPage({ project }) {
 
 
                         {/* ============ ABOUT ============ */}
-                        <section className="project-page-section">
+                        <section
+                            id="project-about"
+                            className="project-page-section"
+                        >
                             <h2>About this project</h2>
 
                             <p>{project.description}</p>
@@ -113,7 +149,10 @@ function ProjectPage({ project }) {
 
                         {/* ============ TECH STACK ============ */}
                         {technologies.length > 0 && (
-                            <section className="project-page-section">
+                            <section
+                                id="project-tech"
+                                className="project-page-section"
+                            >
                                 <h2>Built with</h2>
 
                                 <ul className="project-page-tech">
@@ -128,7 +167,10 @@ function ProjectPage({ project }) {
 
                         {/* ============ HIGHLIGHTS ============ */}
                         {highlights.length > 0 && (
-                            <section className="project-page-section">
+                            <section
+                                id="project-highlights"
+                                className="project-page-section"
+                            >
                                 <h2>Highlights</h2>
 
                                 <ul className="project-page-highlights">
@@ -175,7 +217,10 @@ function ProjectPage({ project }) {
                         {/* Internal links only, to pages this build
                             actually emits (indexableProjects). */}
                         {related.length > 0 && (
-                            <section className="project-page-section">
+                            <section
+                                id="project-related"
+                                className="project-page-section"
+                            >
                                 <h2>Related projects</h2>
 
                                 <ul className="project-page-related">

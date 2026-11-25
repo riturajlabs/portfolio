@@ -4,6 +4,33 @@
 <head>
 
   <!-- ========================================================= -->
+  <!-- Theme bootstrap — runs before first paint so the correct
+       token block is active immediately (no flash of the wrong
+       theme). The ladder mirrors src/lib/theme.js exactly:
+       localStorage.theme wins, else prefers-color-scheme, else
+       dark. Keep the two in sync. -->
+  <!-- ========================================================= -->
+
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("theme");
+        var theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.style.colorScheme = theme;
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+
+  <!-- ========================================================= -->
   <!-- Basic -->
   <!-- ========================================================= -->
 
@@ -16,6 +43,30 @@
   <meta
     http-equiv="X-UA-Compatible"
     content="IE=edge">
+
+  <!-- ========================================================= -->
+  <!-- Fonts
+       Loaded once from the document head instead of a CSS
+       @import so the font stylesheet is discovered during the
+       initial HTML parse. Only the weights the UI actually uses
+       are requested. No font preload: the woff2 URLs are
+       browser- and unicode-range-dependent, so a hardcoded
+       preload would be fragile and could issue a duplicate
+       request. Preconnect + display=swap is the reliable path. -->
+  <!-- ========================================================= -->
+
+  <link
+    rel="preconnect"
+    href="https://fonts.googleapis.com">
+
+  <link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin>
+
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 
   <!-- ========================================================= -->
   <!-- Primary SEO (server-delivered baseline)
@@ -168,7 +219,13 @@
 
   <meta
     name="theme-color"
-    content="#2563EB">
+    content="#0F172A"
+    media="(prefers-color-scheme: dark)">
+
+  <meta
+    name="theme-color"
+    content="#F8FAFC"
+    media="(prefers-color-scheme: light)">
 
   <meta
     name="color-scheme"
@@ -291,6 +348,7 @@
 
 
   <div id="root"></div>
+
 
 
   <script

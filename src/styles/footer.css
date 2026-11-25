@@ -174,9 +174,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 12px; /* Modern square-round look */
-    background: rgba(37, 99, 235, 0.08); /* Glass effect */
-    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: var(--radius);
+    background: var(--primary-soft);
+    border: 1px solid var(--border);
     color: var(--text);
     font-size: 1.2rem;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -184,10 +184,10 @@
 
 .footer-icons a:hover {
     background: var(--brand-gradient, linear-gradient(135deg, #2563eb, #7c3aed));
-    color: white;
+    color: var(--on-primary);
     border-color: transparent;
     transform: translateY(-6px) scale(1.1) rotate(5deg);
-    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+    box-shadow: var(--glow-brand-soft);
 }
 
 /* ===================================================
@@ -215,7 +215,7 @@
 }
 
 .heart-icon {
-    color: #ef4444; /* Beating Red Heart */
+    color: var(--danger); /* Beating Red Heart */
     animation: heartbeat 1.5s infinite;
 }
 
@@ -247,15 +247,15 @@
 
 .back-top:hover {
     background: var(--primary);
-    color: white;
+    color: var(--on-primary);
     border-color: transparent;
     transform: translateY(-4px);
-    box-shadow: 0 12px 25px rgba(37, 99, 235, 0.4);
+    box-shadow: var(--glow-brand-hover);
 }
 
 .back-top:active {
     transform: translateY(-1px) scale(0.95);
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+    box-shadow: var(--glow-brand-active);
 }
 
 /* ===================================================
@@ -311,10 +311,11 @@
         justify-content: center;
     }
     .footer-quote {
-       
+        max-width: 32rem;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 0;
+        border-left: 0;
         text-align: center;
-        padding: 0 3rem 0 0;
     }
-    
-  
 }

@@ -587,6 +587,79 @@ diverges. The button is a convenience, not an automation.
 
 ---
 
+### ADR-018 — The public design upgrade is an approved, phase-gated track
+
+**Date:** 2026-10-17 · **Status:** Accepted (owner-approved)
+
+**Context.** The migration-era documents froze the public design. `PRODUCT_REQUIREMENTS.md`
+§5 lists *"Redesigning the public UI"* as a non-goal; `DESIGN_SYSTEM.md` §2
+invariant **D1** requires `src/styles/**` to receive **zero** changes; §3.2
+**N4** restates it; and `tests/tripwires.test.mjs` plus `.github/workflows/ci.yml`
+enforce it mechanically. The owner has approved a public design upgrade —
+visual consistency, spacing, typography, card elevation, responsive layout and
+accessibility — which necessarily edits `src/styles/**` and renders different
+markup. This ADR records that decision. It authorizes the change-control work in
+Phase U1; it does not itself perform any visual change.
+
+**Decision.** A **public design upgrade track** is approved, governed by
+`docs/PORTFOLIO_UPGRADE.md` and delivered one phase per independently revertible
+commit on the `portfolio-upgrade` branch. It **supersedes only** the
+migration-era design-freeze restrictions listed below. Every other
+architectural, security and product invariant remains mandatory.
+
+**Superseded (migration-era only):**
+
+* `PRODUCT_REQUIREMENTS.md` §5 row *"Redesigning the public UI"* is no longer a
+  non-goal. That section's own rule — a non-goal "requires a new requirement
+  document section before it starts" — is satisfied by `docs/PORTFOLIO_UPGRADE.md`.
+* `DESIGN_SYSTEM.md` §2 invariants **D1** (`src/styles/**` zero changes), **D2**
+  (no token added, removed or changed) and **D3** (no component renders different
+  markup), and the migration-era byte-identical reading of **D5**.
+* `PRODUCT_REQUIREMENTS.md` §3.2 **N4**, reworded to protect `src/data/**` only
+  (see below).
+* The `src/styles/**` half of the tripwire in `tests/tripwires.test.mjs` and the
+  `src/data`/`src/styles` guard in `.github/workflows/ci.yml`.
+
+**Retained and mandatory (not superseded):**
+
+* **`src/data/**` stays frozen.** `N4` (reworded) and the tripwire now guard data
+  only; `git diff -- src/data` must stay empty. `src/data/*.js` remains the legacy
+  migration input and the rollback source.
+* **Admin isolation** (`DESIGN_SYSTEM.md` §4–§5): admin styles stay under
+  `src/admin/`, the admin entry must not import any `src/styles/*.css`, and
+  `assert-admin-bundle.mjs` continues to enforce the separate bundle.
+* **Design conventions that remain goals:** **D4** (colour is always a token),
+  **D6** (Lighthouse accessibility does not regress; the upgrade targets ≥ 95) and
+  **D7** (`prefers-reduced-motion` is honoured — the upgrade fixes its current
+  violation, P0-2).
+* **Product non-regression** `N1`–`N3`, `N5`–`N8` (`PRODUCT_REQUIREMENTS.md` §3.2):
+  six HTML documents, SEO/OG/JSON-LD, discovery files, bundle budget, contact and
+  GitHub/indexability contracts.
+* **Architecture, API and data:** `API.md` contracts, `DATABASE.md` schema
+  (ADR-011), admin authentication and sessions (ADR-009, ADR-015), the contact
+  pipeline, the AI assistant contract and its reindex-on-build behaviour
+  (ADR-006, ADR-017), and static prerendering (ADR-001, ADR-004).
+* **Security and delivery:** `SECURITY.md`, secrets handling, `vercel.json`
+  rewrites and `render.yaml` are untouched.
+
+**Consequences.**
+
+* The `src/styles/**` tripwire must be removed and the CI guard narrowed to
+  `src/data/**` (Phase U1), or CI fails on the first intended CSS change.
+* A **pre-change baseline** (Lighthouse + computed-style + tap-target
+  measurements) is captured in Phase U1 and stored under
+  `docs/upgrade-baselines/`; the final phase compares against it.
+* Any PR that changes `src/data/**`, the admin/API contracts or the deploy
+  configuration still fails — the removed half was the *visual* freeze only.
+
+**Alternatives rejected.** Leaving the non-goal in force (contradicts the
+approved upgrade); editing the invariants in place (this repo supersedes, never
+edits — §18 below); adopting Tailwind/CSS-in-JS or a framework (the hand-written
+system is retained); freezing only in CI but not in code (would leave the
+tripwire lying about intent).
+
+---
+
 # 6. Frontend Data Flow — CURRENT vs TARGET
 
 ## 6.1 CURRENT

@@ -197,11 +197,12 @@ ANALYZE=1 npm run build    # writes stats.html
 | `react-*` | `react`, `react-dom`, scheduler |
 | `motion-*` | `framer-motion` |
 | `icons-*` | `react-icons` (tree-shaken) |
-| `markdown-*` | `react-markdown` + remark plugins |
 | `index-*` | App entry and components |
 
-`markdown-*` is lazy-loaded — it ships when the chat widget first opens, not at
-first paint.
+The markdown stack is not a named chunk. Vite emits `react-markdown-*` and
+`remark-gfm-*` as dynamic-only chunks behind the chat assistant's import
+boundary, so they ship when the chat first renders an AI message (the greeting,
+on open) — never at first paint.
 
 ---
 

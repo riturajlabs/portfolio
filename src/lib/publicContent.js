@@ -37,6 +37,7 @@ import {
     projects,
     seo,
     skills,
+    about as rawAbout,
 } from "../generated/content";
 
 
@@ -75,6 +76,8 @@ export const socials = [
         icon: FaEnvelope,
     },
 ];
+
+export const about = rawAbout;
 
 
 

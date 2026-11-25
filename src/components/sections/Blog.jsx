@@ -106,14 +106,18 @@ function Blog() {
 
                                 <div className="blog-meta">
 
-                                    <span>
-                                        {blog.date}
-                                    </span>
+                                    {blog.status && (
+                                        <span className="blog-status">
+                                            {blog.status}
+                                        </span>
+                                    )}
 
 
-                                    <span>
-                                        {blog.readTime}
-                                    </span>
+                                    {blog.readTime && (
+                                        <span className="blog-readtime">
+                                            {blog.readTime}
+                                        </span>
+                                    )}
 
                                 </div>
 

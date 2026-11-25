@@ -57,7 +57,7 @@ const PROJECT_KEYS = [
   "slug", "title", "description", "longDescription", "image",
   "image_width", "image_height", "imageAlt", "category", "techStack",
   "highlights", "featured", "indexable", "status", "display_order",
-  "live", "github", "seoTitle", "seoDescription",
+  "live", "github", "caseStudy", "seoTitle", "seoDescription",
 ];
 const SKILL_KEYS = ["name", "icon_key", "display_order", "category"];
 const SKILL_CATEGORY_KEYS = ["name", "icon_key", "display_order"];
@@ -491,6 +491,7 @@ try {
       display_order: index,
       live: project.live ?? null,
       github: project.github ?? null,
+      caseStudy: null,
       seoTitle,
       seoDescription,
     };

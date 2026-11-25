@@ -29,19 +29,24 @@
     height: 100%;
 
     background:
-        radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 55%),
+        radial-gradient(circle at top right, var(--hover-overlay), transparent 55%),
         var(--card);
 
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-card);
+
+    /* U5: cards sit on the elevation scale like every other raised
+       surface (DESIGN_SYSTEM elevation); hover climbs to elev-2 with
+       the restrained brand glow instead of a bespoke shadow stack. */
+    box-shadow: var(--elev-1);
 
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .project-card:hover {
     transform: translateY(-8px);
-    border-color: rgba(37, 99, 235, 0.45);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(37, 99, 235, 0.15), 0 0 30px rgba(37, 99, 235, 0.12);
+    border-color: var(--border-light);
+    box-shadow: var(--elev-2), var(--glow-brand-soft);
 }
 
 /* ===================================================
@@ -49,7 +54,7 @@
 =================================================== */
 
 .featured-project {
-    border-color: rgba(37, 99, 235, 0.5);
+    border-color: var(--primary);
 }
 
 .featured-project::before {
@@ -59,7 +64,7 @@
 
     background: radial-gradient(
         circle at top right,
-        rgba(37, 99, 235, 0.18),
+        var(--glow-primary),
         transparent 40%
     );
 
@@ -82,10 +87,10 @@
 
     padding: 0.45rem 0.9rem;
 
-    border-radius: 999px;
+    border-radius: var(--radius-full);
 
     background: var(--primary);
-    color: #fff;
+    color: var(--on-primary);
 
     font-size: 0.75rem;
     font-weight: 600;
@@ -128,7 +133,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(2, 6, 23, 0.55);
+    background: var(--overlay);
     backdrop-filter: blur(2px);
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -144,9 +149,9 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.7rem 1.3rem;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     background: var(--primary);
-    color: #fff;
+    color: var(--on-primary);
     font-weight: 600;
     font-size: 0.9rem;
     box-shadow: var(--shadow-primary);
@@ -160,7 +165,7 @@
 
 .project-overlay-btn:hover {
     background: var(--primary-dark);
-    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.4);
+    box-shadow: var(--glow-brand-hover);
 }
 
 .project-overlay-btn:active {
@@ -186,7 +191,7 @@
 }
 
 .project-description {
-    color: var(--muted);
+    color: var(--text-secondary);
     line-height: 1.7;
     font-size: 0.95rem;
     margin-bottom: 1.8rem;
@@ -208,10 +213,10 @@
 .project-tech span {
     padding: 0.45rem 0.9rem;
 
-    border-radius: 999px;
+    border-radius: var(--radius-full);
 
-    background: rgba(37, 99, 235, 0.12);
-    color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--link);
 
     font-size: 0.78rem;
     font-weight: 600;
@@ -243,7 +248,7 @@
     inset: 0;
     /* Above the navbar (--z-navbar: 1000) so the modal fully covers the UI. */
     z-index: var(--z-modal, 1200);
-    background: rgba(2, 6, 23, 0.72);
+    background: var(--overlay);
     backdrop-filter: blur(10px) saturate(120%);
     -webkit-backdrop-filter: blur(10px) saturate(120%);
     display: flex;
@@ -261,7 +266,7 @@
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl), 0 0 0 1px rgba(37, 99, 235, 0.12);
+    box-shadow: var(--shadow-xl), 0 0 0 1px var(--primary-soft);
     
     /* Firefox Scrollbar Support */
     scrollbar-width: thin;
@@ -308,7 +313,7 @@
 
 .project-modal-close:hover {
     background: var(--danger);
-    color: #fff;
+    color: var(--on-primary);
 }
 
 .project-modal-image {
@@ -332,9 +337,9 @@
 .project-modal-category {
     display: inline-block;
     padding: 0.35rem 0.8rem;
-    border-radius: 999px;
-    background: rgba(124, 58, 237, 0.15);
-    color: var(--secondary);
+    border-radius: var(--radius-full);
+    background: var(--glow-secondary);
+    color: var(--secondary-text);
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -349,7 +354,7 @@
 }
 
 .project-modal-body > p {
-    color: var(--muted);
+    color: var(--text-secondary);
     line-height: 1.7;
     font-size: 0.95rem;
     margin-bottom: 1.4rem;
@@ -364,7 +369,7 @@
 }
 
 .project-modal-metrics h4 {
-    color: var(--primary);
+    color: var(--link);
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;

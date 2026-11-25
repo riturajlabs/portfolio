@@ -242,6 +242,69 @@ describe("dist structure", () => {
         );
         expect(stdout).toMatch(/ok|pass|clean|no admin/i);
     });
+
+    it("keeps the markdown stack out of the initial homepage graph (U8)", () => {
+        const manifest = JSON.parse(readDist(".vite", "manifest.json"));
+        const entry = manifest["index.html"];
+        expect(entry, "index.html entry missing from manifest").toBeDefined();
+
+        // The lazy chat bundle must be reachable only through a dynamic import.
+        expect(entry.dynamicImports || []).toContain(
+            "src/components/common/ChatAssistant.jsx"
+        );
+
+        const markdownKeys = Object.keys(manifest).filter((key) =>
+            /react-markdown|remark-gfm/.test(key)
+        );
+        expect(
+            markdownKeys.some((key) => /react-markdown/.test(key)),
+            "react-markdown should be emitted as a chunk"
+        ).toBe(true);
+        expect(
+            markdownKeys.some((key) => /remark-gfm/.test(key)),
+            "remark-gfm should be emitted as a chunk"
+        ).toBe(true);
+        const markdownFiles = markdownKeys.map((key) => manifest[key].file);
+
+        // Walk the entry's STATIC import graph. A markdown chunk appearing
+        // here means it would be fetched on first paint (the U8 bug).
+        const seen = new Set();
+        const stack = ["index.html"];
+        while (stack.length) {
+            const key = stack.pop();
+            if (seen.has(key) || !manifest[key]) continue;
+            seen.add(key);
+            for (const dep of manifest[key].imports || []) stack.push(dep);
+        }
+        const staticFiles = [...seen].map((key) => manifest[key].file);
+        for (const file of markdownFiles) {
+            expect(
+                staticFiles,
+                `${file} is statically reachable from the homepage entry`
+            ).not.toContain(file);
+        }
+
+        // Nor may the emitted HTML preload/script-reference them.
+        const html = readDist("index.html");
+        for (const file of markdownFiles) {
+            expect(
+                html.includes(file),
+                `index.html references lazy markdown chunk ${file}`
+            ).toBe(false);
+        }
+
+        // ChatAssistant reaches every markdown chunk only through dynamic
+        // imports. Keys come from the manifest, so hashed filenames and
+        // package entry paths never have to be hardcoded here.
+        const chat = manifest["src/components/common/ChatAssistant.jsx"];
+        expect(chat).toBeDefined();
+        const chatDynamic = chat.dynamicImports || [];
+        const chatStatic = chat.imports || [];
+        for (const key of markdownKeys) {
+            expect(chatDynamic).toContain(key);
+            expect(chatStatic).not.toContain(key);
+        }
+    });
 });
 
 // ---------------------------------------------------------------------------

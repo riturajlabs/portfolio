@@ -15,14 +15,33 @@ import {
     FaPlus,
     FaBookOpen,
 } from "react-icons/fa";
-import remarkGfm from "remark-gfm";
 
 import { describeChatError, streamChat } from "../../lib/chatClient";
-// 🚀 Lazy-load markdown — react-markdown + micromark together are ~80 KB
-// (remark-gfm is small and treeshakes well, so it's fine to keep sync).
-// We only pay this cost the first time the user opens the chat AND an
-// AI message arrives. Splitting keeps the initial bundle lean.
-const ReactMarkdown = lazy(() => import("react-markdown"));
+// 🚀 Lazy-load the entire markdown stack — react-markdown + remark-gfm +
+// micromark together are ~80 KB. Loading them in a single dynamic import
+// ensures the markdown chunk is only fetched when an AI message first renders
+// (the greeting, as soon as the dialog opens) — never on the initial page boot.
+// remark-gfm is intentionally NOT imported at the module top-level so that
+// Rollup sees it only as a dynamic dependency: it will not be pulled into the
+// ChatAssistant chunk's static import graph, and the browser will not fetch
+// the markdown chunk until the Suspense boundary first renders.
+const MarkdownMessage = lazy(() =>
+    Promise.all([import("react-markdown"), import("remark-gfm")]).then(
+        ([{ default: ReactMarkdown }, { default: remarkGfm }]) => ({
+            // Wrap into a default export so `lazy()` can unwrap it.
+            default: function MarkdownMessageInner({ components, children }) {
+                return (
+                    <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={components}
+                    >
+                        {children}
+                    </ReactMarkdown>
+                );
+            },
+        })
+    )
+);
 
 import "../../styles/chat.css";
 
@@ -42,12 +61,6 @@ const MAX_HISTORY_TURNS = 6;
 // permanent "Offline". The client now retries transient failures within a
 // strict budget and reports a temporary "waking up" state in between.
 const RETRY_NOTICE_TEXT = "Waking up the AI service…";
-// Inline (not a stylesheet) so the frozen pre-migration CSS under
-// `src/styles/**` stays byte-identical — tests/tripwires.test.mjs enforces it.
-const ERROR_BUBBLE_STYLE = {
-    borderColor: "rgba(239, 68, 68, 0.45)",
-    background: "rgba(239, 68, 68, 0.08)",
-};
 
 // Session persistence keys.
 const CHAT_STORAGE_KEY = "portfolio-chat-session";
@@ -189,8 +202,20 @@ const CodeBlock = ({ inline, className, children, ...props }) => {
 // `chatTransport` is an optional test seam: it can inject `fetchImpl`,
 // `sleep` and `config` into `streamChat` so retries can be exercised
 // deterministically. Production renders `<ChatAssistant />` with no props.
-function ChatAssistant({ chatTransport } = {}) {
-    const [isOpen, setIsOpen] = useState(false);
+function ChatAssistant({
+    chatTransport,
+    // Controlled-mode API: when `open` is provided the parent owns the single
+    // source of truth for open state and mirrors every change through
+    // `onOpenChange`. Direct renders (tests, embeds) may omit it and fall back
+    // to their own state, optionally opened via `initialOpen`.
+    open: controlledOpen,
+    onOpenChange,
+    initialOpen = false,
+    hideExternalTrigger = false,
+} = {}) {
+    const isControlled = controlledOpen !== undefined;
+    const [internalOpen, setInternalOpen] = useState(Boolean(initialOpen));
+    const isOpen = isControlled ? Boolean(controlledOpen) : internalOpen;
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [retryNotice, setRetryNotice] = useState("");
@@ -222,6 +247,30 @@ function ChatAssistant({ chatTransport } = {}) {
     // not the closure-captured stale value (handleSend is memoized).
     const messagesRef = useRef(messages);
     useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+    // Single write path for open state. Controlled mode delegates to the
+    // parent; uncontrolled mode updates local state. Either way we record the
+    // first open and notify the parent, so there is never a second effect that
+    // can silently re-open a deliberately closed dialog.
+    const setOpen = useCallback((nextOpen) => {
+        const next = Boolean(nextOpen);
+        if (!isControlled) {
+            setInternalOpen(next);
+        }
+        if (next) {
+            setHasOpened(true);
+            try {
+                localStorage.setItem(CHAT_OPENED_KEY, "true");
+            } catch {
+                // ignore
+            }
+        }
+        if (typeof onOpenChange === "function") {
+            onOpenChange(next);
+        }
+    }, [isControlled, onOpenChange]);
+
+    const closeChat = useCallback(() => setOpen(false), [setOpen]);
 
     // 💾 Persist conversation for this tab session.
     useEffect(() => {
@@ -258,12 +307,12 @@ function ChatAssistant({ chatTransport } = {}) {
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape' && isOpen) {
-                setIsOpen(false);
+                closeChat();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen]);
+    }, [isOpen, closeChat]);
 
     // 🚧 Focus trap: keep Tab navigation inside the chat window.
     useEffect(() => {
@@ -434,17 +483,7 @@ function ChatAssistant({ chatTransport } = {}) {
         inputRef.current?.focus();
     };
 
-    const handleToggleOpen = () => {
-        if (!isOpen) {
-            setHasOpened(true);
-            try {
-                localStorage.setItem(CHAT_OPENED_KEY, "true");
-            } catch {
-                // ignore
-            }
-        }
-        setIsOpen(!isOpen);
-    };
+    const handleToggleOpen = () => setOpen(!isOpen);
 
     // 🚀 Run one chat request into a reserved AI bubble. Retry/timeout policy
     // lives in `streamChat` (src/lib/chatClient.js); this only maps SSE events
@@ -648,6 +687,21 @@ function ChatAssistant({ chatTransport } = {}) {
     const isStreamingEmpty =
         isLoading && lastMsg?.role === "ai" && !lastMsg.text;
 
+    // 🗣️ Concise live-region text (U7): announce state *transitions* only —
+    // never the streaming tokens. Re-announcing the whole transcript on every
+    // patch is excessive; a short sentence is what a screen-reader user needs.
+    const liveStatus = retryNotice
+        ? RETRY_NOTICE_TEXT
+        : isLoading
+            ? isStreamingEmpty
+                ? "Searching the knowledge base…"
+                : "Generating a response…"
+            : lastMsg?.role === "ai" && lastMsg?.text
+                ? lastMsg.isError
+                    ? "The assistant could not answer. A retry is available."
+                    : "Assistant response ready."
+                : "";
+
     return (
         <>
             {/* BACKDROP BLUR OVERLAY */}
@@ -659,7 +713,9 @@ function ChatAssistant({ chatTransport } = {}) {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.4, ease: "easeInOut" }}
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => {
+                            closeChat();
+                        }}
                         aria-hidden="true"
                     />
                 )}
@@ -710,7 +766,7 @@ function ChatAssistant({ chatTransport } = {}) {
                                     )}
                                     <button 
                                         className="chat-close-btn" 
-                                        onClick={() => setIsOpen(false)}
+                                        onClick={closeChat}
                                         aria-label="Close Chat"
                                     >
                                         <FaTimes />
@@ -719,7 +775,11 @@ function ChatAssistant({ chatTransport } = {}) {
                             </div>
 
                             {/* BODY */}
-                            <div className="chat-body" aria-live="polite" ref={chatBodyRef} onScroll={handleScroll}>
+                            {/* U7: the transcript container is NOT a live region
+                                (a streaming answer would re-announce every
+                                token). A concise status region below carries
+                                polite, transition-level announcements. */}
+                            <div className="chat-body" ref={chatBodyRef} onScroll={handleScroll}>
                                 {messages.map((msg, idx) => {
                                     const isStreamingMsg =
                                         isLoading &&
@@ -732,7 +792,6 @@ function ChatAssistant({ chatTransport } = {}) {
                                         <motion.div 
                                             key={msg.id} 
                                             className={`chat-bubble ${msg.role === "ai" ? "ai-msg" : "user-msg"}${msg.isError ? " error-msg" : ""}`}
-                                            style={msg.isError ? ERROR_BUBBLE_STYLE : undefined}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.3 }}
@@ -743,12 +802,11 @@ function ChatAssistant({ chatTransport } = {}) {
                                                         <span className="chat-bubble-loading">…</span>
                                                     }
                                                 >
-                                                    <ReactMarkdown
-                                                        remarkPlugins={[remarkGfm]}
+                                                    <MarkdownMessage
                                                         components={markdownComponents}
                                                     >
                                                         {msg.text}
-                                                    </ReactMarkdown>
+                                                    </MarkdownMessage>
                                                 </Suspense>
                                             ) : (
                                                 msg.text
@@ -865,6 +923,18 @@ function ChatAssistant({ chatTransport } = {}) {
                                 <div ref={messagesEndRef} />
                             </div>
 
+                            {/* 🗣️ Concise, non-excessive live region (U7).
+                                Always mounted so assistive tech registers it;
+                                announces transitions, not streamed tokens. */}
+                            <div
+                                className="chat-a11y-status"
+                                role="status"
+                                aria-live="polite"
+                                aria-atomic="true"
+                            >
+                                {liveStatus}
+                            </div>
+
                             {/* 🔍 STREAMING STATUS / STOP */}
                             {isLoading && (
                                 <div className="chat-stream-status">
@@ -913,38 +983,40 @@ function ChatAssistant({ chatTransport } = {}) {
                 </AnimatePresence>
 
                 {/* FLOATING BUTTON WITH LABEL */}
-                <div className="chat-fab-wrapper">
-                    <AnimatePresence>
+                {!hideExternalTrigger && (
+                    <div className="chat-fab-wrapper">
+                        <AnimatePresence>
+                            {!isOpen && !hasOpened && (
+                                <motion.div
+                                    className="chat-fab-label"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 5 }}
+                                    transition={{ delay: 1, duration: 0.5 }}
+                                >
+                                    Ask AI ✨
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <motion.button
+                            ref={fabRef}
+                            className={`chat-fab ${!isOpen ? "chat-fab-pulse" : ""}`}
+                            onClick={handleToggleOpen}
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.92 }}
+                            aria-label={isOpen ? "Close AI Chat" : "Open AI Chat"}
+                            aria-haspopup="dialog"
+                            aria-expanded={isOpen}
+                        >
+                            {isOpen ? <FaTimes /> : <FaCommentDots />}
+                        </motion.button>
+
                         {!isOpen && !hasOpened && (
-                            <motion.div
-                                className="chat-fab-label"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 5 }}
-                                transition={{ delay: 1, duration: 0.5 }}
-                            >
-                                Ask AI ✨
-                            </motion.div>
+                            <span className="chat-fab-notification" aria-hidden="true" />
                         )}
-                    </AnimatePresence>
-
-                    <motion.button
-                        ref={fabRef}
-                        className={`chat-fab ${!isOpen ? "chat-fab-pulse" : ""}`}
-                        onClick={handleToggleOpen}
-                        whileHover={{ scale: 1.08 }}
-                        whileTap={{ scale: 0.92 }}
-                        aria-label={isOpen ? "Close AI Chat" : "Open AI Chat"}
-                        aria-haspopup="dialog"
-                        aria-expanded={isOpen}
-                    >
-                        {isOpen ? <FaTimes /> : <FaCommentDots />}
-                    </motion.button>
-
-                    {!isOpen && !hasOpened && (
-                        <span className="chat-fab-notification" aria-hidden="true" />
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </>
     );

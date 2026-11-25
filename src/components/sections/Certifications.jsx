@@ -50,7 +50,11 @@ function Certifications() {
 
                                 key={certificate.title}
 
-                                className="certificate-card"
+                                className={`certificate-card${
+                                    certificate.description
+                                        ? ""
+                                        : " certificate-card-no-description"
+                                }`}
 
 
                                 initial={{
@@ -101,11 +105,11 @@ function Certifications() {
 
 
 
-                                <p>
-
-                                    {certificate.description}
-
-                                </p>
+                                {certificate.description && (
+                                    <p>
+                                        {certificate.description}
+                                    </p>
+                                )}
 
 
 

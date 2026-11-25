@@ -20,6 +20,8 @@
 //     redirects to `/admin/login` exactly once.
 //   * 429 RATE_LIMITED surfaces the `Retry-After` value.
 
+import { normalizeFieldPath } from "../lib/validators.js";
+
 export const ADMIN_API_BASE = "/api/admin";
 export const CSRF_HEADER = "X-CSRF-Token";
 
@@ -207,7 +209,10 @@ export function uploadResume(file) {
 export function fieldErrorMap(error) {
   const map = {};
   for (const entry of error && Array.isArray(error.fields) ? error.fields : []) {
-    if (entry && entry.field) map[entry.field] = entry.message;
+    const field = entry ? normalizeFieldPath(entry.field) : "";
+    if (!field) continue;
+    const message = entry.message == null ? "" : String(entry.message);
+    map[field] = map[field] ? `${map[field]} ${message}` : message;
   }
   return map;
 }

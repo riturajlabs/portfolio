@@ -5,19 +5,76 @@
 // falling back to manual entry only when detection fails. The canonical URL
 // preview reflects the generated /projects/<slug>/ page.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError, fieldErrorMap, get, post, put, uploadImage } from "../api/client.js";
+import CaseStudyEditor from "../components/case-study/CaseStudyEditor.jsx";
 import { Field, Form } from "../components/Form.jsx";
 import ImagePicker from "../components/ImagePicker.jsx";
 import { useToast } from "../components/Toast.jsx";
+import {
+  CASE_STUDY_FIELD,
+  buildCaseStudyPayload,
+  canonicalCaseStudyPath,
+  caseStudyFieldErrors,
+  initCaseStudyDraft,
+  isCaseStudyErrorPath,
+  pruneCaseStudyDocument,
+  timelineOrderingIsInvalid,
+} from "../lib/caseStudy.js";
 import {
   slugPreview,
   validateImagePath,
   validateImageDimensions,
   validateUrl,
 } from "../lib/validators.js";
+
+const TIMELINE_START = `${CASE_STUDY_FIELD}.timeline.start`;
+const TIMELINE_END = `${CASE_STUDY_FIELD}.timeline.end`;
+
+function hasCaseStudyErrors(errors) {
+  return Object.keys(errors || {}).some((path) =>
+    isCaseStudyErrorPath(path),
+  );
+}
+
+function normalizeServerErrors(errors) {
+  return Object.fromEntries(
+    Object.entries(errors || {}).map(([path, message]) => [
+      isCaseStudyErrorPath(path) ? canonicalCaseStudyPath(path) : path,
+      message,
+    ]),
+  );
+}
+
+function sourceMapFor(paths, source) {
+  return Object.fromEntries(paths.map((path) => [path, source]));
+}
+
+function withoutErrorPaths(sources, targets) {
+  const next = {};
+  for (const [path, source] of Object.entries(sources)) {
+    if (
+      targets.some(
+        (target) => path === target || path.startsWith(`${target}.`),
+      )
+    ) {
+      continue;
+    }
+    next[path] = source;
+  }
+  return next;
+}
+
+function caseStudyErrorSourceFor(errors, sources) {
+  const paths = Object.keys(errors || {}).filter(isCaseStudyErrorPath);
+  if (paths.length === 0) return null;
+  const hasClient = paths.some((path) => sources[path] === "client");
+  const hasServer = paths.some((path) => sources[path] === "server");
+  if (hasClient && hasServer) return "mixed";
+  return hasServer ? "server" : "client";
+}
 
 const EMPTY = {
   title: "",
@@ -47,15 +104,135 @@ export default function ProjectEditor() {
   const toast = useToast();
 
   const [form, setForm] = useState(EMPTY);
+  const [caseStudyDraft, setCaseStudyDraft] = useState(() =>
+    initCaseStudyDraft(null),
+  );
   const [fieldErrors, setFieldErrors] = useState({});
+  const [errorSources, setErrorSources] = useState({});
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(false);
   const [techText, setTechText] = useState("");
   const [dimensionsDetected, setDimensionsDetected] = useState(false);
+  const caseStudyErrorSummaryRef = useRef(null);
+  const focusCaseStudyErrorsRef = useRef(false);
+
+  useEffect(() => {
+    if (!focusCaseStudyErrorsRef.current) return;
+    focusCaseStudyErrorsRef.current = false;
+    caseStudyErrorSummaryRef.current?.focus();
+  }, [fieldErrors]);
+
+  const caseStudyErrorSource = caseStudyErrorSourceFor(
+    fieldErrors,
+    errorSources,
+  );
 
   const patch = useCallback((changes) => {
     setForm((current) => ({ ...current, ...changes }));
   }, []);
+
+  function clearFieldError(field) {
+    setFieldErrors((current) => {
+      if (!Object.prototype.hasOwnProperty.call(current, field)) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+    setErrorSources((current) => withoutErrorPaths(current, [field]));
+  }
+
+  const updateCaseStudyDraft = useCallback((updater) => {
+    setCaseStudyDraft((current) =>
+      typeof updater === "function" ? updater(current) : updater,
+    );
+  }, []);
+
+  const clearCaseStudyError = useCallback((path) => {
+    if (
+      !path ||
+      (path !== CASE_STUDY_FIELD &&
+        !path.startsWith(`${CASE_STUDY_FIELD}.`))
+    ) {
+      return;
+    }
+    setErrorSources((current) => withoutErrorPaths(current, [path]));
+    setFieldErrors((current) => {
+      let changed = false;
+      const next = {};
+      for (const [key, message] of Object.entries(current)) {
+        if (key === path || key.startsWith(`${path}.`)) {
+          changed = true;
+        } else {
+          next[key] = message;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, []);
+
+  const validateCaseStudyField = useCallback(
+    (path) => {
+      const prepared = pruneCaseStudyDocument(caseStudyDraft.value ?? {});
+      const problems = caseStudyFieldErrors(prepared);
+      const targets =
+        path === TIMELINE_START || path === TIMELINE_END
+          ? [TIMELINE_START, TIMELINE_END]
+          : [path];
+      const orderingInvalid = timelineOrderingIsInvalid(caseStudyDraft.value);
+      const clientPaths = new Set();
+      for (const [key] of Object.entries(problems)) {
+        if (key === CASE_STUDY_FIELD) continue;
+        if (
+          orderingInvalid &&
+          (key === TIMELINE_START || key === TIMELINE_END)
+        ) {
+          clientPaths.add(TIMELINE_START);
+          clientPaths.add(TIMELINE_END);
+        } else if (
+          targets.some(
+            (target) => key === target || target.startsWith(`${key}.`),
+          )
+        ) {
+          clientPaths.add(key);
+        }
+      }
+      setErrorSources((current) => {
+        const next = withoutErrorPaths(current, targets);
+        for (const clientPath of clientPaths) next[clientPath] = "client";
+        return next;
+      });
+      setFieldErrors((current) => {
+        const next = { ...current };
+        for (const key of Object.keys(next)) {
+          if (
+            targets.some(
+              (target) => key === target || key.startsWith(`${target}.`),
+            )
+          ) {
+            delete next[key];
+          }
+        }
+        for (const [key, message] of Object.entries(problems)) {
+          if (key === CASE_STUDY_FIELD) continue;
+          if (
+            orderingInvalid &&
+            (key === TIMELINE_START || key === TIMELINE_END)
+          ) {
+            next[TIMELINE_START] = message;
+            next[TIMELINE_END] = message;
+          } else if (
+            targets.some(
+              (target) => key === target || target.startsWith(`${key}.`),
+            )
+          ) {
+            next[key] = message;
+          }
+        }
+        return next;
+      });
+    },
+    [caseStudyDraft.value],
+  );
 
   // The owner should not have to measure the image. When a valid path is typed
   // or pasted, read the file's intrinsic size in the browser and fill in the
@@ -69,6 +246,7 @@ export default function ProjectEditor() {
       setDimensionsDetected(false);
       return;
     }
+    clearFieldError("image");
     const probe = new Image();
     probe.onload = () => {
       patch({ image_width: probe.naturalWidth, image_height: probe.naturalHeight });
@@ -78,20 +256,23 @@ export default function ProjectEditor() {
     probe.src = value;
   }
 
+  function handleImageBlur(value) {
+    const message = validateImagePath(value);
+    if (message) {
+      setFieldErrors((current) => ({ ...current, image: message }));
+      setErrorSources((current) => ({ ...current, image: "client" }));
+      return;
+    }
+    clearFieldError("image");
+  }
+
   // Upload is a separate call from the save: the object is stored first, and the
   // server-measured dimensions are written into the form. The row (create or
   // update) is still persisted by the single save path at the bottom, so this
   // stays one screen and one write.
-  async function handleUpload(file) {
+  async function requestImageUpload(file) {
     try {
-      const result = await uploadImage(file);
-      patch({
-        image: result.image,
-        image_width: result.image_width,
-        image_height: result.image_height,
-      });
-      setDimensionsDetected(true);
-      toast.success("Image uploaded.");
+      return await uploadImage(file);
     } catch (err) {
       // Surface the server's field-level reason (size, unsupported type) rather
       // than the generic "Request validation failed." envelope message.
@@ -104,9 +285,27 @@ export default function ProjectEditor() {
     }
   }
 
+  async function handleUpload(file) {
+    const result = await requestImageUpload(file);
+    patch({
+      image: result.image,
+      image_width: result.image_width,
+      image_height: result.image_height,
+    });
+    setDimensionsDetected(true);
+    toast.success("Image uploaded.");
+  }
+
+  async function handleCaseStudyUpload(file) {
+    const result = await requestImageUpload(file);
+    toast.success("Image uploaded.");
+    return result;
+  }
+
   const refresh = useCallback(async () => {
     const detail = await get(`/projects/${id}`);
     setFieldErrors({});
+    setErrorSources({});
     setForm({
       ...EMPTY,
       ...detail,
@@ -126,6 +325,7 @@ export default function ProjectEditor() {
       category: detail.category || null,
       updated_at: detail.updated_at || null,
     });
+    setCaseStudyDraft(initCaseStudyDraft(detail.case_study ?? null));
     setTechText((detail.tech_stack || []).join(", "));
   }, [id]);
 
@@ -172,7 +372,17 @@ export default function ProjectEditor() {
   }
 
   async function onSubmit() {
-    const errors = validate();
+    const projectErrors = validate();
+    const caseStudyPayload = buildCaseStudyPayload({
+      draft: caseStudyDraft,
+      isEditing,
+    });
+    const errors = {
+      ...projectErrors,
+      ...caseStudyPayload.errors,
+    };
+    focusCaseStudyErrorsRef.current = hasCaseStudyErrors(caseStudyPayload.errors);
+    setErrorSources(sourceMapFor(Object.keys(errors), "client"));
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
@@ -195,6 +405,9 @@ export default function ProjectEditor() {
       seo_title: form.seo_title.trim(),
       seo_description: form.seo_description.trim(),
     };
+    if (caseStudyPayload.include) {
+      body.case_study = caseStudyPayload.value;
+    }
 
     setSaving(true);
     try {
@@ -217,9 +430,12 @@ export default function ProjectEditor() {
         if (err.code === "STALE_WRITE") {
           toast.warn("This project was changed elsewhere. Review and save again.");
         } else {
-          const mapped = fieldErrorMap(err);
-          if (Object.keys(mapped).length > 0) setFieldErrors(mapped);
-          else toast.error(err.message);
+          const mapped = normalizeServerErrors(fieldErrorMap(err));
+          if (Object.keys(mapped).length > 0) {
+            focusCaseStudyErrorsRef.current = hasCaseStudyErrors(mapped);
+            setErrorSources(sourceMapFor(Object.keys(mapped), "server"));
+            setFieldErrors(mapped);
+          } else toast.error(err.message);
         }
       } else {
         toast.error(err.message);
@@ -334,6 +550,17 @@ export default function ProjectEditor() {
           </Field>
         </section>
 
+        <CaseStudyEditor
+          draft={caseStudyDraft}
+          onChange={updateCaseStudyDraft}
+          errors={fieldErrors}
+          errorSource={caseStudyErrorSource}
+          errorSummaryRef={caseStudyErrorSummaryRef}
+          onBlurPath={validateCaseStudyField}
+          onClearPath={clearCaseStudyError}
+          onUploadImage={handleCaseStudyUpload}
+        />
+
         <section className="admin-card">
           <h2>Image</h2>
 
@@ -342,6 +569,7 @@ export default function ProjectEditor() {
             label="Image path"
             value={form.image}
             onChange={handleImageChange}
+            onBlur={handleImageBlur}
             onUpload={handleUpload}
             error={fieldErrors.image}
             required

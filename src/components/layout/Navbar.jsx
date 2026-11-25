@@ -12,7 +12,7 @@ const navigation = [
     { id: "about", label: "About" },
     { id: "skills", label: "Skills" },
     { id: "projects", label: "Projects" },
-
+    { id: "github", label: "GitHub" },
     { id: "certifications", label: "Certifications" },
     { id: "blog", label: "Blog" },
     { id: "contact", label: "Contact" },
@@ -69,6 +69,7 @@ function Navbar() {
                                 <a
                                     href={`#${item.id}`}
                                     className={activeSection === item.id ? "active-link" : ""}
+                                    aria-current={activeSection === item.id ? "page" : undefined}
                                     onClick={() => setActiveSection(item.id)}
                                 >
                                     {item.label}
@@ -93,9 +94,11 @@ function Navbar() {
                         <button
                             className="menu-btn d-lg-none"
                             onClick={() => setMenuOpen(!menuOpen)}
-                            aria-label="Toggle Menu"
+                            aria-label={menuOpen ? "Close Menu" : "Open Menu"}
+                            aria-expanded={menuOpen}
+                            aria-controls="mobile-menu-panel"
                         >
-                            {menuOpen ? <FaTimes /> : <FaBars />}
+                            {menuOpen ? <FaTimes aria-hidden="true" /> : <FaBars aria-hidden="true" />}
                         </button>
                     </div>
                 </nav>
@@ -105,6 +108,7 @@ function Navbar() {
                 <AnimatePresence>
                     {menuOpen && (
                         <motion.div
+                            id="mobile-menu-panel"
                             className="mobile-menu d-lg-none"
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
@@ -117,6 +121,7 @@ function Navbar() {
                                         key={item.id}
                                         href={`#${item.id}`}
                                         className={activeSection === item.id ? "active-link" : ""}
+                                        aria-current={activeSection === item.id ? "page" : undefined}
                                         onClick={(e) => {
                                             e.preventDefault();
 

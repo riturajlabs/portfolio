@@ -1,42 +1,18 @@
 import { motion } from "framer-motion";
 
-import {
-    FaGraduationCap,
-    FaCode,
-    FaBrain,
-    FaRocket,
-} from "react-icons/fa";
-
+import { resolveIcon } from "../icons.jsx";
+import { about } from "../../lib/publicContent";
 import SectionTitle from "../common/SectionTitle";
 
 import "../../styles/about.css";
 
-const aboutCards = [
-    {
-        icon: FaGraduationCap,
-        title: "Education",
-        description:
-            "B.Sc. Artificial Intelligence & Machine Learning student, building strong foundations in programming, mathematics, and AI technologies.",
-    },
-    {
-        icon: FaCode,
-        title: "Development",
-        description:
-            "Full Stack Developer focused on building scalable web applications using MERN Stack, modern frontend practices, and backend architectures.",
-    },
-    {
-        icon: FaBrain,
-        title: "AI & Machine Learning",
-        description:
-            "Exploring Machine Learning, Deep Learning, Generative AI, RAG systems, and AI Agents to create intelligent applications.",
-    },
-    {
-        icon: FaRocket,
-        title: "Career Goal",
-        description:
-            "Aspiring AI Engineer combining Software Engineering and Artificial Intelligence to build impactful real-world products.",
-    },
-];
+const aboutCards = Array.isArray(about?.cards)
+    ? about.cards.map((card) => ({
+          icon: resolveIcon(card.icon_key),
+          title: card.title,
+          description: card.description,
+      }))
+    : [];
 
 function About() {
     return (
@@ -46,9 +22,9 @@ function About() {
         >
             <div className="container">
                 <SectionTitle
-                    tag="About Me"
-                    title="Building Software. Exploring Intelligence."
-                    description="I am an Artificial Intelligence and Machine Learning student passionate about creating modern software solutions and intelligent systems that solve real-world problems."
+                    tag={about?.tag || "About Me"}
+                    title={about?.title || ""}
+                    description={about?.description || ""}
                 />
 
                 <div className="about-content">
@@ -70,22 +46,11 @@ function About() {
                             duration: 0.7,
                         }}
                     >
-                        <h3>My Journey</h3>
+                        <h3>{about?.heading || "My Journey"}</h3>
 
-                        <p>
-                            My journey started with web development and
-                            problem solving. While building full stack
-                            applications, I developed a strong interest
-                            in Artificial Intelligence and Machine
-                            Learning.
-                        </p>
-
-                        <p>
-                            Currently, I am strengthening my skills in
-                            Data Structures & Algorithms, Machine
-                            Learning, Deep Learning, Generative AI, and
-                            building AI-powered applications.
-                        </p>
+                        {(about?.paragraphs || []).map((paragraph) => (
+                            <p key={paragraph}>{paragraph}</p>
+                        ))}
                     </motion.div>
 
                     <div className="about-cards">

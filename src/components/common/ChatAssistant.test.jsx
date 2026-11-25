@@ -10,10 +10,19 @@
 // tests never touch the network or real timers.
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ChatAssistant from "./ChatAssistant";
+
+function readStyle(name) {
+    return readFileSync(
+        path.resolve(process.cwd(), `src/styles/${name}`),
+        "utf8",
+    );
+}
 
 // jsdom has no layout, so scroll-into-view is a no-op stub.
 if (!Element.prototype.scrollIntoView) {
@@ -113,8 +122,12 @@ describe("ChatAssistant", () => {
 
         await ask("ping");
         // First backoff: the temporary notice is visible while retrying.
+        // Scoped to the visible status line — the a11y live region (U7)
+        // carries the same sentence for screen readers.
         await waitFor(() =>
-            expect(screen.getByText(/waking up the ai service/i)).toBeTruthy(),
+            expect(
+                document.querySelector(".chat-searching-hint"),
+            ).toHaveTextContent(/waking up the ai service/i),
         );
         expect(resolvers.length).toBe(1);
 
@@ -126,7 +139,7 @@ describe("ChatAssistant", () => {
         const retry = await screen.findByLabelText("Try again");
         expect(retry).toBeInTheDocument();
         // The temporary notice is cleared once the send is over.
-        expect(screen.queryByText(/waking up the ai service/i)).toBeNull();
+        expect(document.querySelector(".chat-searching-hint")).toBeNull();
     });
 
     it("recovers a failed answer in place via the Try again action", async () => {
@@ -175,5 +188,77 @@ describe("ChatAssistant", () => {
         // dev-only mount cleanup did not permanently disable state updates.
         await send("second question");
         await waitFor(() => expect(screen.getByText("answer-2")).toBeTruthy());
+    });
+});
+
+// =========================================================
+// U7 — CHAT UI POLISH REGRESSION
+// =========================================================
+// The chat widget's accessibility/finish work: a concise polite live region
+// (not the transcript), ≥44px interactive targets, and token-only colours.
+// The CSS assertions read the stylesheet directly (no browser), mirroring the
+// component CSS-contract tests used elsewhere in this repo.
+describe("ChatAssistant (U7)", () => {
+    beforeEach(() => {
+        sessionStorage.clear();
+        localStorage.clear();
+    });
+
+    it("announces state transitions via a concise polite status region", async () => {
+        const fetchImpl = vi.fn(async () =>
+            streamResponse(successFrames("A complete answer")),
+        );
+
+        render(
+            <ChatAssistant chatTransport={{ fetchImpl, sleep: vi.fn(async () => {}) }} />,
+        );
+
+        await ask("hi");
+
+        const status = await screen.findByRole("status");
+        await waitFor(() =>
+            expect(status).toHaveTextContent(/assistant response ready/i),
+        );
+        // The announcement is a short sentence, never the streamed answer.
+        expect(status.textContent).not.toContain("A complete answer");
+    });
+
+    it("never marks the streamed transcript as a live region", async () => {
+        render(<ChatAssistant />);
+        fireEvent.click(screen.getByLabelText("Open AI Chat"));
+
+        const body = document.querySelector(".chat-body");
+        expect(body).not.toBeNull();
+        expect(body.getAttribute("aria-live")).toBeNull();
+    });
+
+    it("keeps every interactive chat control at ≥44px and colour-token-only", () => {
+        const css = readStyle("chat.css");
+
+        for (const selector of [
+            ".chat-close-btn",
+            ".chat-newchat-btn",
+            ".chat-action",
+            ".chat-send-btn",
+            ".chat-stop-btn",
+            ".suggested-btn",
+            ".markdown-code-copy-btn",
+        ]) {
+            const rule = css.match(
+                new RegExp(`${selector.replace(".", "\\.")}\\s*\\{[^}]*\\}`),
+            )?.[0];
+            expect(rule, `${selector} rule missing`).toBeTruthy();
+            const dims = [...rule.matchAll(
+                /(?:min-width|min-height|width|height):\s*(\d+)px/g,
+            )].map((m) => Number(m[1]));
+            expect(
+                dims.some((d) => d >= 44),
+                `${selector} lacks a ≥44px dimension`,
+            ).toBe(true);
+        }
+
+        // No literal rgb()/hex colours remain in the chat stylesheet (D4).
+        expect(css).not.toMatch(/rgba?\(\s*[\d.]/);
+        expect(css).not.toMatch(/#[0-9a-fA-F]{3,6}\b/);
     });
 });
