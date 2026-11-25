@@ -22,7 +22,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app import app, allow_origins
+from app import allow_origins, app
 
 PRODUCTION_ORIGIN = "https://riturajlabs.vercel.app"
 DEV_ORIGIN = "http://localhost:5173"
