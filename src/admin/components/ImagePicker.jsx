@@ -18,17 +18,28 @@ export default function ImagePicker({
   label,
   value,
   onChange,
+  onBlur,
   onUpload,
   error,
   required,
+  uploadFileLabel = "Upload image file",
 }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [touched, setTouched] = useState(false);
   const fileInput = useRef(null);
 
-  const validationError = validateImagePath(value);
-  const localError = error || uploadError || validationError;
+  const validationError = touched ? validateImagePath(value) : null;
+  const fieldError = error || validationError;
+  const localError = [...new Set([fieldError, uploadError].filter(Boolean))].join(
+    " ",
+  );
   const showError = Boolean(localError);
+
+  function handleBlur() {
+    setTouched(true);
+    if (onBlur) onBlur(value || "");
+  }
 
   async function handleFile(event) {
     const file = event.target.files && event.target.files[0];
@@ -39,6 +50,7 @@ export default function ImagePicker({
     setUploadError(null);
     try {
       await onUpload(file);
+      setUploadError(null);
     } catch (err) {
       setUploadError(err && err.message ? err.message : "Upload failed.");
     } finally {
@@ -64,7 +76,9 @@ export default function ImagePicker({
                 className="admin-input admin-input--file"
                 type="file"
                 accept="image/webp,image/png,image/jpeg,image/gif"
-                aria-label="Upload image file"
+                aria-label={uploadFileLabel}
+                aria-invalid={uploadError ? "true" : undefined}
+                aria-describedby={uploadError ? linked.errorId : undefined}
                 onChange={handleFile}
                 disabled={uploading}
               />
@@ -81,7 +95,8 @@ export default function ImagePicker({
               setUploadError(null);
               onChange(event.target.value);
             }}
-            aria-invalid={showError}
+            onBlur={handleBlur}
+            aria-invalid={showError ? "true" : undefined}
             aria-describedby={showError ? linked.errorId : linked.hintId}
             autoComplete="off"
             spellCheck="false"

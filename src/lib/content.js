@@ -1633,6 +1633,12 @@ function validateCaseStudy(caseStudy, whereKey, problems) {
     }
 }
 
+export function validateCaseStudyDocument(caseStudy, whereKey = "caseStudy") {
+    const problems = [];
+    validateCaseStudy(caseStudy, whereKey, problems);
+    return problems;
+}
+
 function validateSkills(skills, problems) {
     if (!Array.isArray(skills)) {
         problems.push("skills must be an array.");

@@ -610,6 +610,241 @@ kbd {
 }
 
 /* ---------------------------------------------------------
+   Case study editor
+   --------------------------------------------------------- */
+
+.case-study-editor {
+  --admin-danger-text: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  .case-study-editor {
+    --admin-danger-text: #fca5a5;
+  }
+}
+
+.case-study-editor .admin-btn--danger {
+  color: var(--admin-danger-text);
+  border-color: var(--admin-danger-text);
+}
+
+.case-study-editor .admin-btn--danger:hover {
+  background: var(--admin-danger-text);
+  color: var(--admin-bg);
+}
+
+.case-study-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.case-study-header h2 {
+  margin-bottom: 0.25rem;
+}
+
+.case-study-status {
+  color: var(--admin-text-muted);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.case-study-privacy {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.case-study-empty {
+  padding: 0.75rem 0 0.25rem;
+}
+
+.case-study-empty p {
+  color: var(--admin-text-muted);
+  margin-top: 0;
+}
+
+.case-study-warning {
+  background: var(--admin-warning-soft);
+  border: 1px solid var(--admin-warning);
+  border-left-width: 4px;
+  border-radius: var(--admin-radius-sm);
+  padding: 0.875rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.case-study-warning p {
+  font-size: 0.875rem;
+  margin: 0.375rem 0 0;
+}
+
+.case-study-stored-problems {
+  color: var(--admin-text);
+  font-size: 0.8125rem;
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.case-study-stored-problems li + li {
+  margin-top: 0.25rem;
+}
+
+.case-study-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.case-study-raw-repair {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  padding: 0.875rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.case-study-raw-textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  min-height: 16rem;
+}
+
+.case-study-raw-error {
+  font-size: 0.8125rem;
+}
+
+.case-study-raw-error .admin-field-error {
+  margin: 0.5rem 0 0;
+}
+
+.case-study-error-summary {
+  background: var(--admin-danger-soft);
+  border: 1px solid var(--admin-danger);
+  border-left-width: 4px;
+  border-radius: var(--admin-radius-sm);
+  padding: 0.875rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.case-study-error-summary h3 {
+  color: var(--admin-danger-text);
+  font-size: 0.9375rem;
+  margin-bottom: 0.5rem;
+}
+
+.case-study-error-source {
+  display: inline-block;
+  background: var(--admin-surface);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-left: 0.5rem;
+  padding: 0.0625rem 0.375rem;
+  text-transform: uppercase;
+}
+
+.case-study-error-summary ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.case-study-error-summary li + li {
+  margin-top: 0.35rem;
+}
+
+.case-study-error-summary li {
+  font-size: 0.875rem;
+}
+
+.case-study-error-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.case-study-error-label {
+  font-weight: 700;
+  margin-right: 0.35rem;
+}
+
+.case-study-error-path {
+  color: var(--admin-text);
+  font-size: 0.75rem;
+  margin-right: 0.35rem;
+}
+
+.case-study-section-description {
+  margin-top: -0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.case-study-subsection {
+  background: var(--admin-surface-raised);
+  margin-top: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 0.875rem 1rem 0.25rem;
+}
+
+.case-study-grid {
+  display: grid;
+  gap: 0 1rem;
+}
+
+.case-study-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.case-study-repeatable-meta {
+  margin-top: -0.25rem;
+}
+
+.case-study-repeatable-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.case-study-repeatable-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+  background: var(--admin-surface-raised);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  padding: 0.75rem;
+}
+
+.case-study-repeatable-fields {
+  min-width: 0;
+}
+
+.case-study-repeatable-fields .admin-field:last-child {
+  margin-bottom: 0;
+}
+
+.case-study-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.case-study-empty-note {
+  border: 1px dashed var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  color: var(--admin-text-muted);
+  font-size: 0.875rem;
+  margin: 0 0 0.75rem;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------
    Modal (ConfirmDialog) — focus trap + Escape
    --------------------------------------------------------- */
 
@@ -813,5 +1048,45 @@ kbd {
 
   .admin-content {
     padding: 1rem 1rem 4rem;
+  }
+
+  .case-study-grid--two {
+    grid-template-columns: 1fr;
+  }
+
+  .case-study-repeatable-row {
+    grid-template-columns: 1fr;
+  }
+
+  .case-study-row-actions {
+    justify-content: flex-start;
+  }
+
+  .case-study-editor .admin-fieldset {
+    min-width: 0;
+  }
+
+  .case-study-error-summary li {
+    overflow-wrap: anywhere;
+  }
+
+  .case-study-error-link,
+  .case-study-error-path {
+    overflow-wrap: anywhere;
+  }
+
+  .case-study-error-path {
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: top;
+  }
+
+  .case-study-editor button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .case-study-editor input[type="file"] {
+    min-height: 44px;
   }
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatDateTime,
   isRemoteImage,
+  normalizeFieldPath,
   SLUG_MAX_LENGTH,
   slugPreview,
   todayDateInputValue,
@@ -11,6 +12,25 @@ import {
   validateSlug,
   validateUrl,
 } from "./validators.js";
+
+describe("normalizeFieldPath", () => {
+  it("returns an empty path for null, non-string, and blank values", () => {
+    expect(normalizeFieldPath(null)).toBe("");
+    expect(normalizeFieldPath(undefined)).toBe("");
+    expect(normalizeFieldPath(42)).toBe("");
+    expect(normalizeFieldPath("   ")).toBe("");
+  });
+
+  it("normalizes bracket notation, repeated separators, and outer dots", () => {
+    expect(normalizeFieldPath("[case_study][outcomes][0].source")).toBe(
+      "case_study.outcomes.0.source",
+    );
+    expect(normalizeFieldPath(".case_study..role.")).toBe("case_study.role");
+    expect(normalizeFieldPath(" case_study.gallery[2].alt ")).toBe(
+      "case_study.gallery.2.alt",
+    );
+  });
+});
 
 describe("validateSlug", () => {
   it("accepts lowercase slugs with single hyphens", () => {
